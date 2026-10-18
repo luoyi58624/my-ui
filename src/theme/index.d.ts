@@ -1,3 +1,4 @@
+/** 展示页主题配置的类型，不属于 MyUI 或 Vue 组件入口。 */
 /** 实际渲染的明暗主题。 */
 export type ThemeMode = "light" | "dark";
 
@@ -140,3 +141,6 @@ export declare const defaultThemeOptions: {
   light: { color: "blue"; style: "soft" };
   dark: { color: "blue"; style: "soft" };
 };
+
+/** 计算示例配色的文字对比度。 */
+export declare function contrastRatio(first: string, second: string): number;

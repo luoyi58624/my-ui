@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { Button, Dialog, Icon, Input, Segmented, Slider, Switch } from '../../vue'
-import { applyTheme, createTheme, contrastRatio, defaultThemeOptions, themeColors, themeStyles, type ThemeColorId, type ThemeData, type ThemeMode, type ThemePreference, type ThemeStyleId } from '../theme'
+import { applyTheme, createTheme, contrastRatio, defaultThemeOptions, themeColors, themeStyles, type ThemeColorId, type ThemeData, type ThemeMode, type ThemePreference, type ThemeStyleId } from '../theme/index.js'
 
 type Settings = { mode: ThemePreference; backdropBlur: boolean; fontWeight: number; light: ThemeData; dark: ThemeData }
 function defaults(): Settings {

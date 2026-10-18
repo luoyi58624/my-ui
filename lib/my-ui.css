@@ -6,7 +6,7 @@
 [hidden] {
   display: none !important;
 }
-/* 默认柔和风格的独立明暗数据；主题入口可切换预设与按需覆写，组件维护自己的布局。 */
+/* 默认明暗样式；应用通过 data-theme 与 CSS 变量覆写，配色预设由各自示例管理。 */
 :root {
   color-scheme: light;
   --background: #f2f3f5;

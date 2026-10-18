@@ -6,7 +6,8 @@
 <div id="app"></div>
 <script type="module">
 import { createApp, h, nextTick, ref } from 'vue'
-import { Input, Icon, Combobox, Button, applyTheme } from '/vue/index.ts'
+import { Input, Icon, Combobox, Button } from '/vue/index.ts'
+import { applyTheme } from '/src/theme/index.js'
 applyTheme({ mode: 'light' })
 const el = selector => document.querySelector(selector)
 const assert = (value, message) => { if (!value) throw Error(message) }

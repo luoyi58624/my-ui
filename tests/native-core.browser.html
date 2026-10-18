@@ -16,7 +16,24 @@ const assert=(value,message)=>{if(!value)throw Error(message);};
 const cleanup=()=>{app?.unmount();app=undefined;owned.forEach(c=>c.destroy());owned=[];fixture.replaceChildren();};
 const run=async(name,test)=>{try{cleanup();await test();results.push({name,pass:true});}catch(error){results.push({name,pass:false,error:error.stack});}finally{cleanup();}};
 document.querySelector('#run').onclick=async()=>{
-  results.length=0;document.querySelector('#result').textContent='运行中';MyUI.applyTheme({mode:'light'});
+  results.length=0;document.querySelector('#result').textContent='运行中';document.documentElement.dataset.theme='light';
+  await run('组件核心独立于示例主题，CSS 明暗切换与变量覆写直接生效', async () => {
+    for (const name of ['applyTheme', 'createTheme', 'themeColors', 'themeStyles', 'defaultThemeOptions', 'contrastRatio']) assert(!(name in MyUI), name + ' 仍属于组件入口');
+    const root = document.documentElement, previous = root.style.getPropertyValue('--primary');
+    const button = add('Button', { label: 'CSS 配色' }).element;
+    button.style.transition = 'none';
+    try {
+      assert(!previous, '组件自行向根节点写入配色');
+      const light = getComputedStyle(button).backgroundColor;
+      root.dataset.theme = 'dark'; await tick();
+      assert(getComputedStyle(button).backgroundColor !== light, '未加载示例主题时，CSS 暗色失效');
+      root.style.setProperty('--primary', '#123456');
+      assert(getComputedStyle(button).backgroundColor === 'rgb(18, 52, 86)', '组件覆盖了用户的 CSS 变量');
+    } finally {
+      if (previous) root.style.setProperty('--primary', previous); else root.style.removeProperty('--primary');
+      root.dataset.theme = 'light';
+    }
+  });
   await run('原生按钮、加载状态与内容尺寸',async()=>{let count=0;const c=add('Button',{label:'保存',onClick:()=>count++});c.element.click();assert(count===1,'原生点击丢失');c.update({loading:true});c.element.click();assert(count===1,'加载中仍触发业务回调');assert(c.element.textContent.includes('保存'),'加载时丢失原内容');});
   await run('原生按钮各变体的纯图标保持居中，动态文字与加载不挤偏内容', async () => {
     const centered = (node, button, label) => {
@@ -195,7 +212,7 @@ document.querySelector('#run').onclick=async()=>{
     ]) });
     app.mount(fixture);
     for (const mode of ['light', 'dark']) {
-      MyUI.applyTheme({ mode });
+      document.documentElement.dataset.theme = mode;
       await tick();
       assert(fixture.querySelector('.my-segmented').getBoundingClientRect().height < 60, mode + ' 分段高度错误');
       assert(fixture.querySelector('.my-list-row').getBoundingClientRect().height < 100, mode + ' 列表高度错误');
@@ -236,7 +253,7 @@ document.querySelector('#run').onclick=async()=>{
     assert(mask.includes('www.w3.org/2000/svg') && !mask.includes('my-w3'), 'Tooltip 背景遮罩命名空间损坏');
     assert(panel.querySelector('[role="tooltip"]').textContent === '完整的数值提示', 'Tooltip 文字丢失');
     for (const mode of ['light', 'dark']) {
-      MyUI.applyTheme({ mode }); await tick();
+      document.documentElement.dataset.theme = mode; await tick();
       const color = getComputedStyle(panel.querySelector('[role="tooltip"]')).color;
       assert(color === (mode === 'dark' ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)'), mode + ' Tooltip 文字未反色');
     }

@@ -13,7 +13,7 @@
 <script type="module">
 import { createApp, defineComponent, h, nextTick, ref } from 'vue'
 import { Button, Floating, Input, Menu, Popup, Select, popup } from '/vue/index.ts'
-import { applyTheme } from '/src/theme/index.ts'
+import { applyTheme } from '/src/theme/index.js'
 
 applyTheme({ mode: 'light' })
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms))

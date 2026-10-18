@@ -62,10 +62,10 @@
 </main>
 <script>
   document.addEventListener('DOMContentLoaded', () => {
-    const { mount, create, popup, applyTheme } = MyUI;
+    const { mount, create, popup } = MyUI;
     let dark = false;
-    applyTheme({ mode: 'light' });
-    document.querySelector('#theme').onclick = () => { dark = !dark; applyTheme({ mode: dark ? 'dark' : 'light' }); };
+    document.documentElement.dataset.theme = 'light';
+    document.querySelector('#theme').onclick = () => { dark = !dark; document.documentElement.dataset.theme = dark ? 'dark' : 'light'; };
     document.querySelector('#save').onclick = () => { document.querySelector('#notice').textContent = '修改已在当前页面保存'; };
     mount('#nickname', 'Input', { label: '显示名称', value: '小蓝同学', clearable: true, icon: 'user' });
     const cities = [{ value:'hangzhou',label:'杭州',description:'西湖与日常的好风景' },{ value:'shanghai',label:'上海',description:'在城市中发现灵感' },{ value:'chengdu',label:'成都',description:'慢一点，也自在一点' }];

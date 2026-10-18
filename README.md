@@ -1,19 +1,19 @@
 # my-ui
 
-可以直接复制、本地修改的组件源码。原生 HTML 与 Vue 共用同一套样式、交互、主题、定位与动画；不发布 npm 包。
+可以直接复制、本地修改的组件源码。原生 HTML 与 Vue 共用同一套样式、交互、定位与动画；不发布 npm 包。组件只提供 CSS 默认明暗样式，展示页的配色预设和主题编辑器独立于组件库。
 
 ```text
 lib/
   my-ui.css           所有组件样式，按组件分节
   my-ui.js            原生 DOM 交互核心，无框架依赖，无需编译
   my-ui.d.ts          原生 API 类型
-  theme.d.ts          主题类型
 vue/
   index.ts            Vue 组件入口
   adapter.ts          props、v-model、事件、插槽和生命周期适配
   popup.ts            Vue 内容渲染适配
   components/         42 个组件的类型与薄封装，无组件样式
 src/                  Vue 示例页面与演示业务
+  theme/              示例专用的配色预设、主题编辑与类型
 native.html           不加载 Vue、可直接打开的 HTML 示例
 ```
 
@@ -122,15 +122,9 @@ Vue 从 `./my-ui/vue` 导入 `popup`，`content` 返回 `h()` 构建的 Vue 内�
 
 `my-ui.js` 按主题、DOM 基础、输入与选择、列表、浮层、菜单、滑块和触摸手势分节。修改公共行为只改这一个文件，Vue 与 HTML 同时生效。
 
-```js
-MyUI.applyTheme({
-  mode: 'system', backdropBlur: true, fontWeight: 400,
-  light: { color: 'blue', style: 'soft' },
-  dark: { color: 'teal', style: 'clear' },
-});
-```
+明暗样式通过 `document.documentElement.dataset.theme = 'dark'` 切换，浅色使用 `'light'`。颜色、阴影、字重和背景模糊都可直接覆写 CSS 变量，组件 JS 不会应用配色或覆盖这些值。
 
-浅色和暗色数据独立；主色不会染色页面灰阶。内置 14 组精选主色、3 组层级风格和按场景区分的阴影，主题设置可继续调整。Vue 入口也导出同名主题 API。
+展示页的 14 组主色、3 组层级风格、系统外观监听与主题编辑逻辑位于 `src/theme/index.js`，由 `src/demo/ThemeSettings.vue` 使用；它们不属于 `MyUI` 或 Vue 组件入口。用户只复制 `lib/` 和 `vue/` 时，不会带入这套示例配置。
 
 ## 本地展示与验证
 

@@ -1,8 +1,6 @@
 import '../lib/my-ui.css'
 
 import '../lib/my-ui.js'
-export const { applyTheme, createTheme, contrastRatio, themeColors, themeStyles, defaultThemeOptions } = globalThis.MyUI
-export type { ThemeOptions, ThemeData, ThemeLayers, ThemeMode, ThemePreference, ThemeColorId, ThemeStyleId, ThemeColorPreset } from '../lib/theme'
 
 /** my-ui 的 Vue 薄封装；样式和交互统一维护在 lib/my-ui.css 与 lib/my-ui.js。 */
 export { default as Icon } from './components/Icon.vue'

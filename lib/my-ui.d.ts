@@ -89,12 +89,6 @@ export interface MyUIApi {
     /** 立即释放当前应用的所有 API 弹层与等待结果。 */
     closeAll(): void;
   };
-  applyTheme: typeof import("./theme").applyTheme;
-  createTheme: typeof import("./theme").createTheme;
-  contrastRatio: (first: string, second: string) => number;
-  themeColors: typeof import("./theme").themeColors;
-  themeStyles: typeof import("./theme").themeStyles;
-  defaultThemeOptions: typeof import("./theme").defaultThemeOptions;
   utils: Record<string, (...args: any[]) => any>;
 }
 declare global {

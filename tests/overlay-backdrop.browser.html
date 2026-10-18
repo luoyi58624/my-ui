@@ -15,7 +15,8 @@
 <div id="app"></div>
 <script type="module">
 import { createApp, h, nextTick, ref } from 'vue'
-import { Button, Input, Popup, popup, applyTheme } from '/vue/index.ts'
+import { Button, Input, Popup, popup } from '/vue/index.ts'
+import { applyTheme } from '/src/theme/index.js'
 import SelectionPanel from '/src/demo/SelectionPanel.vue'
 
 applyTheme({ mode: 'dark', backdropBlur: true })
