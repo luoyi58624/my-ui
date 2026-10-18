@@ -1627,7 +1627,8 @@ input[data-my-slider]:disabled {
 .my-group-body[data-my-cell-group] > * {
   position: relative;
 }
-.my-group-body[data-my-cell-group] > :not(:first-child)::before {
+/* 插槽占位使用 display: contents，分割线由内部 ListRow 绘制，不能重复挂到占位上。 */
+.my-group-body[data-my-cell-group] > :not(:first-child, .my-row-slot)::before {
   content: "";
   position: absolute;
   top: 0;
@@ -1902,6 +1903,10 @@ button[data-my-segmented]:disabled {
   grid-template-columns: repeat(var(--segment-count, 3), minmax(0, 1fr));
 }
 .my-segmented button[data-my-segmented] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   border: none;
   background: none;
   color: var(--text-secondary);
@@ -3013,7 +3018,7 @@ h3[data-my-drawer] {
     light-dark(rgb(97 97 97 / 0.9), rgb(255 255 255 / 0.9))
   );
   mask:
-    url("data:image/svg+xml,%3Csvg xmlns=%22http://www.my-w3.my-org/2000/svg%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 rx=%224%22/%3E%3C/svg%3E")
+    url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 rx=%224%22/%3E%3C/svg%3E")
       center / calc(100% - 16px) calc(100% - 16px) no-repeat,
     var(--_tooltip-arrow-mask, linear-gradient(transparent, transparent))
       var(--_tooltip-arrow-position, 0 0) / var(--_tooltip-arrow-size, 0 0)

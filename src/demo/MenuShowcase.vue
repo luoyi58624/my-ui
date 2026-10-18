@@ -82,7 +82,7 @@ const cascadeActions: MenuOption[] = [
 .context-area { display: flex; align-items: center; gap: 12px; padding: 16px; border: 1px solid var(--border); border-radius: 18px; min-width: 0; user-select: none; }
 .context-area > svg { width: 24px; height: 24px; flex-shrink: 0; color: var(--primary); }
 .context-area > div { min-width: 0; }
-.context-area > div:not(.menu-host) { flex: 1; }
+.context-area > div:not(.my-menu-host) { flex: 1; }
 .context-area strong, .context-area span { display: block; }
 .context-area span { margin-top: 4px; }
 .menu-note { margin: 16px 0 0; }

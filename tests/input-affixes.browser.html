@@ -36,7 +36,7 @@ createApp({ setup() {
       })
       await check('清空位于右侧操作组左边，眼睛靠右，热区填满内部高度', async () => {
         const box = rect(field('password')), buttons = [...field('password').querySelectorAll('button')], border = parseFloat(getComputedStyle(field('password')).borderTopWidth)
-        assert(buttons.length === 2 && buttons[0].classList.contains('clear-input') && buttons[1].classList.contains('password-toggle'), '密码操作顺序错误')
+        assert(buttons.length === 2 && buttons[0].classList.contains('my-clear-input') && buttons[1].classList.contains('my-password-toggle'), '密码操作顺序错误')
         near(rect(buttons[0]).right, rect(buttons[1]).left, '操作区域之间有空洞')
         for (const button of buttons) {
           const b = rect(button)
@@ -47,15 +47,15 @@ createApp({ setup() {
       })
       await check('自定义高度与 6px 边距仍维持圆形反馈及对称对齐', async () => {
         compact.value = true; await flush()
-        const box = rect(field('password')), button = field('password').querySelector('.password-toggle'), visual = button.querySelector(".my-input-action-visual"), icon = button.querySelector('svg'), border = parseFloat(getComputedStyle(field('password')).borderRightWidth)
+        const box = rect(field('password')), button = field('password').querySelector('.my-password-toggle'), visual = button.querySelector(".my-input-action-visual"), icon = button.querySelector('svg'), border = parseFloat(getComputedStyle(field('password')).borderRightWidth)
         near(box.height, 56, '自定义高度失效'); near(rect(button).height, box.height - border * 2, '热区没有随高度扩展')
         near(rect(visual).width, 24, '反馈宽度'); near(rect(visual).height, 24, '反馈变成椭圆'); near(box.right - border - rect(icon).right, 6, '自定义内边距叠加')
         compact.value = false; await flush()
       })
       await check('显隐和清空各执行一次，清空后眼睛保持原位', async () => {
-        const eye = field('password').querySelector('.password-toggle'), eyeLeft = rect(eye).left
+        const eye = field('password').querySelector('.my-password-toggle'), eyeLeft = rect(eye).left
         eye.click(); await flush(); assert(el('#password').type === 'text', '眼睛未切换密码')
-        field('password').querySelector('.clear-input').click(); await flush()
+        field('password').querySelector('.my-clear-input').click(); await flush()
         assert(password.value === '' && updates === 1 && clicks === 0 && document.activeElement === el('#password'), '清空触发重复更新或误激活输入')
         assert(field('password').querySelectorAll('button').length === 1, '保留了空按钮')
         near(rect(eye).left, eyeLeft, '清空后眼睛发生跳位')
@@ -74,18 +74,18 @@ createApp({ setup() {
       })
       await check('禁用禁止激活与显隐，只读保留聚焦且移除清空', async () => {
         disabled.value = true; await flush(); const before = password.value
-        field('password').click(); field('password').querySelector('.password-toggle').click(); await flush()
+        field('password').click(); field('password').querySelector('.my-password-toggle').click(); await flush()
         assert(el('#password').disabled && el('#password').type === 'password' && password.value === before, '禁用仍可操作')
         disabled.value = false; readonly.value = true; await flush()
         field('password').click(); await flush()
-        assert(document.activeElement === el('#password') && !field('password').querySelector('.clear-input'), '只读不能聚焦或仍能清空')
+        assert(document.activeElement === el('#password') && !field('password').querySelector('.my-clear-input'), '只读不能聚焦或仍能清空')
         readonly.value = false; await flush()
       })
       await check('展开箭头仅作装饰，整行激活在已聚焦时也能重开菜单', async () => {
-        const indicator = field('city').querySelector(".my-combobox-indicator"), area = indicator.closest(".my-input-suffix")
+        const indicator = field('city').querySelector(".my-input-suffix svg"), area = indicator.closest(".my-input-suffix")
         const interactive = indicator.closest('button, [tabindex], [role=button]')
         assert((!interactive || !field('city').contains(interactive)) && indicator.getAttribute('aria-hidden') === 'true', '箭头仍是独立控件')
-        assert(field('city').querySelectorAll('button').length === 1 && field('city').lastElementChild.firstElementChild.classList.contains('clear-input'), '清空未位于操作组左侧')
+        assert(field('city').querySelectorAll('button').length === 1 && field('city').lastElementChild.firstElementChild.classList.contains('my-clear-input'), '清空未位于操作组左侧')
         for (let i = 0; i < 2; i++) {
           area.click(); await flush(); assert(el('#city').getAttribute('aria-expanded') === 'true' && document.activeElement === el('#city'), '装饰区域未激活输入框')
           el('#city').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })); await flush()
