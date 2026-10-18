@@ -173,11 +173,16 @@ svg[data-my-icon] {
 .my-underlink[data-my-button] {
   position: relative;
 }
-.my-button-content[data-my-button] {
+.my-button-content[data-my-button],
+.my-button-label[data-my-button] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: inherit;
+}
+/* 空文字不占图标间距；插槽内的图标与文字共用居中布局，避免 SVG 基线偏移。 */
+.my-button-label[data-my-button]:empty {
+  display: none;
 }
 .my-is-loading[data-my-button] {
   cursor: progress;
