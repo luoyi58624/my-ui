@@ -3,7 +3,7 @@ import { useNative } from '../adapter'
 
 defineOptions({ inheritAttrs: false })
 const props = defineProps<{
-  /** 表单项的可见标签。 */
+  /** 表单项的可见标签；竖排标题只提供辅助名称，不通过点击激活控件。 */
   label: string
   /** 控件标识，不传时自动生成并关联标签。 */
   id?: string

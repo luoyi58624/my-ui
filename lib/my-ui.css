@@ -1142,11 +1142,6 @@ button[data-my-select]:disabled {
   height: 18px;
   flex-shrink: 0;
   color: var(--text-secondary);
-  transform: rotate(90deg);
-  transition: transform 0.22s cubic-bezier(0.2, 0.78, 0.22, 1);
-}
-.my-select-box.my-open .my-select-chevron[data-my-select] {
-  transform: rotate(-90deg);
 }
 @media (hover: hover) and (pointer: fine) {
   .my-select-trigger[data-my-select]:not(:disabled):hover {

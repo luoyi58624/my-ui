@@ -5,7 +5,7 @@
 <main><h1>原生核心与 Vue 适配</h1><button id="run" disabled>运行定向回归</button><div id="fixture"></div><pre id="result">尚未运行</pre></main>
 <script type="module">
 import {createApp,h,ref,nextTick} from 'vue'
-import {Icon,Button,Input,Form,FormField,Radio,RadioGroup,Checkbox,CheckboxGroup,TagGroup,Menu,Dialog,Popup,popup,Tabs,Collapse,CollapseItem,Segmented,ListRow,Progress} from '/vue/index.ts'
+import {Icon,Button,Input,Textarea,Select,Combobox,Form,FormField,Radio,RadioGroup,Checkbox,CheckboxGroup,TagGroup,Menu,Dialog,Popup,popup,Tabs,Collapse,CollapseItem,Segmented,ListRow,Progress} from '/vue/index.ts'
 const {create}=MyUI,fixture=document.querySelector('#fixture'),results=[];
 let owned=[],app;
 const add=(name,props={},slots={})=>{const c=create(name,props,{slots});owned.push(c);fixture.append(c.element);return c;};
@@ -78,6 +78,69 @@ document.querySelector('#run').onclick=async()=>{
     assert(!c.element.querySelector('.my-password-toggle')?.getClientRects().length, '隐藏按钮仍可见');
   });
   await run('表单错误不撑高，文字与辅助关系正确',async()=>{const c=add('Input',{label:'邮箱',value:'x',hint:'输入说明'});const before=c.element.getBoundingClientRect().height;c.update({error:'这是一个需要隐藏超出部分的很长错误说明'.repeat(8)});assert(Math.abs(c.element.getBoundingClientRect().height-before)<.5,'错误撑高表单');const input=c.element.querySelector('input'),error=document.getElementById(input.getAttribute('aria-describedby'));assert(error?.getAttribute('role')==='alert'&&getComputedStyle(error).position==='absolute','错误关系或定位失效');});
+  await run('竖排标题不激活输入、文本域或搜索选择，控件仍有辅助名称且可正常使用', async () => {
+    for (const name of ['Input', 'Textarea', 'Combobox']) {
+      const c = add(name, { label: name + ' 标题', value: '', options: [{ value: 'a', label: '选项甲' }] });
+      await tick();
+      const label = c.element.querySelector('.my-field-label'), input = c.element.querySelector('input:not([type="hidden"]),textarea');
+      let clicks = 0;
+      input.addEventListener('click', () => clicks++);
+      label.click(); await tick();
+      assert(clicks === 0 && document.activeElement !== input, name + ' 标题仍激活控件');
+      assert(!label.hasAttribute('for') && input.getAttribute('aria-labelledby') === label.id, name + ' 辅助名称关联丢失');
+      assert(input.getAttribute('aria-expanded') !== 'true', name + ' 标题展开了选项');
+      c.exposed.focus();
+      assert(document.activeElement === input, name + ' 无法直接聚焦');
+      input.click();
+      assert(clicks === 1 && (name !== 'Combobox' || input.getAttribute('aria-expanded') === 'true'), name + ' 输入区无法正常激活');
+      c.exposed.close?.();
+    }
+    const slider = add('Slider', { label: '显示强度', value: 50, valueLabelDisplay: 'off' });
+    let clicks = 0;
+    slider.element.querySelector('input').addEventListener('click', () => clicks++);
+    slider.element.querySelector('.my-range-heading > :first-child').click();
+    assert(clicks === 0 && slider.element.querySelector('input').getAttribute('aria-label') === '显示强度', '滑块竖排标题仍激活控件或丢失名称');
+  });
+  await run('Select 上下箭头不旋转，标题不展开，实际按钮与键盘焦点仍可用', async () => {
+    const c = add('Select', { label: '内容分类', value: 'a', options: [{ value: 'a', label: '效率优先' }, { value: 'b', label: '舒适优先' }] });
+    const label = c.element.querySelector('.my-field-label'), button = c.element.querySelector('.my-select-trigger'), arrow = c.element.querySelector('.my-select-chevron');
+    await tick();
+    label.click(); await tick();
+    assert(button.getAttribute('aria-expanded') === 'false' && document.activeElement !== button, 'Select 标题仍激活按钮');
+    assert(button.getAttribute('aria-labelledby') === label.id, 'Select 丢失标题辅助名称');
+    assert(getComputedStyle(arrow).transform === 'none', '上下箭头被旋转成横向');
+    button.focus(); button.click(); await tick();
+    assert(button.getAttribute('aria-expanded') === 'true' && visible('[role="listbox"]'), 'Select 按钮未同步菜单展开状态');
+    assert(getComputedStyle(arrow).transform === 'none', '展开后上下箭头被旋转成横向');
+  });
+  await run('Vue 布局切换同步标题点击行为，横排标签与复选文字保留原生关联', async () => {
+    const layout = ref('vertical');
+    app = createApp({ setup: () => () => h('div', [
+      h(Form, { layout: layout.value }, () => [
+        h(Input, { id: 'title-input', label: '名称', modelValue: '' }),
+        h(Textarea, { label: '简介', modelValue: '' }),
+        h(Combobox, { label: '目的地', modelValue: '', options: [{ value: 'a', label: '杭州' }] }),
+        h(Select, { label: '分类', modelValue: 'a', options: [{ value: 'a', label: '效率优先' }] }),
+      ]),
+      h(Checkbox, { label: '允许同步', modelValue: false }),
+    ]) });
+    app.mount(fixture); await tick();
+    let clicks = 0;
+    fixture.querySelectorAll('input,textarea,.my-select-trigger').forEach(input => input.addEventListener('click', () => clicks++));
+    const labels = [...fixture.querySelectorAll('.my-field-label')];
+    labels.forEach(label => label.click()); await tick();
+    assert(clicks === 0 && !fixture.querySelector('[aria-expanded="true"]'), 'Vue 竖排标题激活了控件');
+    for (const value of ['horizontal', 'inline', 'vertical']) {
+      layout.value = value; await tick();
+      const input = fixture.querySelector('#title-input'), label = document.getElementById(input.getAttribute('aria-labelledby'));
+      const previous = clicks;
+      label.click();
+      assert(clicks === previous + (value === 'vertical' ? 0 : 1), value + ' 标题点击行为未同步');
+    }
+    const choice = fixture.querySelector('.my-choice-control');
+    choice.querySelector('.my-choice-label').click();
+    assert(choice.querySelector('input').checked, '复选框文字不再可以切换选中态');
+  });
   await run('独立 Radio、Checkbox 和分组只更新对应值',async()=>{let value;const c=add('RadioGroup',{label:'方案',value:'one',options:[{value:'one',label:'一'},{value:'two',label:'二'}],onChange:v=>value=v});await tick();const inputs=c.element.querySelectorAll('input');assert(inputs[0].checked&&!inputs[1].checked,'初始单选错误');assert(inputs[0].name===inputs[1].name,'原生组名称不一致');inputs[1].click();assert(value==='two'&&inputs[1].checked&&!inputs[0].checked,'单选状态未同步');const checkbox=add('Checkbox',{value:false,label:'保存',indeterminate:true,onChange:v=>value=v});checkbox.element.querySelector('input').click();assert(value===true&&!checkbox.element.querySelector('input').indeterminate,'复选或半选清理失败');});
   await run('Tag 单选、多选状态保留类型',async()=>{let value;const c=add('TagGroup',{value:[],label:'兴趣',options:[{value:'a',label:'甲'},{value:'b',label:'乙'}],onChange:v=>value=v});c.element.querySelectorAll('[role="button"],button')[0].click();assert(Array.isArray(value)&&value[0]==='a','标签多选失败');});
   await run('Slider 限制刻度、范围、缓冲三段及键盘',async()=>{let value;const c=add('Slider',{label:'温度',value:20,min:0,max:100,step:null,marks:[{value:0},{value:20},{value:37},{value:100}],buffer:80,onChange:v=>value=v});const input=c.element.querySelector('input');input.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true,cancelable:true}));assert(value===37&&Number(input.value)===37,'指定刻度键盘失效');const range=add('Slider',{label:'范围',value:[20,70],marks:true,step:10});assert(range.element.querySelectorAll('input').length===2,'范围滑块缺失');assert(c.element.querySelector('.my-progress-buffer')&&!c.element.querySelector('.my-progress-buffer').hidden,'缓冲层缺失');});
