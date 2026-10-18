@@ -30,6 +30,14 @@ test('自定义刻度仅负责展示，数值步长仍生效；空限制集与�
   assert.equal(sliderScale(20, -10, 1, true).disabled, true)
   assert.equal(sliderScale(0, 100, -1, false).normalize(37.4), 37)
 })
+
+test('相邻刻度按中点对称切换，恰好 50% 与普通步长一样选择下一档', () => {
+  const scale = sliderScale(0, 100, null, [{ value: 0 }, { value: 20 }, { value: 37 }, { value: 100 }])
+  for (const [raw, expected] of [[9.99, 0], [10, 20], [10.01, 20], [28.49, 20], [28.5, 37], [28.51, 37], [68.49, 37], [68.5, 100], [68.51, 100]]) {
+    assert.equal(scale.normalize(raw), expected)
+  }
+  assert.equal(sliderScale(0, 100, 10, true).normalize(25), 30)
+})
 test('极小步长限制自动绘制密度，仍按真实步长选值', () => {
   const scale = sliderScale(-.00000005, .0000001, .00000001, true)
   assert.equal(scale.normalize(.000000043), .00000004)

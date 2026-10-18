@@ -18,11 +18,15 @@ const halo=(root,index=0)=>all(root+" .my-slider-halo")[index]
 async function frames(element,action){action();await nextTick();const samples=[],start=performance.now();do{await new Promise(resolve=>requestAnimationFrame(resolve));const s=getComputedStyle(element);samples.push({opacity:Number(s.opacity),width:element.getBoundingClientRect().width})}while(performance.now()-start<210);return samples}
 const shown=(root,index=0)=>host(root,index)?.classList.contains("my-ready")&&host(root,index)?.getAttribute('aria-hidden')==='false'
 const pt=(root,fraction)=>{const r=el(root+" .my-slider-track").getBoundingClientRect();return{x:r.left+r.width*fraction,y:r.top+r.height/2}}
+function follows(root,fraction,index=0){
+  const point=pt(root,fraction),anchor=all(root+' .my-slider-thumb-anchor')[index].getBoundingClientRect(),circle=halo(root,index).getBoundingClientRect(),fill=el(root+' .my-progress-fill').getBoundingClientRect(),control=input(root,index),r=control.getBoundingClientRect(),size=all(root+' .my-slider-thumb-anchor')[index].getBoundingClientRect().width
+  near(anchor.x+anchor.width/2,point.x,'提示锚点未跟手');near(circle.x+circle.width/2,point.x,'光圈未跟手');near(r.left+size/2+(r.width-size)*(Number(control.value)-Number(control.min))/(Number(control.max)-Number(control.min)),point.x,'原生圆块未跟手');near(all(root+' input').length>1&&index===0?fill.left:fill.right,point.x,'填充端点未跟手')
+}
 function pointer(element,type,point,pointerType='mouse'){element.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerId:71,pointerType,isPrimary:true,button:0,buttons:type==='pointerup'||type==='pointercancel'?0:1,clientX:point.x,clientY:point.y}))}
 function key(element,name){const e=new KeyboardEvent('keydown',{key:name,bubbles:true,cancelable:true});element.dispatchEvent(e);return e}
 function nativeValue(root,value,index=0){const e=input(root,index);e.value=String(value);e.dispatchEvent(new Event('input',{bubbles:true}))}
 async function rangeDrag(from,to,type='mouse',end='pointerup'){pointer(el("#range .my-slider-control"),'pointerdown',pt('#range',from),type);await flush();pointer(document,'pointermove',pt('#range',to),type);await flush();pointer(document,end,pt('#range',to),type);await flush()}
-const described=button=>document.getElementById(button.getAttribute('aria-describedby').split(' ').find(id=>id.startsWith('tooltip-')))
+const described=button=>(button.getAttribute('aria-describedby')??'').split(/\s+/).map(id=>document.getElementById(id)).find(node=>node?.getAttribute('role')==='tooltip')
 
 createApp({setup(){
   const value=ref(50),interval=ref([20,70]),restricted=ref(20),marks=ref([{value:0,label:'0°C'},{value:20,label:'20°C'},{value:37,label:'37°C'},{value:100,label:'100°C'}])
@@ -37,10 +41,36 @@ createApp({setup(){
         assert(all("#single .my-slider-marks > span").length===11,'自动刻度数量错误');assert(all("#single .my-slider-marks > .my-selected").length===6,'选中段刻度错误');assert(getComputedStyle(el("#single .my-slider-marks .my-selected")).backgroundColor!==getComputedStyle(all("#single .my-slider-marks > span").at(-1)).backgroundColor,'刻度没有反色')
       })
       await check('自定义 marks 按数值定位文字，零值标签保留，默认端点文字不重复',async()=>{
-        assert(el("#restricted .my-slider-mark-labels").textContent==='0°C20°C37°C100°C','刻度文字错误');assert(!el("#restricted .my-range-scale"),'重复显示默认端点文字');const r=el("#restricted .my-slider-track").getBoundingClientRect(),dot=all("#restricted .my-slider-marks > span")[2].getBoundingClientRect();near(dot.x+dot.width/2,r.x+r.width*.37,'非等距刻度位置')
+        assert(el("#restricted .my-slider-mark-labels").textContent==='0°C20°C37°C100°C','刻度文字错误');assert(getComputedStyle(el("#restricted .my-range-scale")).display==='none','重复显示默认端点文字');const r=el("#restricted .my-slider-track").getBoundingClientRect(),dot=all("#restricted .my-slider-marks > span")[2].getBoundingClientRect();near(dot.x+dot.width/2,r.x+r.width*.37,'非等距刻度位置')
       })
       await check('step=null 只吸附到明确给出的刻度',async()=>{
-        nativeValue('#restricted',35);await flush();assert(restricted.value===37&&input('#restricted').value==='37','未吸附 37');nativeValue('#restricted',21);await flush();assert(restricted.value===20,'未吸附 20')
+        nativeValue('#restricted',35);await flush();assert(restricted.value===37&&input('#restricted').value==='37','未吸附 37');nativeValue('#restricted',21);await flush();assert(restricted.value===20&&input('#restricted').value==='20','未吸附 20');nativeValue('#restricted',27.5);await flush();assert(restricted.value===20&&input('#restricted').value==='20','同一档位内原生圆块仍停在错误位置');follows('#restricted',.2)
+      })
+      await check('同一档位内连续拖动，圆块、光圈、进度与提示跟手且不重复更新绑定值',async()=>{
+        restricted.value=20;await flush();const control=el('#restricted .my-slider-control'),updates=[],changed=event=>updates.push(event.detail);el('#restricted').addEventListener('my:change',changed)
+        try{pointer(control,'pointerdown',pt('#restricted',.2));pointer(document,'pointermove',pt('#restricted',.275));await flush();assert(restricted.value===20&&input('#restricted').getAttribute('aria-valuenow')==='20'&&tip('#restricted').textContent==='20°C','显示值未保持在 20');follows('#restricted',.275);const a=host('#restricted').querySelector('.my-tooltip-arrow').getBoundingClientRect();near(a.x+a.width/2,pt('#restricted',.275).x,'提示未跟随原生圆块');pointer(document,'pointerup',pt('#restricted',.275));await flush();follows('#restricted',.2);assert(input('#restricted').value==='20'&&updates.length===0,'松开没有吸附或重复发出相同值')}
+        finally{el('#restricted').removeEventListener('my:change',changed)}
+      })
+      await check('非等距刻度按各自中点实时切档，向前和向后规则相同',async()=>{
+        const markNodes=all('#restricted .my-slider-marks > span'),labelNodes=all('#restricted .my-slider-mark-labels > span');pointer(el('#restricted .my-slider-control'),'pointerdown',pt('#restricted',.2))
+        for(const [fraction,value] of [[.284,20],[.286,37],[.684,37],[.686,100],[.684,37],[.286,37],[.284,20]]){pointer(document,'pointermove',pt('#restricted',fraction));await flush();assert(restricted.value===value,'相邻中点切档错误 '+fraction);follows('#restricted',fraction)}
+        assert(markNodes.every((node,index)=>node===all('#restricted .my-slider-marks > span')[index])&&labelNodes.every((node,index)=>node===all('#restricted .my-slider-mark-labels > span')[index]),'连续拖动重建刻度元素')
+        pointer(document,'pointerup',pt('#restricted',.284));await flush();follows('#restricted',.2)
+      })
+      await check('普通步长也连续跟手，松开恢复 step 与键盘取值',async()=>{
+        value.value=50;await flush();pointer(el('#single .my-slider-control'),'pointerdown',pt('#single',.5));pointer(document,'pointermove',pt('#single',.54));await flush();assert(value.value===50&&input('#single').step==='any','拖动步长未分离');follows('#single',.54);pointer(document,'pointermove',pt('#single',.56));await flush();assert(value.value===60,'跨中点未更新');follows('#single',.56);pointer(document,'pointerup',pt('#single',.56));await flush();follows('#single',.6);assert(input('#single').step==='10','松开未恢复原生步长');value.value=50;await flush()
+      })
+      await check('范围端点交叉时切换上下限，圆块、填充和焦点连续跟随当前手势',async()=>{
+        interval.value=[20,70];await flush();const control=el('#range .my-slider-control');pointer(control,'pointerdown',pt('#range',.2));pointer(document,'pointermove',pt('#range',.21));await flush();assert(interval.value.join(',')==='20,70','未跨中点却更新范围');follows('#range',.21);pointer(document,'pointermove',pt('#range',.23));await flush();assert(interval.value.join(',')==='25,70','范围跨中点未更新');follows('#range',.23);pointer(document,'pointerup',pt('#range',.23));await flush();follows('#range',.25);follows('#range',.7,1);pointer(control,'pointerdown',pt('#range',.25));pointer(document,'pointermove',pt('#range',.9));await flush();assert(interval.value.join(',')==='70,90'&&document.activeElement===input('#range',1),'越过上限后未切换为终点');follows('#range',.9,1);follows('#range',.7);pointer(document,'pointermove',pt('#range',.51));await flush();assert(interval.value.join(',')==='50,70'&&document.activeElement===input('#range'),'反向越过下限后未切换为起点');follows('#range',.51);pointer(document,'pointerup',pt('#range',.51));await flush();follows('#range',.5);interval.value=[20,70];await flush()
+      })
+      await check('触摸交叉后取消仍保留有序范围，圆块吸附到当前的新职责',async()=>{
+        interval.value=[20,70];await flush();pointer(el('#range .my-slider-control'),'pointerdown',pt('#range',.2),'touch');pointer(document,'pointermove',pt('#range',.81),'touch');await flush();assert(interval.value.join(',')==='70,80','触摸未切换上下限');follows('#range',.81,1);pointer(document,'pointercancel',pt('#range',.81),'touch');await flush();follows('#range',.8,1);follows('#range',.7);pointer(document,'pointermove',pt('#range',.1),'touch');assert(interval.value.join(',')==='70,80','取消后仍响应移动');interval.value=[20,70];await flush()
+      })
+      await check('触摸取消与窗口失焦都吸附到已更新刻度，迟到移动不再生效',async()=>{
+        restricted.value=20;await flush();const control=el('#restricted .my-slider-control');pointer(control,'pointerdown',pt('#restricted',.2),'touch');pointer(document,'pointermove',pt('#restricted',.3),'touch');await flush();assert(restricted.value===37,'触摸没有实时更新刻度');follows('#restricted',.3);pointer(document,'pointercancel',pt('#restricted',.3),'touch');await flush();follows('#restricted',.37);pointer(document,'pointermove',pt('#restricted',.7),'touch');await flush();assert(restricted.value===37,'取消后仍更新');pointer(control,'pointerdown',pt('#restricted',.37));pointer(document,'pointermove',pt('#restricted',.31));window.dispatchEvent(new Event('blur'));await flush();follows('#restricted',.37);restricted.value=20;await flush()
+      })
+      await check('拖出轨道两端会钳制位置与取值，不能出现离轨圆块',async()=>{
+        pointer(el('#restricted .my-slider-control'),'pointerdown',pt('#restricted',.2));for(const [fraction,value]of[[-.2,0],[1.2,100]]){pointer(document,'pointermove',pt('#restricted',fraction));await flush();assert(restricted.value===value,'轨道外值未钳制');follows('#restricted',value/100)}pointer(document,'pointerup',pt('#restricted',1.2));restricted.value=20;await flush()
       })
       await check('限定刻度的方向键、Home、End 使用相同的取值集合',async()=>{
         assert(key(input('#restricted'),'ArrowRight').defaultPrevented,'方向键未接管');await flush();assert(restricted.value===37,'20 没有进入 37');key(input('#restricted'),'ArrowLeft');await flush();assert(restricted.value===20,'37 没有返回 20');key(input('#restricted'),'End');await flush();assert(restricted.value===100,'End 错误');key(input('#restricted'),'Home');await flush();assert(restricted.value===0,'Home 错误');input('#restricted').blur()
@@ -48,14 +78,19 @@ createApp({setup(){
       await check('范围绑定生成两个独立原生滑块和有名称的分组',async()=>{
         assert(all('#range input').length===2&&all('#range input').every(e=>e.type==='range'),'不是双原生滑块');assert(el('#range').getAttribute('role')==='group','没有范围分组');assert(input('#range').getAttribute('aria-label').includes('起始值')&&input('#range',1).getAttribute('aria-label').includes('结束值'),'端点没有独立名称')
       })
-      await check('范围轨道仅填充起始到结束段，ARIA 边界跟随另一个端点',async()=>{
-        const track=el("#range .my-slider-track").getBoundingClientRect(),fill=el("#range .my-progress-fill").getBoundingClientRect();near(fill.x-track.x,track.width*.2,'填充起点');near(fill.width,track.width*.5,'填充长度');assert(input('#range').getAttribute('aria-valuemax')==='70'&&input('#range',1).getAttribute('aria-valuemin')==='20','端点边界没有关联')
+      await check('范围轨道仅填充起始到结束段，两个端点均可使用完整数值区间',async()=>{
+        const track=el("#range .my-slider-track").getBoundingClientRect(),fill=el("#range .my-progress-fill").getBoundingClientRect();near(fill.x-track.x,track.width*.2,'填充起点');near(fill.width,track.width*.5,'填充长度');assert(input('#range').getAttribute('aria-valuemax')==='100'&&input('#range',1).getAttribute('aria-valuemin')==='0','上下限仍阻止端点交叉')
       })
       await check('更新范围返回新数组，原数组不被修改',async()=>{
         const old=interval.value;nativeValue('#range',40);await flush();assert(interval.value!==old&&old.join(',')==='20,70'&&interval.value.join(',')==='40,70','范围更新修改原数组')
       })
-      await check('两个端点不能穿越，原生输入值也恢复到合法边界',async()=>{
-        nativeValue('#range',95);await flush();assert(interval.value.join(',')==='70,70'&&input('#range').value==='70','下端点穿越');nativeValue('#range',0,1);await flush();assert(interval.value.join(',')==='70,70'&&input('#range',1).value==='70','上端点穿越');interval.value=[20,70];await flush()
+      await check('原生输入交叉会切换上下限并保持新数组有序',async()=>{
+        const old=interval.value;nativeValue('#range',95);await flush();assert(interval.value.join(',')==='70,95'&&input('#range',1).value==='95'&&old.join(',')==='40,70','下端点未切换为上限或修改了旧数组');nativeValue('#range',0,1);await flush();assert(interval.value.join(',')==='0,70'&&input('#range').value==='0','上端点未切换为下限');interval.value=[20,70];await flush()
+      })
+      await check('纯 JS 限定刻度范围支持键盘交叉，焦点与辅助名称切换到新职责',async()=>{
+        const updates=[],native=MyUI.create('Slider',{label:'原生范围',value:[20,37],step:null,marks:[{value:0},{value:20},{value:37},{value:100}],valueLabelDisplay:'off',onChange:value=>updates.push(value)});document.body.append(native.element)
+        try{let inputs=[...native.element.querySelectorAll('input')];inputs[0].focus({preventScroll:true});key(inputs[0],'ArrowRight');key(inputs[0],'ArrowRight');await flush();assert(updates.at(-1).join(',')==='37,100'&&document.activeElement===inputs[1]&&inputs[1].getAttribute('aria-label').endsWith('结束值'),'键盘向右越界未切换上限');key(inputs[1],'ArrowLeft');key(inputs[1],'ArrowLeft');await flush();assert(updates.at(-1).join(',')==='20,37'&&document.activeElement===inputs[0]&&inputs[0].getAttribute('aria-label').endsWith('起始值'),'键盘向左越界未切换下限')}
+        finally{native.destroy();native.element.remove()}
       })
       await check('按下轨道选择最近端点，拖动同步范围和轨道',async()=>{
         await rangeDrag(.2,.4);assert(interval.value.join(',')==='40,70','起点拖动错误');await rangeDrag(.7,.9);assert(interval.value.join(',')==='40,90','终点拖动错误')
@@ -126,7 +161,7 @@ createApp({setup(){
         applyTheme({mode:'dark'});pointer(el("#single .my-slider-control"),'pointerenter',pt('#single',.3));await flush();const s=getComputedStyle(tip('#single'));assert(skin(tip('#single')).backgroundColor==='rgba(255, 255, 255, 0.9)'&&s.color==='rgb(0, 0, 0)','暗色反色错误');pointer(el("#single .my-slider-control"),'pointerleave',pt('#single',.3));applyTheme({mode:'light'});await flush();assert(localStorage.getItem('chenglan:theme')===saved,'修改了保存的主题')
       })
       await check('普通 Tooltip 箭头可关闭，局部覆写同时应用于面板和箭头',async()=>{
-        const button=el('#custom-tip');arrow.value=false;await flush();button.focus();await flush();const text=described(button);assert(!text.parentElement.querySelector(".my-tooltip-arrow")&&!skin(text).maskImage.includes('conic-gradient'),'关闭箭头失败');arrow.value=true;await flush();assert(skin(text).backgroundColor==='rgb(18, 52, 86)'&&skin(text).maskImage.includes('conic-gradient'),'统一背景未继承局部颜色或箭头缺失');assert(getComputedStyle(text).backgroundColor==='rgba(0, 0, 0, 0)','内容重复叠加半透明背景');button.blur()
+        const button=el('#custom-tip');arrow.value=false;await flush();button.focus();await flush();const text=described(button);assert(!skin(text).maskImage.includes('conic-gradient'),'关闭箭头失败');arrow.value=true;await flush();assert(skin(text).backgroundColor==='rgb(18, 52, 86)'&&skin(text).maskImage.includes('conic-gradient'),'统一背景未继承局部颜色或箭头缺失');assert(getComputedStyle(text).backgroundColor==='rgba(0, 0, 0, 0)','内容重复叠加半透明背景');button.blur()
       })
       await check('四角提示自动翻转，箭头沿实际方向并留在面板范围内',async()=>{
         for(const id of ['tl','tr','bl','br']){const button=el('#'+id);button.focus();await flush();const text=described(button),panel=text.parentElement,r=panel.getBoundingClientRect(),a=panel.querySelector(".my-tooltip-arrow").getBoundingClientRect(),side=panel.closest(".my-floating-position").dataset.side;assert(r.left>=7&&r.right<=innerWidth-7&&r.top>=7&&r.bottom<=innerHeight-7,'提示越界 '+id);assert(getComputedStyle(panel.querySelector(".my-tooltip-arrow")).clipPath!=='none','没有三角形');if(side==='top')near(a.top,text.getBoundingClientRect().bottom,'上方箭头');if(side==='bottom')near(a.bottom,text.getBoundingClientRect().top,'下方箭头');if(side==='left')near(a.left,text.getBoundingClientRect().right,'左侧箭头');if(side==='right')near(a.right,text.getBoundingClientRect().left,'右侧箭头');button.blur()}

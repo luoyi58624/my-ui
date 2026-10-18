@@ -4,7 +4,7 @@ import type { SliderMark } from './sliderTypes'
 
 defineOptions({ inheritAttrs: false })
 const props = withDefaults(defineProps<{
-  /** 数值表示单滑块，两个数值的数组表示范围；更新时返回新数组。 */
+  /** 数值表示单滑块，数组表示范围；交叉时切换上下限，返回新的有序数组。 */
   modelValue: T
   /** 已缓冲到的数值，范围与 min/max 相同；省略时不显示缓冲层。 */
   buffer?: number
@@ -14,7 +14,7 @@ const props = withDefaults(defineProps<{
   min?: number
   /** 最大允许值。 */
   max?: number
-  /** 每次改变的步长；null 表示只能选择 marks 中的数值。 */
+  /** 取值步长，null 限定为 marks；拖动连续跟手，数值按中点切档，松开吸附。 */
   step?: number | null
   /** true 按 step 绘制刻度，数组指定刻度位置和可选文字。 */
   marks?: boolean | readonly SliderMark[]
