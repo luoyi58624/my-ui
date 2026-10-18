@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Image 图片组件定向回归</title>
+<link rel="stylesheet" href="/lib/my-ui.css"><script src="/lib/my-ui.js"></script>
+<style>main{max-width:900px;margin:auto;padding:24px}#fixture{margin:24px 0;max-width:600px}pre{font:12px/1.6 monospace;white-space:pre-wrap;overflow-wrap:anywhere}</style>
+<main><h1>Image 图片组件</h1><button id="run" disabled>运行图片回归</button><div id="fixture"></div><pre id="result">尚未运行</pre></main>
+<script type="module">
+import { createApp, h, ref, nextTick } from 'vue'
+import { Image as UiImage, Button } from '/vue/index.ts'
+const fixture = document.querySelector('#fixture'), result = document.querySelector('#result'), runButton = document.querySelector('#run')
+const canvas = document.createElement('canvas'); canvas.width = 8; canvas.height = 6; canvas.getContext('2d').fillRect(0, 0, 8, 6)
+const valid = canvas.toDataURL('image/png'), invalid = 'data:image/png;base64,AA=='
+const pause = ms => new Promise(resolve => setTimeout(resolve, ms))
+const tick = async () => { await nextTick(); await nextTick(); await new Promise(resolve => requestAnimationFrame(resolve)) }
+const assert = (condition, message) => { if (!condition) throw Error(message) }
+const near = (a, b, message) => assert(Math.abs(a - b) < 1, message + ': ' + a + '/' + b)
+const until = async predicate => { for (let i = 0; i < 100; i++) { if (predicate()) return; await pause(15) } throw Error('等待图片状态超时') }
+let owned = [], app
+const add = (props = {}, slots = {}, attributes = {}) => { const c = MyUI.create('Image', { loading: 'eager', ...props }, { slots, attributes }); owned.push(c); fixture.append(c.element); return c }
+const cleanup = () => { app?.unmount(); app = undefined; owned.forEach(c => c.destroy()); owned = []; fixture.replaceChildren() }
+const state = c => c.element.dataset.state
+runButton.onclick = async () => {
+  runButton.disabled = true; result.textContent = '运行中'; document.documentElement.dataset.theme = 'light'
+  const reports = []
+  const check = async (name, action) => { cleanup(); try { await action(); reports.push({ name, pass: true }) } catch (error) { reports.push({ name, pass: false, error: String(error) }) } finally { cleanup() } }
+  await check('空地址只显示占位，不请求当前页面或触发失败', async () => {
+    let errors = 0; const c = add({ alt: '空图片', onError: () => errors++ })
+    assert(state(c) === 'empty' && !c.element.querySelector('img').hasAttribute('src'), '空地址产生请求')
+    await pause(40); assert(errors === 0 && !c.element.querySelector('.my-image-placeholder').hidden, '空地址触发失败或没有占位')
+  })
+  await check('真实 PNG 加载、替代文字与原生事件完整，显式比例不跳动', async () => {
+    let loads = 0, target; const c = add({ src: valid, alt: '测试照片', width: 160, ratio: '16 / 9', onLoad: event => { loads++; target = event.target } })
+    assert(state(c) === 'loading' && c.element.getAttribute('aria-busy') === 'true', '没有进入加载态')
+    const before = c.element.getBoundingClientRect(); near(before.height, 90, '占位未保留比例')
+    await until(() => state(c) === 'loaded'); const image = c.element.querySelector('img')
+    assert(loads === 1 && target === image && image.naturalWidth === 8 && image.alt === '测试照片', '真实加载事件或图片语义失效')
+    assert(!c.element.hasAttribute('aria-busy') && c.element.querySelector('.my-image-placeholder').hidden, '成功后仍显示加载态')
+    near(c.element.getBoundingClientRect().height, before.height, '加载后发生跳动')
+  })
+  await check('未指定比例时采用原图比例，缓存图片仍产生一次成功事件', async () => {
+    let loads = 0; const c = add({ src: valid, width: 160, onLoad: () => loads++ })
+    await until(() => state(c) === 'loaded'); near(c.element.getBoundingClientRect().height, 120, '自然比例错误'); assert(loads === 1, '缓存图片漏掉或重复触发成功')
+  })
+  await check('宽高接受 CSS 长度，五种 fit 更新不重新请求图片', async () => {
+    let loads = 0; const c = add({ src: valid, width: '180', height: '100px', fit: 'contain', onLoad: () => loads++ })
+    await until(() => state(c) === 'loaded'); const image = c.element.querySelector('img'); near(c.element.getBoundingClientRect().height, 100, '显式高度错误')
+    near(c.element.getBoundingClientRect().width, 180, '数字字符串宽度错误')
+    for (const fit of ['cover', 'contain', 'fill', 'none', 'scale-down']) { c.update({ fit }); assert(c.element.querySelector('img') === image && getComputedStyle(image).objectFit === fit, fit + ' 不生效或重新请求') }
+    await pause(30); assert(loads === 1, '外观更新重新加载了图片')
+  })
+  await check('原生 lazy 在远处延迟，切换 eager 后立即加载', async () => {
+    const c = add({ src: valid + '#lazy', width: 160, height: 120, loading: undefined }, {}, { style: 'position:absolute;top:25000px' })
+    const image = c.element.querySelector('img'); assert(image.loading === 'lazy', '未启用原生 lazy')
+    if ('loading' in HTMLImageElement.prototype) { await pause(80); assert(state(c) === 'loading' && !image.naturalWidth, '远处仍提前加载') }
+    c.update({ loading: 'eager' }); await until(() => state(c) === 'loaded'); assert(c.element.querySelector('img') === image, '修改 loading 重建了请求节点')
+  })
+  await check('默认失败重试启动新请求，不改写 URL 且不重复回调', async () => {
+    let errors = 0; const c = add({ src: invalid, alt: '封面', onError: () => errors++ })
+    await until(() => state(c) === 'error'); const image = c.element.querySelector('img'), button = c.element.querySelector('.my-image-error button')
+    assert(button.getAttribute('aria-label') === '重新加载封面', '重试没有可访问名称')
+    button.click(); assert(state(c) === 'loading' && c.element.querySelector('img') !== image, '重试未启动')
+    await until(() => state(c) === 'error'); assert(errors === 2 && c.element.querySelector('img').getAttribute('src') === invalid, '重试重复回调或篡改地址')
+  })
+  await check('失败后换用有效地址恢复，旧节点事件不能影响新图片', async () => {
+    let errors = 0, loads = 0; const c = add({ src: invalid, onError: () => errors++, onLoad: () => loads++ })
+    await until(() => state(c) === 'error'); const previous = c.element.querySelector('img')
+    c.update({ src: valid }); previous.dispatchEvent(new Event('error')); previous.dispatchEvent(new Event('load'))
+    await until(() => state(c) === 'loaded'); assert(errors === 1 && loads === 1 && c.element.querySelector('.my-image-error').hidden, '旧事件覆盖恢复结果')
+  })
+  await check('小缩略图的占位与重试不溢出，图标位于容器中心', async () => {
+    const c = add({ src: invalid, width: 48, height: 48 }); await until(() => state(c) === 'error'); await tick()
+    const box = c.element.getBoundingClientRect(), button = c.element.querySelector('.my-image-error button').getBoundingClientRect(), icon = c.element.querySelector('.my-image-error button svg').getBoundingClientRect()
+    assert(button.width <= box.width && button.height <= box.height, '重试超出缩略图')
+    near(icon.left + icon.width / 2, box.left + box.width / 2, '缩略图图标横向偏移'); near(icon.top + icon.height / 2, box.top + box.height / 2, '缩略图图标纵向偏移')
+    c.update({ src: '' }); await tick(); assert(getComputedStyle(c.element.querySelector('.my-image-message > span')).display === 'none', '缩略图占位文案未收起')
+  })
+  await check('加载中快速换图，不发送旧请求的失败回调', async () => {
+    let errors = 0, loads = 0; const c = add({ src: invalid, onError: () => errors++, onLoad: () => loads++ })
+    const previous = c.element.querySelector('img'); c.update({ src: valid }); previous.dispatchEvent(new Event('error'))
+    await until(() => state(c) === 'loaded'); assert(errors === 0 && loads === 1, '快速切换产生旧回调')
+  })
+  await check('清空已加载图片回到占位，不保留旧图或报错', async () => {
+    let errors = 0; const c = add({ src: valid, onError: () => errors++ }); await until(() => state(c) === 'loaded')
+    c.update({ src: '' }); await pause(30); assert(state(c) === 'empty' && !c.element.querySelector('img').hasAttribute('src') && errors === 0, '清空仍保留请求')
+  })
+  await check('圆角、背景与位置可局部覆写，不写入全局主题', async () => {
+    const before = document.documentElement.getAttribute('style'), c = add({ src: valid }, {}, { style: '--image-radius:6px;--image-background:#123456;--image-position:25% 75%' })
+    await until(() => state(c) === 'loaded'); const box = getComputedStyle(c.element), image = getComputedStyle(c.element.querySelector('img'))
+    assert(box.borderRadius === '6px' && box.backgroundColor === 'rgb(18, 52, 86)' && image.objectPosition === '25% 75%', 'CSS 覆写失效')
+    assert(document.documentElement.getAttribute('style') === before, 'Image 改写全局主题')
+  })
+  await check('原生属性传给 img，class 和 style 留在外层，移除无残留', async () => {
+    const c = add({ src: valid }, {}, { id: 'actual-photo', class: 'custom-picture', srcset: valid + ' 1x', sizes: '160px', referrerpolicy: 'no-referrer', crossorigin: 'anonymous' })
+    await until(() => state(c) === 'loaded'); const image = c.element.querySelector('img')
+    assert(image.id === 'actual-photo' && image.getAttribute('srcset') && image.sizes === '160px' && image.referrerPolicy === 'no-referrer' && image.crossOrigin === 'anonymous', '原生属性没有传给 img')
+    assert(c.element.classList.contains('custom-picture') && !image.classList.contains('custom-picture'), '外层 class 错位')
+    c.update({}, { sizes: '80px' }); await until(() => state(c) === 'loaded'); assert(!c.element.querySelector('img').hasAttribute('crossorigin'), '移除属性残留')
+  })
+  await check('装饰图使用空 alt，修改替代文字不重新加载', async () => {
+    const c = add({ src: valid }); await until(() => state(c) === 'loaded'); const image = c.element.querySelector('img')
+    assert(image.alt === '' && !c.element.hasAttribute('role'), '装饰图片强制增加语义')
+    c.update({ alt: '新描述' }); assert(image.alt === '新描述' && c.element.querySelector('img') === image, '修改 alt 重建图片')
+  })
+  await check('原生占位与错误插槽收到地址、状态和重试方法', async () => {
+    let placeholder, failure
+    const c = add({ src: '' }, { placeholder: context => { placeholder = context; return '自己的占位' }, error: context => { failure = context; const b = document.createElement('button'); b.textContent = '自己的重试'; b.onclick = context.retry; return b } })
+    assert(placeholder.state === 'empty' && c.element.textContent.includes('自己的占位'), '占位插槽失效')
+    c.update({ src: invalid }); await until(() => state(c) === 'error'); assert(failure.src === invalid && typeof failure.retry === 'function', '错误上下文失效')
+    c.element.querySelector('.my-image-error button').click(); assert(state(c) === 'loading', '自定义重试未启动')
+  })
+  await check('声明式 data-my Image 可直接增强 HTML', async () => {
+    const host = document.createElement('div'); host.setAttribute('data-my', 'Image'); host.setAttribute('data-options', JSON.stringify({ src: valid, width: 160, ratio: 2, loading: 'eager' })); fixture.append(host)
+    const [c] = MyUI.init(fixture); owned.push(c); await until(() => state(c) === 'loaded'); near(host.getBoundingClientRect().height, 80, '声明式比例错误')
+  })
+  await check('销毁时解除监听，迟到事件不会回调或重新挂载', async () => {
+    let events = 0; const c = add({ src: valid, onLoad: () => events++, onError: () => events++ }), image = c.element.querySelector('img')
+    c.destroy(); image.dispatchEvent(new Event('load')); image.dispatchEvent(new Event('error')); await pause(30)
+    assert(events === 0 && !c.element.isConnected && !image.hasAttribute('src'), '销毁后仍处理请求或保留资源')
+  })
+  await check('Vue 保留事件、响应式地址、比例和公开 retry', async () => {
+    const src = ref(valid), imageRef = ref(); let loads = 0, errors = 0
+    app = createApp({ setup: () => () => h(UiImage, { ref: imageRef, src: src.value, alt: 'Vue 图片', width: 160, ratio: 2, loading: 'eager', onLoad: () => loads++, onError: () => errors++ }) })
+    app.mount(fixture); await until(() => loads === 1); near(fixture.querySelector('.my-image').getBoundingClientRect().height, 80, 'Vue 比例错误')
+    src.value = invalid; await until(() => errors === 1); imageRef.value.retry(); await until(() => errors === 2)
+    src.value = valid; await until(() => loads === 2); assert(fixture.querySelector('img').alt === 'Vue 图片', 'Vue 恢复失败')
+  })
+  await check('Vue 具名插槽支持业务按钮、响应性和错误重试', async () => {
+    const src = ref(''), message = ref('准备中'); let errors = 0
+    app = createApp({ setup: () => () => h(UiImage, { src: src.value, loading: 'eager', onError: () => errors++ }, {
+      placeholder: ({ state }) => h('span', { 'data-placeholder': '' }, message.value + ' ' + state),
+      error: ({ retry }) => h(Button, { onClick: retry }, () => '业务重试'),
+    }) }); app.mount(fixture); await tick(); assert(fixture.textContent.includes('准备中 empty'), 'Vue 占位插槽失效')
+    message.value = '继续等待'; await tick(); assert(fixture.textContent.includes('继续等待'), '占位不响应业务更新')
+    src.value = invalid; await until(() => errors === 1); await tick(); fixture.querySelector('.my-image-error button').click(); await until(() => errors === 2)
+    src.value = valid; await until(() => fixture.querySelector('.my-image').dataset.state === 'loaded'); assert(fixture.querySelector('.my-image-error').hidden, 'Vue 错误插槽未隐藏')
+  })
+  await check('明暗模式只继承 CSS，失败文字和按钮可读', async () => {
+    const c = add({ src: invalid }); await until(() => state(c) === 'error')
+    for (const mode of ['light', 'dark']) { document.documentElement.dataset.theme = mode; await tick(); const style = getComputedStyle(c.element); assert(style.color !== style.backgroundColor, mode + ' 文字和背景同色'); assert(c.element.querySelector('.my-image-error button').getClientRects().length, mode + ' 重试不可见') }
+    document.documentElement.dataset.theme = 'light'
+  })
+  result.textContent = JSON.stringify({ pass: reports.every(report => report.pass), total: reports.length, reports }, null, 2); runButton.disabled = false
+}
+runButton.disabled = false
+</script></html>

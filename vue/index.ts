@@ -5,6 +5,7 @@ import '../lib/my-ui.js'
 /** my-ui 的 Vue 薄封装；样式和交互统一维护在 lib/my-ui.css 与 lib/my-ui.js。 */
 export { default as Icon } from './components/Icon.vue'
 export { default as Avatar } from './components/Avatar.vue'
+export { default as Image } from './components/Image.vue'
 export { default as Badge } from './components/Badge.vue'
 export { default as Button } from './components/Button.vue'
 export { default as Tag } from './components/Tag.vue'

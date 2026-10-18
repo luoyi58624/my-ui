@@ -3191,6 +3191,74 @@ img[data-my-avatar] {
   border-radius: inherit;
 }
 
+/* ── Image ───────────────────────────────────────────── */
+
+/* 默认预留 4:3 占位，成功后采用图片自身比例；显式宽高或 aspect-ratio 优先。 */
+.my-image[data-my-image] {
+  position: relative;
+  container: my-image / inline-size;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: var(--image-natural-ratio, 4 / 3);
+  overflow: hidden;
+  border-radius: var(--image-radius, 12px);
+  background: var(--image-background, var(--fill));
+  color: var(--text-secondary);
+}
+.my-image-content[data-my-image] {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-position: var(--image-position, 50% 50%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.my-image[data-state="loaded"] > .my-image-content[data-my-image] {
+  opacity: 1;
+}
+.my-image-placeholder[data-my-image],
+.my-image-error[data-my-image] {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  font-size: 13px;
+  line-height: 20px;
+  text-align: center;
+}
+.my-image-message[data-my-image] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.my-image-message[data-my-image] > svg {
+  width: 28px;
+  height: 28px;
+}
+.my-image-error[data-my-image] .my-button {
+  min-height: 36px;
+  margin-top: -4px;
+  font-size: 13px;
+}
+/* 缩略图只保留图标，避免占位文字和重试按钮超出小图片。 */
+@container my-image (max-width: 140px) {
+  .my-image-placeholder[data-my-image],
+  .my-image-error[data-my-image] { padding: 0; }
+  .my-image-message[data-my-image] > span:not(.my-loading),
+  .my-image-error[data-my-image] .my-button-label { display: none; }
+  .my-image-error[data-my-image] .my-button {
+    width: 32px;
+    min-height: 32px;
+    margin: 0;
+    padding: 0;
+  }
+}
+
 /* ── Badge ───────────────────────────────────────────── */
 
 .my-badge[data-my-badge] {

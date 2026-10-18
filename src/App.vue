@@ -7,6 +7,7 @@ import MenuShowcase from './demo/MenuShowcase.vue'
 import FeedbackPrimitives from './demo/FeedbackPrimitives.vue'
 import SelectionCollapseShowcase from './demo/SelectionCollapseShowcase.vue'
 import IdentityShowcase from './demo/IdentityShowcase.vue'
+import ImageShowcase from './demo/ImageShowcase.vue'
 import ShadowShowcase from './demo/ShadowShowcase.vue'
 import TouchShowcase from './demo/TouchShowcase.vue'
 import ComboboxShowcase from './demo/ComboboxShowcase.vue'
@@ -242,6 +243,7 @@ onBeforeUnmount(() => {
         </div>
         <div class="secondary-pair"><ShadowShowcase @notify="notify" /></div>
         <div class="secondary-pair"><IdentityShowcase /></div>
+        <div class="secondary-pair"><ImageShowcase /></div>
         <Card class="navigation-panel"><div class="nav-descrip"><h3>底部导航</h3><p>轻量导航示例，仅演示图标与选中状态，不构成完整 App 页面。</p></div><Navigation v-model="navigation" :options="navOptions" /></Card>
         <div class="list-grid" aria-label="列表示例">
           <Card class="list-panel" title="选择列表" description="传统单选与复选，左侧选择框，右侧标题" sample="SELECTABLE LIST">

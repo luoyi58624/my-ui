@@ -106,6 +106,8 @@ export function useNative(name: string, props: object, emit: unknown) {
     select: () => controller?.exposed.select?.(),
     /** 重新计算浮层位置。 */
     updatePosition: () => controller?.exposed.updatePosition?.(),
+    /** 重新加载当前图片，失败后可主动重试。 */
+    retry: () => controller?.exposed.retry?.(),
   };
   const render: Component = () => {
     revision.value;
