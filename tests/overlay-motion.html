@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>弹层动画回归验证</title>
+<style>
+  main { max-width: 900px; padding: 24px; margin: auto; }
+  .tools { display: flex; flex-wrap: wrap; gap: 12px; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+</style>
+<div id="app"></div>
+<script type="module">
+import { createApp, h, nextTick, ref } from 'vue'
+import { Button, Dialog, Drawer, Sheet, Popup, popup } from '/vue/index.ts'
+import { applyTheme } from '/src/theme/index.ts'
+
+applyTheme({ mode: 'light' })
+const pause = ms => new Promise(resolve => setTimeout(resolve, ms))
+const frames = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+const selectors = ".my-overlay, .my-sheet-overlay, .my-drawer-overlay"
+const panel = root => root.querySelector('[role="dialog"]')
+const visible = root => root.isConnected && getComputedStyle(root).display !== 'none'
+const snapshot = root => ({
+  // 面板与遮罩分别淡入，外层保持不透明，避免改变模糊的背景读取边界。
+  opacity: +getComputedStyle(root).opacity * +getComputedStyle(panel(root)).opacity,
+  transform: getComputedStyle(panel(root)).transform,
+  display: getComputedStyle(root).display,
+  inert: root.inert,
+  hidden: root.getAttribute('aria-hidden'),
+})
+function assert(condition, message) { if (!condition) throw new Error(message) }
+
+// 在真实浏览器逐帧读取 DOM，记录初始、途中和终态，不用源代码断言代替动效验证。
+async function opening(action, name, reduced) {
+  const existing = new Set(document.querySelectorAll(selectors))
+  const handle = action()
+  await nextTick()
+  const root = Array.from(document.querySelectorAll(selectors)).find(root => visible(root) && !existing.has(root))
+    ?? Array.from(document.querySelectorAll(selectors)).find(root => visible(root) && root.getAttribute('aria-hidden') === 'false')
+  assert(root, name + ' 没有显示')
+  const samples = [{ time: 0, ...snapshot(root) }]
+  const start = performance.now()
+  while (performance.now() - start < 400) {
+    await new Promise(resolve => requestAnimationFrame(resolve))
+    samples.push({ time: Math.round(performance.now() - start), ...snapshot(root) })
+  }
+  const last = samples.at(-1)
+  assert(last.opacity === 1 && last.transform === 'none', name + ' 未到达显示终态')
+  assert(!root.inert && root.contains(document.activeElement), name + ' 未锁定焦点')
+  if (reduced) {
+    assert(samples.every(sample => sample.opacity === 1 && sample.transform === 'none'), name + ' 减少动态效果时仍有位移或透明度过渡')
+  } else {
+    assert(samples[0].opacity === 0 && samples[0].transform !== 'none', name + ' 缺少首次进入起点')
+    assert(samples.some(sample => sample.opacity > 0 && sample.opacity < 1 && sample.transform !== 'none'), name + ' 没有进入过程')
+  }
+  return { root, handle, report: { name, start: samples[0], middle: samples.find(sample => sample.opacity > .15 && sample.opacity < .85), end: last } }
+}
+
+async function closing(root, action, name, reduced, staysMounted = false) {
+  const ended = []
+  root.addEventListener('transitionend', event => ended.push(event.propertyName))
+  action()
+  await nextTick()
+  assert(root.inert && root.getAttribute('aria-hidden') === 'true', name + ' 关闭未立即隔离交互')
+  assert(!root.contains(document.activeElement), name + ' 关闭未立即恢复焦点')
+  await pause(380)
+  assert(staysMounted ? !visible(root) : !root.isConnected, name + ' 退出后未隐藏或清理')
+  if (!reduced) assert(ended.includes('opacity') && ended.includes('transform'), name + ' 退出过渡被提前卸载：' + ended.join(','))
+  return { ended, cleaned: !visible(root) }
+}
+
+createApp({ setup() {
+  const host = ref(true), running = ref(false), result = ref('尚未运行')
+  const controlled = ref(null), shown = ref(false)
+  const components = { dialog: Dialog, sheet: Sheet, drawer: Drawer }
+  function openApi(kind, position) {
+    if (kind === 'dialog') {
+      const closed = popup.showAlert({ title: '动画确认', message: '首次挂载与退出均应平滑。', center: position === 'center' })
+      return { closed, close: () => document.querySelector(".my-overlay.my-show .my-popup-actions button").click() }
+    }
+    const options = { title: '动画验证', content: ({ close }) => h(Button, { onClick: () => close('已关闭') }, () => '关闭测试窗口') }
+    return kind === 'sheet' ? popup.showSheet(options) : popup.showDrawer({ ...options, placement: position })
+  }
+  function changeComponent(kind, initiallyOpen) {
+    controlled.value = kind
+    shown.value = initiallyOpen
+  }
+  async function run() {
+    if (running.value) return
+    running.value = true
+    const reports = [], reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
+    result.value = '运行中'
+    try {
+      for (const [kind, position] of [['drawer', 'left'], ['drawer', 'right'], ['drawer', 'top'], ['drawer', 'bottom'], ['sheet'], ['dialog', 'bottom'], ['dialog', 'center']]) {
+        const name = 'API ' + kind + ' ' + (position ?? '')
+        const opened = await opening(() => openApi(kind, position), name, reduced)
+        const closed = await closing(opened.root, () => opened.handle.close(), name, reduced)
+        await opened.handle.closed
+        reports.push({ ...opened.report, ...closed })
+      }
+      for (const kind of ['drawer', 'sheet', 'dialog']) {
+        const name = '组件 v-model ' + kind
+        changeComponent(kind, false)
+        await nextTick()
+        const opened = await opening(() => { shown.value = true }, name, reduced)
+        reports.push({ ...opened.report, ...await closing(opened.root, () => { shown.value = false }, name, reduced, true) })
+        controlled.value = null
+        await nextTick()
+        const first = await opening(() => changeComponent(kind, true), '首次条件挂载 ' + kind, reduced)
+        await closing(first.root, () => { shown.value = false }, kind, reduced, true)
+        reports.push(first.report)
+        controlled.value = null
+        await nextTick()
+      }
+      // 快速反向切换由 Vue 取消旧过渡，旧任务不能覆盖最后一次显示状态。
+      changeComponent('drawer', false)
+      await nextTick()
+      shown.value = true
+      await nextTick()
+      await pause(70)
+      shown.value = false
+      await nextTick()
+      await pause(45)
+      shown.value = true
+      await pause(420)
+      const reversing = document.querySelector(".my-drawer-overlay.my-show")
+      assert(reversing && snapshot(reversing).opacity === 1 && snapshot(reversing).transform === 'none', '快速反向切换终态错误')
+      await closing(reversing, () => { shown.value = false }, '快速反向切换', reduced, true)
+      controlled.value = null
+      await nextTick()
+      reports.push({ name: '快速反向切换', passed: true })
+
+      const early = popup.showSheet({ title: '未进入即关闭', content: () => h('p', '不应闪现') })
+      early.close('early')
+      assert(await early.closed === 'early', '立即关闭结果错误')
+      await pause(380)
+      assert(document.querySelectorAll(selectors).length === 0, '立即关闭后残留窗口')
+      reports.push({ name: '同帧关闭', passed: true })
+
+      for (const kind of ['drawer', 'sheet']) {
+        const interrupted = openApi(kind, 'left')
+        await nextTick()
+        await frames()
+        interrupted.close('interrupted')
+        assert(await interrupted.closed === 'interrupted', '进入途中关闭结果错误')
+        await pause(420)
+        assert(document.querySelectorAll(selectors).length === 0, '进入途中关闭后残留窗口')
+        reports.push({ name: '进入途中关闭 ' + kind, passed: true })
+      }
+
+      const lower = await opening(() => openApi('drawer', 'right'), '嵌套底层', reduced)
+      const upper = await opening(() => openApi('dialog', 'center'), '嵌套顶层', reduced)
+      assert(lower.root.inert && document.documentElement.style.overflow === 'hidden', '嵌套窗口没有隔离底层')
+      await closing(upper.root, upper.handle.close, '关闭嵌套顶层', reduced)
+      assert(!lower.root.inert && lower.root.contains(document.activeElement) && document.documentElement.style.overflow === 'hidden', '关闭顶层未返回底层')
+      await closing(lower.root, lower.handle.close, '关闭嵌套底层', reduced)
+      reports.push({ name: '嵌套焦点与滚动锁', passed: true })
+
+      const waiting = openApi('sheet')
+      await nextTick()
+      await frames()
+      host.value = false
+      await nextTick()
+      assert(await waiting.closed === undefined, '卸载宿主没有结束等待')
+      await pause(380)
+      assert(document.querySelectorAll(selectors).length === 0 && document.documentElement.style.overflow !== 'hidden' && !document.querySelector('main').closest('[inert]'), '宿主卸载残留 DOM、滚动锁或隔离')
+      host.value = true
+      await nextTick()
+      reports.push({ name: '动画途中卸载与重挂载', passed: true })
+      result.value = JSON.stringify({ passed: true, reduced, cases: reports.length, reports }, null, 2)
+    } catch (error) {
+      result.value = JSON.stringify({ passed: false, reduced, error: String(error), reports }, null, 2)
+      controlled.value = null
+      host.value = false
+      await nextTick()
+      host.value = true
+    } finally { running.value = false }
+  }
+  return () => h('main', {}, [
+    h('h1', '弹层动画回归验证'),
+    h('p', '真实帧采样：API、组件初始显示、反向切换、快速关闭、嵌套焦点和卸载清理。'),
+    h('div', { class: 'tools' }, [h(Button, { 'aria-busy': running.value, onClick: run }, () => '运行全项回归'), h(Button, { disabled: running.value, onClick: () => openApi('sheet') }, () => '查看底部面板'), h(Button, { disabled: running.value, onClick: () => openApi('drawer', 'right') }, () => '查看右侧抽屉')]),
+    h('pre', { role: 'status' }, result.value),
+    controlled.value ? h(components[controlled.value], { modelValue: shown.value, title: '组件动画验证', 'onUpdate:modelValue': value => { shown.value = value } }, () => h(Button, { onClick: () => { shown.value = false } }, () => '关闭组件')) : null,
+    host.value ? h(Popup) : null,
+  ])
+} }).mount('#app')
+</script>
+</html>

@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>滑块刻度、范围与提示回归</title>
+<style>main{max-width:900px;margin:64px auto;padding:24px}.fixtures{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px;margin:32px 0}.actions{display:flex;gap:12px;flex-wrap:wrap}.edge{position:fixed;z-index:2}.tl{top:10px;left:10px}.tr{top:10px;right:10px}.bl{bottom:10px;left:10px}.br{bottom:10px;right:10px}.local{--tooltip-background:#123456;--tooltip-color:#fff;--tooltip-max-width:180px}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}@media(max-width:760px){.fixtures{grid-template-columns:1fr}}</style>
+<div id="app"></div><script type="module">
+import{createApp,h,nextTick,ref}from'vue'
+import{Button,Slider,Tooltip,applyTheme}from'/vue/index.ts'
+applyTheme({mode:'light'})
+const el=selector=>document.querySelector(selector),all=selector=>[...document.querySelectorAll(selector)],pause=ms=>new Promise(resolve=>setTimeout(resolve,ms))
+const assert=(value,message)=>{if(!value)throw new Error(message)},near=(a,b,message)=>assert(Math.abs(a-b)<1.2,`${message}: ${a}/${b}`)
+const flush=async()=>{await nextTick();await nextTick();for(let frame=0;frame<3;frame++)await new Promise(resolve=>requestAnimationFrame(resolve));await pause(20)}
+const input=(root,index=0)=>all(root+' input')[index]
+const tip=(root,index=0)=>document.getElementById(input(root,index).id.replace(/-\d+$/,'-value-'+index))
+const host=(root,index=0)=>tip(root,index)?.closest(".my-floating-position")
+const skin=text=>getComputedStyle(text.parentElement,'::before')
+const halo=(root,index=0)=>all(root+" .my-slider-halo")[index]
+// 逐帧读取实际渲染尺寸，避免只检查 transition 声明却漏掉瞬间跳变。
+async function frames(element,action){action();await nextTick();const samples=[],start=performance.now();do{await new Promise(resolve=>requestAnimationFrame(resolve));const s=getComputedStyle(element);samples.push({opacity:Number(s.opacity),width:element.getBoundingClientRect().width})}while(performance.now()-start<210);return samples}
+const shown=(root,index=0)=>host(root,index)?.classList.contains("my-ready")&&host(root,index)?.getAttribute('aria-hidden')==='false'
+const pt=(root,fraction)=>{const r=el(root+" .my-slider-track").getBoundingClientRect();return{x:r.left+r.width*fraction,y:r.top+r.height/2}}
+function pointer(element,type,point,pointerType='mouse'){element.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerId:71,pointerType,isPrimary:true,button:0,buttons:type==='pointerup'||type==='pointercancel'?0:1,clientX:point.x,clientY:point.y}))}
+function key(element,name){const e=new KeyboardEvent('keydown',{key:name,bubbles:true,cancelable:true});element.dispatchEvent(e);return e}
+function nativeValue(root,value,index=0){const e=input(root,index);e.value=String(value);e.dispatchEvent(new Event('input',{bubbles:true}))}
+async function rangeDrag(from,to,type='mouse',end='pointerup'){pointer(el("#range .my-slider-control"),'pointerdown',pt('#range',from),type);await flush();pointer(document,'pointermove',pt('#range',to),type);await flush();pointer(document,end,pt('#range',to),type);await flush()}
+const described=button=>document.getElementById(button.getAttribute('aria-describedby').split(' ').find(id=>id.startsWith('tooltip-')))
+
+createApp({setup(){
+  const value=ref(50),interval=ref([20,70]),restricted=ref(20),marks=ref([{value:0,label:'0°C'},{value:20,label:'20°C'},{value:37,label:'37°C'},{value:100,label:'100°C'}])
+  const disabled=ref(false),mode=ref('auto'),mounted=ref(true),constantFormat=ref(false),arrow=ref(true),result=ref('尚未运行'),running=ref(false)
+  function reset(){document.activeElement?.blur();value.value=50;interval.value=[20,70];restricted.value=20;disabled.value=false;mode.value='auto';mounted.value=true;constantFormat.value=false;arrow.value=true;marks.value=[{value:0,label:'0°C'},{value:20,label:'20°C'},{value:37,label:'37°C'},{value:100,label:'100°C'}];applyTheme({mode:'light'})}
+  async function run(){
+    if(running.value)return
+    running.value=true;result.value='运行中';reset();await flush()
+    const reports=[],saved=localStorage.getItem('chenglan:theme'),check=async(name,action)=>{await action();reports.push({name,passed:true})}
+    try{
+      await check('marks=true 按 step 生成刻度，选中段与未选中段颜色不同',async()=>{
+        assert(all("#single .my-slider-marks > span").length===11,'自动刻度数量错误');assert(all("#single .my-slider-marks > .my-selected").length===6,'选中段刻度错误');assert(getComputedStyle(el("#single .my-slider-marks .my-selected")).backgroundColor!==getComputedStyle(all("#single .my-slider-marks > span").at(-1)).backgroundColor,'刻度没有反色')
+      })
+      await check('自定义 marks 按数值定位文字，零值标签保留，默认端点文字不重复',async()=>{
+        assert(el("#restricted .my-slider-mark-labels").textContent==='0°C20°C37°C100°C','刻度文字错误');assert(!el("#restricted .my-range-scale"),'重复显示默认端点文字');const r=el("#restricted .my-slider-track").getBoundingClientRect(),dot=all("#restricted .my-slider-marks > span")[2].getBoundingClientRect();near(dot.x+dot.width/2,r.x+r.width*.37,'非等距刻度位置')
+      })
+      await check('step=null 只吸附到明确给出的刻度',async()=>{
+        nativeValue('#restricted',35);await flush();assert(restricted.value===37&&input('#restricted').value==='37','未吸附 37');nativeValue('#restricted',21);await flush();assert(restricted.value===20,'未吸附 20')
+      })
+      await check('限定刻度的方向键、Home、End 使用相同的取值集合',async()=>{
+        assert(key(input('#restricted'),'ArrowRight').defaultPrevented,'方向键未接管');await flush();assert(restricted.value===37,'20 没有进入 37');key(input('#restricted'),'ArrowLeft');await flush();assert(restricted.value===20,'37 没有返回 20');key(input('#restricted'),'End');await flush();assert(restricted.value===100,'End 错误');key(input('#restricted'),'Home');await flush();assert(restricted.value===0,'Home 错误');input('#restricted').blur()
+      })
+      await check('范围绑定生成两个独立原生滑块和有名称的分组',async()=>{
+        assert(all('#range input').length===2&&all('#range input').every(e=>e.type==='range'),'不是双原生滑块');assert(el('#range').getAttribute('role')==='group','没有范围分组');assert(input('#range').getAttribute('aria-label').includes('起始值')&&input('#range',1).getAttribute('aria-label').includes('结束值'),'端点没有独立名称')
+      })
+      await check('范围轨道仅填充起始到结束段，ARIA 边界跟随另一个端点',async()=>{
+        const track=el("#range .my-slider-track").getBoundingClientRect(),fill=el("#range .my-progress-fill").getBoundingClientRect();near(fill.x-track.x,track.width*.2,'填充起点');near(fill.width,track.width*.5,'填充长度');assert(input('#range').getAttribute('aria-valuemax')==='70'&&input('#range',1).getAttribute('aria-valuemin')==='20','端点边界没有关联')
+      })
+      await check('更新范围返回新数组，原数组不被修改',async()=>{
+        const old=interval.value;nativeValue('#range',40);await flush();assert(interval.value!==old&&old.join(',')==='20,70'&&interval.value.join(',')==='40,70','范围更新修改原数组')
+      })
+      await check('两个端点不能穿越，原生输入值也恢复到合法边界',async()=>{
+        nativeValue('#range',95);await flush();assert(interval.value.join(',')==='70,70'&&input('#range').value==='70','下端点穿越');nativeValue('#range',0,1);await flush();assert(interval.value.join(',')==='70,70'&&input('#range',1).value==='70','上端点穿越');interval.value=[20,70];await flush()
+      })
+      await check('按下轨道选择最近端点，拖动同步范围和轨道',async()=>{
+        await rangeDrag(.2,.4);assert(interval.value.join(',')==='40,70','起点拖动错误');await rangeDrag(.7,.9);assert(interval.value.join(',')==='40,90','终点拖动错误')
+      })
+      await check('重叠端点仍可分别向两侧展开',async()=>{
+        interval.value=[50,50];await flush();await rangeDrag(.49,.3);assert(interval.value.join(',')==='30,50','重叠起点不能向左展开');interval.value=[50,50];await flush();await rangeDrag(.51,.8);assert(interval.value.join(',')==='50,80','重叠终点不能向右展开')
+      })
+      await check('calc 与 rem 定制圆块尺寸后，实际轨道仍与拖动数值一致',async()=>{
+        const root=el('#range');root.style.setProperty('--slider-thumb-size','calc(1rem + 48px)');interval.value=[20,70];await flush();await rangeDrag(.2,.4);assert(interval.value.join(',')==='40,70','定制圆块导致数值偏移');root.style.removeProperty('--slider-thumb-size');await flush()
+      })
+      await check('触屏按下立即显示数值，移动时更新，取消后不再接受拖动',async()=>{
+        interval.value=[20,70];await flush();pointer(el("#range .my-slider-control"),'pointerdown',pt('#range',.2),'touch');await flush();assert(shown('#range'),'触屏数值等待长按才出现');pointer(document,'pointermove',pt('#range',.4),'touch');await flush();assert(interval.value[0]===40,'触屏范围没有更新');pointer(document,'pointercancel',pt('#range',.4),'touch');await flush();pointer(document,'pointermove',pt('#range',.6),'touch');await flush();assert(interval.value[0]===40&&!el("#range .my-is-active"),'取消后仍在拖动')
+      })
+      await check('禁用两个原生端点，拖动中禁用会立即清理手势',async()=>{
+        pointer(el("#range .my-slider-control"),'pointerdown',pt('#range',.4));await flush();disabled.value=true;await flush();assert(all('#range input').every(e=>e.disabled),'端点未禁用');pointer(document,'pointermove',pt('#range',.5));await flush();assert(interval.value[0]===40&&!shown('#range'),'禁用后仍操作或显示提示');disabled.value=false;await flush()
+      })
+      await check('auto 默认隐藏，鼠标进入显示，离开后淡出',async()=>{
+        input('#single').blur();assert(!shown('#single'),'初始可见');pointer(el("#single .my-slider-control"),'pointerenter',pt('#single',.5));await flush();assert(shown('#single')&&tip('#single').textContent==='50%','悬停未显示当前值');pointer(el("#single .my-slider-control"),'pointerleave',pt('#single',.5));await flush();assert(!shown('#single'),'离开未关闭')
+      })
+      await check('精细指针光圈渐入、按压扩大、松开缩回、离开渐出',async()=>{
+        const control=el("#single .my-slider-control"),circle=halo('#single'),point=pt('#single',.5),reduced=matchMedia('(prefers-reduced-motion:reduce)').matches,fine=matchMedia('(hover:hover) and (pointer:fine)').matches
+        pointer(control,'pointerleave',point);await pause(180)
+        const hover=await frames(circle,()=>pointer(control,'pointerenter',point));near(hover.at(-1).width,fine?36:20,'悬停直径');assert(hover.at(-1).opacity===(fine?1:0),'悬停透明度错误')
+        if(fine&&!reduced)assert(hover.some(s=>s.opacity>0&&s.opacity<1&&s.width>20&&s.width<36),'悬停没有中间帧')
+        const press=await frames(circle,()=>pointer(control,'pointerdown',point));near(press.at(-1).width,50,'按压直径');if(!reduced)assert(press.some(s=>s.width>(fine?36:20)&&s.width<50),'按压没有放大过渡')
+        const release=await frames(circle,()=>pointer(document,'pointerup',point));near(release.at(-1).width,fine?36:20,'松开直径');if(!reduced)assert(release.some(s=>s.width>(fine?36:20)&&s.width<50),'松开没有缩小过渡')
+        const leave=await frames(circle,()=>pointer(control,'pointerleave',point));assert(leave.at(-1).opacity===0,'离开没有隐藏');if(fine&&!reduced)assert(leave.some(s=>s.opacity>0&&s.opacity<1),'离开没有淡出')
+        if(reduced)assert(getComputedStyle(circle).transitionProperty==='none','减少动态效果仍有光圈过渡')
+      })
+      await check('范围端点光圈跟随实际位置，触屏取消与禁用清理光圈',async()=>{
+        interval.value=[20,70];await flush();const control=el("#range .my-slider-control");pointer(control,'pointerleave',pt('#range',.2));await pause(180)
+        pointer(control,'pointerdown',pt('#range',.2),'touch');pointer(document,'pointermove',pt('#range',.4),'touch');await pause(190);near(halo('#range').getBoundingClientRect().width,50,'触屏按压光圈');const r=halo('#range').getBoundingClientRect();near(r.x+r.width/2,pt('#range',.4).x,'范围光圈未跟随');assert(getComputedStyle(halo('#range',1)).opacity==='0','另一端点错误激活')
+        pointer(document,'pointercancel',pt('#range',.4),'touch');await pause(190);assert(getComputedStyle(halo('#range')).opacity==='0','取消后光圈残留');disabled.value=true;await flush();pointer(control,'pointerdown',pt('#range',.4),'touch');await pause(190);assert(getComputedStyle(halo('#range')).opacity==='0','禁用仍出现光圈');disabled.value=false;await flush()
+      })
+      await check('定制圆块尺寸时光圈仍按原尺寸外扩，快速反向保持连续',async()=>{
+        const root=el('#single'),control=el("#single .my-slider-control"),circle=halo('#single'),point=pt('#single',.5),reduced=matchMedia('(prefers-reduced-motion:reduce)').matches
+        root.style.setProperty('--slider-thumb-size','40px');await flush();pointer(control,'pointerdown',point);await pause(190);near(circle.getBoundingClientRect().width,70,'定制按压直径');pointer(document,'pointerup',point);pointer(control,'pointerleave',point);await pause(35)
+        const before=circle.getBoundingClientRect().width;pointer(control,'pointerdown',point);await nextTick();const after=circle.getBoundingClientRect().width;if(!reduced)near(before,after,'快速反向发生跳变');pointer(document,'pointercancel',point);await pause(190);root.style.removeProperty('--slider-thumb-size');await flush()
+      })
+      await check('数值变化时提示跟随圆块，不固定在滑块中间',async()=>{
+        pointer(el("#single .my-slider-control"),'pointerenter',pt('#single',.5));nativeValue('#single',80);await flush();const a=host('#single').querySelector(".my-tooltip-arrow").getBoundingClientRect();near(a.x+a.width/2,pt('#single',.8).x,'提示箭头没有跟随');assert(tip('#single').textContent==='80%','数值文案没有同步')
+      })
+      await check('常量格式化文案下，提示位置仍随滑块更新',async()=>{
+        constantFormat.value=true;await flush();nativeValue('#single',30);await flush();const a=host('#single').querySelector(".my-tooltip-arrow").getBoundingClientRect();near(a.x+a.width/2,pt('#single',.3).x,'固定文案导致位置停留');constantFormat.value=false;await flush()
+      })
+      await check('off 禁止提示，on 可显示两个范围端点，不增加 Tab 入口',async()=>{
+        mode.value='off';await flush();assert(!shown('#single')&&!shown('#range'),'off 仍可见');mode.value='on';interval.value=[20,70];await flush();assert(shown('#range')&&shown('#range',1),'常显端点缺失');assert(!all('#range [tabindex]').some(e=>e.tabIndex>=0),'数值提示增加焦点入口');mode.value='auto';await flush()
+      })
+      await check('常显数值离屏时关闭，回到可见区域自动恢复',async()=>{
+        mode.value='on';await flush();const root=el('#range');root.style.transform='translateY(2000px)';await flush();assert(!shown('#range'),'离屏提示仍显示');root.style.removeProperty('transform');await flush();assert(shown('#range')&&shown('#range',1),'回到可见区域未恢复');mode.value='auto';await flush()
+      })
+      await check('常显提示在模态隔离时关闭，解除 inert 后自动恢复',async()=>{
+        mode.value='on';await flush();const root=el('#range');root.inert=true;await flush();assert(!shown('#range'),'inert 后仍显示');root.inert=false;await flush();assert(shown('#range')&&shown('#range',1),'解除模态隔离未恢复');mode.value='auto';await flush()
+      })
+      await check('Escape 关闭数值提示且保留焦点，方向键操作重新显示',async()=>{
+        input('#restricted').focus();key(input('#restricted'),'ArrowRight');await flush();assert(shown('#restricted'),'键盘未显示数值');assert(key(input('#restricted'),'Escape').defaultPrevented,'Escape 未关闭提示');await flush();assert(!shown('#restricted')&&document.activeElement===input('#restricted'),'Escape 移动焦点');key(input('#restricted'),'ArrowRight');await flush();assert(shown('#restricted'),'再次操作未显示');input('#restricted').blur()
+      })
+      await check('辅助数值可单独格式化，外部数组显示排序但不改写',async()=>{
+        assert(input('#restricted').getAttribute('aria-valuetext').includes('摄氏度'),'辅助文案没有格式化');const original=[85,10];interval.value=original;await flush();assert(input('#range').value==='10'&&input('#range',1).value==='85'&&original.join(',')==='85,10','排序改写了外部数组')
+      })
+      await check('空限定集合安全禁用，恢复 marks 后可再次操作',async()=>{
+        marks.value=[];await flush();assert(input('#restricted').disabled,'空限定集合仍可操作');marks.value=[{value:0,label:0},{value:20,label:'20°C'},{value:37,label:'37°C'},{value:100,label:'100°C'}];await flush();assert(!input('#restricted').disabled&&el("#restricted .my-slider-mark-labels").textContent.startsWith('0'),'恢复刻度或零标签失败')
+      })
+      await check('Flutter 风格保持紧凑圆角、无阴影和反色文字',async()=>{
+        pointer(el("#single .my-slider-control"),'pointerenter',pt('#single',.3));await flush();const s=getComputedStyle(tip('#single')),coarse=matchMedia('(pointer:coarse)').matches;assert(s.borderRadius==='4px'&&s.boxShadow==='none','仍是卡片外观');assert(s.fontSize===(coarse?'14px':'12px'),'字号错误');near(tip('#single').getBoundingClientRect().height,coarse?32:24,'单行提示高度');assert(skin(tip('#single')).backgroundColor==='rgba(97, 97, 97, 0.9)'&&s.color==='rgb(255, 255, 255)','浅色反色错误');pointer(el("#single .my-slider-control"),'pointerleave',pt('#single',.3))
+      })
+      await check('暗色主题使用白色提示、黑色文字，切换不写入用户配置',async()=>{
+        applyTheme({mode:'dark'});pointer(el("#single .my-slider-control"),'pointerenter',pt('#single',.3));await flush();const s=getComputedStyle(tip('#single'));assert(skin(tip('#single')).backgroundColor==='rgba(255, 255, 255, 0.9)'&&s.color==='rgb(0, 0, 0)','暗色反色错误');pointer(el("#single .my-slider-control"),'pointerleave',pt('#single',.3));applyTheme({mode:'light'});await flush();assert(localStorage.getItem('chenglan:theme')===saved,'修改了保存的主题')
+      })
+      await check('普通 Tooltip 箭头可关闭，局部覆写同时应用于面板和箭头',async()=>{
+        const button=el('#custom-tip');arrow.value=false;await flush();button.focus();await flush();const text=described(button);assert(!text.parentElement.querySelector(".my-tooltip-arrow")&&!skin(text).maskImage.includes('conic-gradient'),'关闭箭头失败');arrow.value=true;await flush();assert(skin(text).backgroundColor==='rgb(18, 52, 86)'&&skin(text).maskImage.includes('conic-gradient'),'统一背景未继承局部颜色或箭头缺失');assert(getComputedStyle(text).backgroundColor==='rgba(0, 0, 0, 0)','内容重复叠加半透明背景');button.blur()
+      })
+      await check('四角提示自动翻转，箭头沿实际方向并留在面板范围内',async()=>{
+        for(const id of ['tl','tr','bl','br']){const button=el('#'+id);button.focus();await flush();const text=described(button),panel=text.parentElement,r=panel.getBoundingClientRect(),a=panel.querySelector(".my-tooltip-arrow").getBoundingClientRect(),side=panel.closest(".my-floating-position").dataset.side;assert(r.left>=7&&r.right<=innerWidth-7&&r.top>=7&&r.bottom<=innerHeight-7,'提示越界 '+id);assert(getComputedStyle(panel.querySelector(".my-tooltip-arrow")).clipPath!=='none','没有三角形');if(side==='top')near(a.top,text.getBoundingClientRect().bottom,'上方箭头');if(side==='bottom')near(a.bottom,text.getBoundingClientRect().top,'下方箭头');if(side==='left')near(a.left,text.getBoundingClientRect().right,'左侧箭头');if(side==='right')near(a.right,text.getBoundingClientRect().left,'右侧箭头');button.blur()}
+      })
+      await check('卸载中结束拖动，无残留提示或迟到更新，重新挂载可用',async()=>{
+        interval.value=[20,70];await flush();const ids=all('#range input').map((e,i)=>e.id.replace(/-\d+$/,'-value-'+i));pointer(el("#range .my-slider-control"),'pointerdown',pt('#range',.2));await flush();mounted.value=false;await flush();assert(ids.every(id=>!document.getElementById(id)),'卸载残留提示');pointer(document,'pointermove',{x:200,y:200});pointer(document,'pointerup',{x:200,y:200});assert(interval.value.join(',')==='20,70','卸载后还更新');mounted.value=true;await flush();assert(all('#range input').length===2,'重新挂载失败')
+      })
+      result.value=JSON.stringify({passed:reports.length,viewport:[innerWidth,innerHeight],dpr:devicePixelRatio,reducedMotion:matchMedia('(prefers-reduced-motion:reduce)').matches,reports},null,2)
+    }catch(error){result.value=JSON.stringify({passed:reports.length,error:String(error),reports},null,2)}finally{running.value=false}
+  }
+  return()=>h('main',[
+    h('h1','滑块刻度、范围与提示'),h('div',{class:'actions'},[h(Button,{id:'run',disabled:running.value,onClick:run},()=> '运行定向回归'),h(Button,{variant:'outline',onClick:reset},()=> '重置'),h(Button,{variant:'text',onClick:()=>disabled.value=!disabled.value},()=>disabled.value?'启用滑块':'禁用滑块')]),
+    mounted.value&&h('div',{class:'fixtures'},[
+      h(Slider,{id:'single',label:'强度',modelValue:value.value,'onUpdate:modelValue':v=>value.value=v,step:10,marks:true,disabled:disabled.value,valueLabelDisplay:mode.value,valueLabelFormat:constantFormat.value?()=> '当前强度':undefined}),
+      h(Slider,{id:'restricted',label:'指定温度',modelValue:restricted.value,'onUpdate:modelValue':v=>restricted.value=v,step:null,marks:marks.value,unit:'°C',getAriaValueText:v=>v+' 摄氏度',disabled:disabled.value,valueLabelDisplay:mode.value}),
+      h(Slider,{id:'range',label:'筛选范围',modelValue:interval.value,'onUpdate:modelValue':v=>interval.value=v,step:5,marks:true,disabled:disabled.value,valueLabelDisplay:mode.value})
+    ]),
+    h(Tooltip,{class:'local',content:'局部颜色与箭头',arrow:arrow.value},()=>h(Button,{id:'custom-tip',variant:'outline'},()=> '局部提示')),
+    ...[['tl','bottom'],['tr','left'],['bl','right'],['br','top']].map(([id,placement])=>h(Tooltip,{class:'edge '+id,content:'提示靠近边缘时自动避让',placement},()=>h(Button,{id,variant:'outline'},()=>id.toUpperCase()))),
+    h('pre',{id:'result',role:'status'},result.value)
+  ])
+}}).mount('#app')
+</script></html>

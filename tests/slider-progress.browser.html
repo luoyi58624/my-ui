@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>滑块与缓冲进度回归</title>
+<style>
+main{max-width:860px;margin:32px auto;padding:24px}.fixtures{display:grid;gap:24px;margin-block:28px}.rings{display:flex;gap:24px}.custom{--progress-color:#176b3c;--progress-track:#e8f0ea;--progress-buffer-color:#9cccad;--progress-thickness:8px;--slider-thumb-size:24px}.actions{display:flex;gap:12px}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
+</style>
+<div id="app"></div>
+<script type="module">
+import {createApp,h,nextTick,ref} from 'vue'
+import {Button,Progress,Slider,applyTheme} from '/vue/index.ts'
+
+applyTheme({mode:'light'})
+const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms))
+const assert=(condition,message)=>{if(!condition)throw new Error(message)}
+const near=(actual,expected,message)=>assert(Math.abs(actual-expected)<.015,`${message}: ${actual} / ${expected}`)
+const el=selector=>document.querySelector(selector)
+const fraction=(selector,layer)=>el(`${selector} ${layer}`).getBoundingClientRect().width/el(`${selector} .progress-track`).getBoundingClientRect().width
+const flush=async()=>{await nextTick();await nextTick();await pause(230)}
+createApp({setup(){
+  const value=ref(36),buffer=ref(72),maximum=ref(100),slide=ref(36),slideBuffer=ref(72),minimum=ref(0),slideMax=ref(100),step=ref(1),disabled=ref(false),mounted=ref(true)
+  const result=ref('尚未运行'),running=ref(false)
+  const reset=()=>{value.value=36;buffer.value=72;maximum.value=100;slide.value=36;slideBuffer.value=72;minimum.value=0;slideMax.value=100;step.value=1;disabled.value=false;mounted.value=true;applyTheme({mode:'light'})}
+  const slider=(id,extra={})=>h(Slider,{id,modelValue:slide.value,buffer:slideBuffer.value,label:id==='slider'?'播放位置':'自定义播放位置',min:minimum.value,max:slideMax.value,step:step.value,disabled:disabled.value,'onUpdate:modelValue':value=>slide.value=value,...extra})
+  async function run(){
+    if(running.value)return
+    running.value=true;result.value='运行中';reset();await flush()
+    const reports=[],check=async(name,action)=>{await action();reports.push({name,passed:true})}
+    try{
+      await check('省略 buffer 保留两层轨道且不增加缓冲语义',async()=>{
+        assert(!el("#plain .my-progress-buffer"),'默认绘制了缓冲层');assert(!el('#plain').getAttribute('aria-valuetext').includes('缓冲'),'默认增加了缓冲文案')
+      })
+      await check('播放与缓冲同时显示，读取值仍为播放进度',async()=>{
+        near(fraction('#progress',".my-progress-fill"),.36,'播放比例');near(fraction('#progress',".my-progress-buffer"),.72,'缓冲比例')
+        assert(el('#progress').getAttribute('aria-valuenow')==='36','完成量被缓冲量覆盖');assert(el('#progress').getAttribute('aria-valuetext').includes('已缓冲 72%'),'缺少缓冲说明')
+      })
+      await check('缓冲落后于播放时，缓冲层不截断已完成进度',async()=>{
+        value.value=80;buffer.value=20;await flush();near(fraction('#progress',".my-progress-buffer"),.8,'落后缓冲');near(fraction('#progress',".my-progress-fill"),.8,'已播放')
+      })
+      await check('缓冲超出总量时限制为完整轨道',async()=>{
+        value.value=36;buffer.value=150;await flush();near(fraction('#progress',".my-progress-buffer"),1,'上界')
+      })
+      await check('负缓冲和零完成量不显示虚假的进度',async()=>{
+        value.value=0;buffer.value=-20;await flush();near(fraction('#progress',".my-progress-buffer"),0,'下界');assert(el("#ring .my-ring-buffer").getAttribute('opacity')==='0','零缓冲圆环仍有圆点')
+      })
+      await check('非法缓冲不绘制第三层',async()=>{
+        for(const invalid of [undefined,NaN,Infinity,-Infinity]){buffer.value=invalid;await flush();assert(!el("#progress .my-progress-buffer")&&!el("#ring .my-ring-buffer"),'非法缓冲仍显示')}
+      })
+      await check('未知进度保留等待动画，不误报已缓冲完成量',async()=>{
+        value.value=undefined;buffer.value=72;await flush();assert(el('#progress').classList.contains("my-indeterminate"),'未知进度不是等待态');assert(!el('#progress').hasAttribute('aria-valuenow')&&!el("#progress .my-progress-buffer"),'未知进度错误报告数值')
+      })
+      await check('自定义总量与小数按同一比例解释完成量和缓冲量',async()=>{
+        maximum.value=12;value.value=3.6;buffer.value=9;await flush();near(fraction('#progress',".my-progress-fill"),.3,'自定义完成量');near(fraction('#progress',".my-progress-buffer"),.75,'自定义缓冲量')
+      })
+      await check('非法总量回退 100，缓冲比例同步回退',async()=>{
+        maximum.value=0;value.value=36;buffer.value=72;await flush();near(fraction('#progress',".my-progress-buffer"),.72,'非法总量');assert(el('#progress').getAttribute('aria-valuemax')==='100','总量未回退')
+      })
+      await check('环形进度按相同顺序和比例绘制缓冲',async()=>{
+        maximum.value=100;await flush();assert(el("#ring .my-ring-buffer").getAttribute('stroke-dasharray')==='72 100','环形缓冲比例错误');assert(el("#ring .my-ring-fill").getAttribute('stroke-dasharray')==='36 100','环形完成比例错误');assert(el("#ring .my-ring-buffer").compareDocumentPosition(el("#ring .my-ring-value"))&Node.DOCUMENT_POSITION_FOLLOWING,'环形缓冲层覆盖完成层')
+      })
+      await check('滑块共享三层轨道，不增加额外 progressbar 语义',async()=>{
+        near(fraction('#slider',".my-progress-fill"),.36,'滑块进度');near(fraction('#slider',".my-progress-buffer"),.72,'滑块缓冲');assert(!el('#slider [role="progressbar"]'),'滑块内部重复进度语义');assert(el('#slider input').type==='range','丢失原生 range')
+      })
+      await check('滑块轨道精确对齐原生圆块中心的行程',async()=>{
+        const input=el('#slider input').getBoundingClientRect(),track=el("#slider .my-progress-track").getBoundingClientRect();near(track.left-input.left,10,'轨道左侧');near(input.right-track.right,10,'轨道右侧');assert(input.height>=44,'原生命中区域不足')
+        assert(getComputedStyle(el("#slider .my-progress-fill")).transitionProperty==='none','拖动轨道带追赶动画')
+      })
+      await check('滑块 min/max 共用于播放和缓冲比例',async()=>{
+        minimum.value=20;slideMax.value=80;slide.value=35;slideBuffer.value=65;await flush();near(fraction('#slider',".my-progress-fill"),.25,'滑块区间进度');near(fraction('#slider',".my-progress-buffer"),.75,'滑块区间缓冲')
+      })
+      await check('滑块缓冲限制范围并允许动态移除',async()=>{
+        slideBuffer.value=100;await flush();near(fraction('#slider',".my-progress-buffer"),1,'滑块缓冲上界');slideBuffer.value=-1;await flush();near(fraction('#slider',".my-progress-buffer"),.25,'滑块缓冲下界');slideBuffer.value=NaN;await flush();assert(!el("#slider .my-progress-buffer"),'滑块非法缓冲仍显示')
+      })
+      await check('原生 input 更新 v-model，禁用时拒绝额外输入事件',async()=>{
+        minimum.value=0;slideMax.value=100;step.value=5;await flush();const input=el('#slider input');input.value='55';input.dispatchEvent(new Event('input',{bubbles:true}));await flush();assert(slide.value===55,'输入没有同步')
+        disabled.value=true;await flush();input.value='80';input.dispatchEvent(new Event('input',{bubbles:true}));await flush();assert(slide.value===55&&input.disabled,'禁用控件仍可更新');disabled.value=false;await flush()
+      })
+      await check('局部颜色和粗细在 Slider、Progress 同时生效',async()=>{
+        slideBuffer.value=72;await flush()
+        const color=getComputedStyle(el("#custom-progress .my-progress-fill")).backgroundColor;assert(color==='rgb(23, 107, 60)'&&getComputedStyle(el("#custom-slider .my-progress-fill")).backgroundColor===color,'进度色未共享')
+        assert(getComputedStyle(el("#custom-progress .my-progress-buffer")).backgroundColor==='rgb(156, 204, 173)'&&getComputedStyle(el("#custom-slider .my-progress-buffer")).backgroundColor==='rgb(156, 204, 173)','缓冲覆写未共享')
+        assert(el("#custom-slider .my-progress-track").getBoundingClientRect().height===8,'共享厚度未生效')
+      })
+      await check('自定义圆块尺寸改变行程起点，进度端点仍与圆块一致',async()=>{
+        const input=el('#custom-slider input').getBoundingClientRect(),track=el("#custom-slider .my-progress-track").getBoundingClientRect();near(track.left-input.left,12,'定制圆块对齐')
+      })
+      await check('浅色和暗色均保留互不相同的三层颜色',async()=>{
+        slideBuffer.value=72;await flush();for(const mode of ['light','dark']){applyTheme({mode});await flush();const colors=[".my-progress-track",".my-progress-buffer",".my-progress-fill"].map(part=>getComputedStyle(el('#progress '+part)).backgroundColor);assert(new Set(colors).size===3,mode+' 三层颜色混在一起')}
+      })
+      await check('减少动态效果关闭等待动画和数值过渡',async()=>{
+        value.value=undefined;await flush();const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches,fill=getComputedStyle(el("#progress .my-progress-fill"));assert((fill.animationName==='none')===reduced,'等待动画未尊重系统设置');if(reduced)assert(fill.transitionProperty==='none','进度过渡未关闭')
+      })
+      await check('卸载和重新挂载后进度与滑块可正常使用',async()=>{
+        mounted.value=false;await flush();assert(!el('#slider')&&!el('#progress'),'组件卸载残留');reset();await flush();near(fraction('#slider',".my-progress-fill"),.36,'重新挂载')
+      })
+      result.value=JSON.stringify({passed:reports.length,total:20,viewport:[innerWidth,innerHeight],reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches,reports},null,2)
+    }catch(error){result.value=JSON.stringify({passed:reports.length,total:20,error:String(error),reports},null,2)}finally{running.value=false}
+  }
+  return()=>h('main',[
+    h('h1','滑块与缓冲进度'),h('div',{class:'actions'},[h(Button,{id:'run',disabled:running.value,onClick:run},()=> '运行定向回归'),h(Button,{variant:'outline',onClick:reset},()=> '重置'),h(Button,{variant:'text',onClick:()=>disabled.value=!disabled.value},()=>disabled.value?'启用滑块':'禁用滑块'),h(Button,{variant:'text',onClick:()=>applyTheme({mode:document.documentElement.dataset.theme==='dark'?'light':'dark'})},()=> '切换明暗')]),
+    mounted.value&&h('div',{class:'fixtures'},[
+      h(Progress,{id:'plain',value:36,label:'普通进度'}),h(Progress,{id:'progress',value:value.value,buffer:buffer.value,max:maximum.value,label:'播放和缓冲'}),slider('slider'),
+      h(Progress,{id:'custom-progress',class:'custom',value:36,buffer:72,label:'定制进度'}),slider('custom-slider',{class:'custom'}),
+      h('div',{class:'rings'},[h(Progress,{id:'ring',type:'circle',value:value.value,buffer:buffer.value,max:maximum.value,label:'环形缓冲'}),h(Progress,{type:'circle',label:'正在加载'})])
+    ]),h('pre',{id:'result'},result.value)
+  ])
+}}).mount('#app')
+</script>
+</html>

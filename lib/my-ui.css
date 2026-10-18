@@ -1,0 +1,3623 @@
+/* my-ui · 直接修改此文件即可定制所有组件。
+ * 目录：基础与主题 → 按钮/选择 → 表单 → 列表/导航 → 浮层 → 展示/反馈。
+ * data-my-* 仅隔离组件内部选择器，避免 input、button 等规则影响宿主页面。
+ */
+
+[hidden] {
+  display: none !important;
+}
+/* 默认柔和风格的独立明暗数据；主题入口可切换预设与按需覆写，组件维护自己的布局。 */
+:root {
+  color-scheme: light;
+  --background: #f2f3f5;
+  --card-background: #ffffff;
+  --fill: #f1f2f4;
+  --border: #dde0e5;
+  --text: #17191e;
+  --text-secondary: #626874;
+  --gray: #bac2ce;
+  --hover: #e9ecf0;
+  --press: #e0e4ea;
+  --selected-background: #ffffff;
+  --selected-shadow:
+    0 1px 4px rgb(18 25 37 / 0.1), 0 0 0 1px rgb(18 25 37 / 0.05);
+  --small-shadow: 0 1px 2px rgb(18 25 37 / 0.1);
+  --shadow: 0 1px 3px rgb(18 25 37 / 0.045), 0 4px 12px rgb(18 25 37 / 0.025);
+  --popup-shadow:
+    0 0 0 1px rgb(18 25 37 / 0.07), 0 4px 12px rgb(18 25 37 / 0.12),
+    0 18px 44px -8px rgb(18 25 37 / 0.24);
+  --modal-shadow:
+    0 0 0 1px rgb(18 25 37 / 0.08), 0 8px 24px rgb(18 25 37 / 0.14),
+    0 32px 80px -12px rgb(18 25 37 / 0.3);
+  --overlay-background: rgb(12 18 28 / 0.34);
+  --overlay-backdrop-filter: blur(4px);
+  --success: #176b3c;
+  --warning: #805500;
+  --danger: #b5283c;
+  --primary: #2454c6;
+  --primary-text: #ffffff;
+  --font:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC",
+    "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #121419;
+  --card-background: #252931;
+  --fill: #333944;
+  --border: #596576;
+  --text: #f4f6fa;
+  --text-secondary: #c4cbd6;
+  --gray: #7c899c;
+  --hover: #3c4350;
+  --press: #464e5b;
+  --selected-background: #414956;
+  --selected-shadow: 0 1px 5px rgb(0 0 0 / 0.28), 0 0 0 1px #68778c;
+  --small-shadow: 0 1px 2px rgb(0 0 0 / 0.32);
+  --shadow: 0 1px 3px rgb(0 0 0 / 0.16), 0 4px 12px rgb(0 0 0 / 0.12);
+  --popup-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.2), 0 4px 12px rgb(0 0 0 / 0.36),
+    0 20px 48px -8px rgb(0 0 0 / 0.7);
+  --modal-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.22), 0 8px 24px rgb(0 0 0 / 0.44),
+    0 32px 80px -12px rgb(0 0 0 / 0.82);
+  --overlay-background: rgb(0 0 0 / 0.62);
+  --success: #a4dfb4;
+  --warning: #f3db82;
+  --danger: #ffacae;
+  --primary: #aac8ff;
+  --primary-text: #000000;
+}
+
+/* 页面基础重置与无障碍规则，不包含组件选择器。 */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  scrollbar-gutter: stable;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: var(--font-weight, 400);
+  background: var(--background);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+/* 页面显式启用，保留单指滚动；组件嵌入其他网站时不强制改变缩放策略。 */
+html.my-no-zoom {
+  touch-action: pan-x pan-y;
+}
+
+button {
+  cursor: pointer;
+  font-weight: var(--font-weight-action, 500);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* 默认四档字重由主题统一调整：正文 400、操作 500、小标题 600、大标题 700。 */
+h1,
+h2 {
+  font-weight: var(--font-weight-title, 700);
+}
+h3,
+h4,
+strong,
+b {
+  font-weight: var(--font-weight-subtitle, 600);
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+a[href]:focus-visible,
+[tabindex]:focus-visible,
+[contenteditable]:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* ── Icon ───────────────────────────────────────────── */
+
+svg[data-my-icon] {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ── Button ───────────────────────────────────────────── */
+
+.my-button[data-my-button],
+.my-icon-button[data-my-button],
+.my-round-arrow[data-my-button],
+.my-underlink[data-my-button] {
+  position: relative;
+}
+.my-button-content[data-my-button] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: inherit;
+}
+.my-is-loading[data-my-button] {
+  cursor: progress;
+}
+.my-is-loading .my-button-content[data-my-button] {
+  opacity: 0;
+}
+.my-button-loading[data-my-button] {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.my-is-loading[data-my-button]:active {
+  transform: none;
+}
+/* 插槽与内置图标共用按钮尺寸规则，不向组件外部的 SVG 扩散。 */
+button[data-my-button]:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+.my-button[data-my-button] {
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: var(--font-weight-action, 500);
+  transition:
+    transform 0.16s ease,
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    opacity 0.2s ease;
+  white-space: nowrap;
+  min-height: 44px;
+  padding: 0 17px;
+  font-size: 15px;
+  border-radius: 13px;
+  gap: 7px;
+}
+.my-button[data-my-button] svg {
+  width: 16px;
+  height: 16px;
+}
+.my-button.my-primary[data-my-button] {
+  background: var(--primary);
+  color: var(--primary-text);
+  box-shadow: none;
+}
+.my-button.my-outline[data-my-button] {
+  border-color: var(--border);
+  background: var(--card-background);
+  color: var(--primary);
+}
+.my-button.my-text-only[data-my-button] {
+  color: var(--primary);
+  background: transparent;
+  padding-inline: 8px;
+  opacity: 1;
+  transform: none;
+  touch-action: manipulation;
+  transition:
+    opacity 0.2s ease,
+    color 0.15s ease;
+}
+.my-button.my-inactive[data-my-button] {
+  background: var(--fill);
+  color: var(--text-secondary);
+}
+.my-icon-button[data-my-button] {
+  display: inline-grid;
+  place-items: center;
+  color: var(--text-secondary);
+  background: var(--fill);
+  border: 1px solid var(--border);
+  transition:
+    transform 0.16s ease,
+    background-color 0.16s ease,
+    opacity 0.2s ease;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+}
+.my-icon-button.my-selected[data-my-button] {
+  background: var(--fill);
+  color: var(--primary);
+}
+.my-icon-button[data-my-button] svg {
+  width: 19px;
+  height: 19px;
+}
+.my-icon-button.my-bare-icon[data-my-button] {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-secondary);
+  opacity: 1;
+  transform: none;
+  touch-action: manipulation;
+  transition:
+    opacity 0.2s ease,
+    color 0.15s ease;
+}
+.my-round-arrow[data-my-button] {
+  width: 46px;
+  height: 46px;
+  border: 1px solid var(--border);
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--fill);
+  color: var(--primary);
+  transform: scale(1);
+  transform-origin: center;
+  touch-action: manipulation;
+  transition:
+    transform 0.16s cubic-bezier(0.2, 0.7, 0.2, 1),
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+.my-round-arrow[data-my-button] svg {
+  width: 17px;
+  height: 17px;
+}
+.my-underlink[data-my-button] {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  color: var(--primary);
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 14px;
+  font-weight: var(--font-weight-action, 500);
+  margin-top: 24px;
+  opacity: 1;
+  transform: none;
+  touch-action: manipulation;
+  transition:
+    opacity 0.2s ease,
+    color 0.15s ease;
+}
+.my-underlink[data-my-button] svg {
+  width: 14px;
+  height: 14px;
+}
+.my-button[data-my-button]:not(.my-text-only):not(:disabled) {
+  transform: scale(1);
+  transform-origin: center;
+  touch-action: manipulation;
+  transition:
+    transform 0.16s cubic-bezier(0.2, 0.7, 0.2, 1),
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+.my-icon-button[data-my-button]:not(.my-bare-icon) {
+  transform: scale(1);
+  transform-origin: center;
+  touch-action: manipulation;
+  transition:
+    transform 0.16s cubic-bezier(0.2, 0.7, 0.2, 1),
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+.my-button[data-my-button]:not(.my-text-only):not(:disabled):not(
+    .my-is-loading
+  ):active {
+  transform: scale(0.95);
+}
+.my-icon-button[data-my-button]:not(.my-bare-icon):not(.my-is-loading):not(
+    :disabled
+  ):active {
+  transform: scale(0.95);
+  background-color: var(--press);
+}
+.my-round-arrow[data-my-button]:not(.my-is-loading):not(:disabled):active {
+  transform: scale(0.95);
+  background-color: var(--press);
+}
+.my-button.my-primary[data-my-button]:not(.my-is-loading):not(
+    :disabled
+  ):active {
+  background-color: color-mix(in srgb, var(--primary) 86%, #000);
+}
+.my-button.my-outline[data-my-button]:not(.my-is-loading):not(
+    :disabled
+  ):active {
+  background-color: var(--press);
+}
+.my-button.my-text-only[data-my-button]:not(.my-is-loading):not(
+    :disabled
+  ):active {
+  background-color: var(--press);
+  transition-duration: 0s;
+  transform: none;
+}
+.my-icon-button.my-bare-icon[data-my-button]:not(.my-is-loading):not(
+    :disabled
+  ):active {
+  background-color: var(--press);
+  transition-duration: 0s;
+  transform: none;
+}
+.my-underlink[data-my-button]:not(.my-is-loading):not(:disabled):active {
+  background-color: var(--press);
+  transition-duration: 0s;
+  transform: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .my-button.my-primary[data-my-button]:not(.my-is-loading):not(
+      :disabled
+    ):hover:not(:active) {
+    background-color: color-mix(in srgb, var(--primary) 94%, #000);
+  }
+  .my-button.my-outline[data-my-button]:not(.my-is-loading):not(
+      :disabled
+    ):hover:not(:active) {
+    background-color: var(--hover);
+  }
+  .my-round-arrow[data-my-button]:not(.my-is-loading):not(:disabled):hover:not(
+      :active
+    ) {
+    background-color: var(--hover);
+  }
+  .my-icon-button[data-my-button]:not(.my-bare-icon):not(.my-is-loading):not(
+      :disabled
+    ):hover:not(:active) {
+    background-color: var(--hover);
+  }
+  .my-button.my-text-only[data-my-button]:not(.my-is-loading):not(
+      :disabled
+    ):hover:not(:active) {
+    background-color: var(--hover);
+  }
+  .my-icon-button.my-bare-icon[data-my-button]:not(.my-is-loading):not(
+      :disabled
+    ):hover:not(:active) {
+    background-color: var(--hover);
+  }
+  .my-underlink[data-my-button]:not(.my-is-loading):not(:disabled):hover:not(
+      :active
+    ) {
+    background-color: var(--hover);
+  }
+}
+@media (max-width: 1100px) {
+  .my-button[data-my-button] {
+    padding: 0 17px;
+  }
+}
+@media (max-width: 400px) {
+  .my-button[data-my-button] {
+    padding: 0 13px;
+    font-size: 15px;
+    min-height: 44px;
+  }
+}
+
+/* ── Tag ───────────────────────────────────────────── */
+
+/* 外层始终保留完整点击区域，缩放只影响不接收指针的内层。 */
+.my-tag[data-my-tag] {
+  --tag-color: var(--primary);
+  display: inline-flex;
+  align-items: stretch;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 999px;
+  font: inherit;
+  vertical-align: middle;
+}
+.my-tag-content[data-my-tag] {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 12px;
+  border: 1px solid
+    color-mix(in srgb, var(--tag-color) 18%, var(--card-background));
+  border-radius: inherit;
+  color: var(--tag-color);
+  background: color-mix(in srgb, var(--tag-color) 10%, var(--card-background));
+  font-size: 13px;
+  font-weight: var(--font-weight-action, 500);
+  line-height: 20px;
+  white-space: nowrap;
+  pointer-events: none;
+  transition:
+    transform 0.16s ease,
+    background-color 0.16s ease,
+    color 0.16s ease;
+}
+.my-tag-content[data-my-tag] svg {
+  width: 16px;
+  height: 16px;
+}
+.my-green[data-my-tag] {
+  --tag-color: var(--success);
+}
+.my-orange[data-my-tag] {
+  --tag-color: var(--warning);
+}
+.my-red[data-my-tag] {
+  --tag-color: var(--danger);
+}
+.my-gray[data-my-tag] {
+  --tag-color: var(--text-secondary);
+}
+.my-is-selectable[data-my-tag] {
+  border-radius: 11px;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+}
+.my-is-selectable .my-tag-content[data-my-tag] {
+  min-height: 32px;
+  border-color: var(--border);
+  background: var(--card-background);
+  color: var(--text-secondary);
+}
+.my-is-selected .my-tag-content[data-my-tag] {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-text);
+}
+.my-is-selectable:not(.my-is-disabled):active .my-tag-content[data-my-tag] {
+  transform: scale(0.95);
+  background-color: var(--press);
+}
+.my-is-selected:not(.my-is-disabled):active .my-tag-content[data-my-tag] {
+  background-color: color-mix(in srgb, var(--primary) 86%, #000);
+}
+.my-is-disabled[data-my-tag] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+@media (hover: hover) and (pointer: fine) {
+  .my-is-selectable:not(.my-is-disabled):hover:not(:active)
+    .my-tag-content[data-my-tag] {
+    background-color: var(--hover);
+  }
+  .my-is-selected:not(.my-is-disabled):hover:not(:active)
+    .my-tag-content[data-my-tag] {
+    background-color: color-mix(in srgb, var(--primary) 94%, #000);
+  }
+}
+
+/* ── TagGroup ───────────────────────────────────────────── */
+
+.my-tag-group[data-my-tag-group] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  min-width: 0;
+}
+
+/* ── Switch ───────────────────────────────────────────── */
+
+.my-switch[data-my-switch] {
+  position: relative;
+  width: 47px;
+  height: 28px;
+  appearance: none;
+  border: 0;
+  background: var(--gray);
+  border-radius: 99px;
+  cursor: pointer;
+  transition: background 0.23s;
+  flex-shrink: 0;
+  touch-action: manipulation;
+}
+.my-switch[data-my-switch]::after {
+  content: "";
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  top: 3px;
+  left: 3px;
+  background: var(--switch-thumb-background, #fff);
+  border-radius: 50%;
+  box-shadow: 0 2px 5px rgb(0 0 0 / 0.12);
+  transition:
+    transform 0.23s,
+    background-color 0.15s;
+}
+.my-switch[data-my-switch]:checked {
+  background: var(--primary);
+}
+.my-switch[data-my-switch]:checked::after {
+  /* 填充主色较亮时使用深色圆点，避免暗色主题出现浅色叠浅色。 */
+  background: var(--switch-thumb-background, var(--primary-text));
+  transform: translateX(19px);
+}
+
+/* ── ChoiceControl ───────────────────────────────────────────── */
+
+.my-choice-control[data-my-choice-control] {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  min-height: 42px;
+  padding: 7px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: background-color 0.14s ease;
+}
+input[data-my-choice-control] {
+  appearance: none;
+  -webkit-appearance: none;
+  display: grid;
+  place-items: center;
+  flex: 0 0 var(--choice-size, 20px);
+  width: var(--choice-size, 20px);
+  height: var(--choice-size, 20px);
+  margin: 0;
+  border: 1.5px solid var(--gray);
+  border-radius: 6px;
+  background: var(--card-background);
+  cursor: inherit;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+input[type="radio"][data-my-choice-control] {
+  border-radius: 50%;
+}
+input[data-my-choice-control]:checked,
+input[data-my-choice-control]:indeterminate {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+input[type="radio"][data-my-choice-control]:checked::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--primary-text);
+}
+input[type="checkbox"][data-my-choice-control]:checked::after {
+  content: "";
+  width: 9px;
+  height: 5px;
+  border-left: 2px solid var(--primary-text);
+  border-bottom: 2px solid var(--primary-text);
+  transform: translateY(-1px) rotate(-45deg);
+}
+input[type="checkbox"][data-my-choice-control]:indeterminate::after {
+  content: "";
+  width: 9px;
+  height: 2px;
+  border: 0;
+  border-radius: 1px;
+  background: var(--primary-text);
+  transform: none;
+}
+input[data-my-choice-control]:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+.my-choice-copy[data-my-choice-control] {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.my-choice-label[data-my-choice-control] {
+  display: block;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: var(--font-weight-action, 500);
+  line-height: 22px;
+}
+.my-choice-description[data-my-choice-control] {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: var(--font-weight, 400);
+  line-height: 20px;
+}
+.my-is-list[data-my-choice-control] {
+  display: flex;
+  position: relative;
+  gap: 12px;
+  padding: var(--list-padding-block, 14px) var(--list-padding-inline, 16px);
+  border-radius: 0;
+  --choice-size: 21px;
+}
+.my-is-list .my-choice-label[data-my-choice-control] {
+  font-size: 15px;
+}
+.my-is-list .my-choice-description[data-my-choice-control] {
+  margin-top: 4px;
+}
+.my-is-list input[type="radio"][data-my-choice-control]:checked::after {
+  width: 8px;
+  height: 8px;
+}
+.my-is-list
+  input[type="checkbox"][data-my-choice-control]:checked:not(
+    :indeterminate
+  )::after {
+  width: 10px;
+  height: 6px;
+}
+.my-choice-control[data-my-choice-control]:has(input:disabled) {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+@media (hover: hover) and (pointer: fine) {
+  .my-choice-control[data-my-choice-control]:not(:has(input:disabled)):hover {
+    background-color: var(--hover);
+  }
+}
+@media (hover: none) and (pointer: coarse) {
+  .my-choice-control[data-my-choice-control]:not(:has(input:disabled)):active {
+    background-color: var(--press);
+  }
+}
+
+/* ── ChoiceGroup ───────────────────────────────────────────── */
+
+.my-choice-group[data-my-choice-group] {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+legend[data-my-choice-group] {
+  padding: 0;
+  margin-bottom: 10px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: var(--font-weight-action, 500);
+  line-height: 20px;
+}
+.my-choice-items[data-my-choice-group] {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  min-width: 0;
+}
+.my-choice-items.my-inline[data-my-choice-group] {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+.my-choice-group[data-my-choice-group]:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+/* ── Choices ───────────────────────────────────────────── */
+
+.my-list-stack[data-my-choices] {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: var(--list-border, 1px solid var(--border));
+  border-radius: var(--list-radius, 18px);
+  background: var(--card-background);
+  overflow: hidden;
+}
+/* 首尾间距与分割线继续由列表容器负责，选择控件只复用绘制与命中。 */
+.my-list-stack[data-my-choices]
+  > .my-choice-control
+  + .my-choice-control::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: var(--list-padding-inline, 16px);
+  right: var(--list-padding-inline, 16px);
+  height: 0;
+  border-top: 1px solid var(--list-divider-color, var(--border));
+  pointer-events: none;
+}
+.my-list-stack[data-my-choices] > .my-choice-control:first-child {
+  padding-top: calc(var(--list-padding-block, 14px) + 2px);
+}
+.my-list-stack[data-my-choices] > .my-choice-control:last-child {
+  padding-bottom: calc(var(--list-padding-block, 14px) + 2px);
+}
+
+/* ── Form ───────────────────────────────────────────── */
+
+.my-form[data-my-form] {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 26px;
+  min-width: 0;
+}
+.my-form-inline[data-my-form] {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+/* ── FormField ───────────────────────────────────────────── */
+
+.my-form-field[data-my-form-field] {
+  min-width: 0;
+}
+.my-field-label[data-my-form-field] {
+  display: block;
+  font-weight: var(--font-weight-action, 500);
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 20px;
+  margin-bottom: 8px;
+}
+.my-field-body[data-my-form-field] {
+  min-width: 0;
+}
+.my-field-control[data-my-form-field] {
+  position: relative;
+  min-width: 0;
+}
+.my-form-field.my-horizontal[data-my-form-field],
+.my-form-field.my-inline[data-my-form-field] {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  column-gap: 16px;
+  align-items: start;
+}
+.my-form-field.my-horizontal .my-field-label[data-my-form-field],
+.my-form-field.my-inline .my-field-label[data-my-form-field] {
+  padding-top: 12px;
+  margin-bottom: 0;
+}
+.my-form-field.my-inline[data-my-form-field] {
+  flex: 1 1 320px;
+  grid-template-columns: 80px minmax(0, 1fr);
+  column-gap: 12px;
+}
+.my-required[data-my-form-field] {
+  margin-left: 4px;
+  color: var(--danger);
+}
+.my-field-foot[data-my-form-field] {
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.my-field-foot[data-my-form-field] .my-valid {
+  color: var(--success);
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.my-field-foot[data-my-form-field] svg {
+  width: 13px;
+  height: 13px;
+}
+.my-has-error .my-field-foot[data-my-form-field] {
+  visibility: hidden;
+}
+.my-field-error[data-my-form-field] {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  margin: 0;
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 600px) {
+  .my-form-field.my-horizontal[data-my-form-field] {
+    grid-template-columns: 80px minmax(0, 1fr);
+    column-gap: 12px;
+  }
+}
+
+/* ── Input ───────────────────────────────────────────── */
+
+/* 八个外观变量分别控制底色、文字、边框整体/颜色、焦点色、高度、圆角和内边距。 */
+.my-input-box[data-my-input] {
+  box-sizing: border-box;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--input-height, 44px);
+  padding-inline: var(--input-padding, 13px);
+  border: var(
+    --input-border,
+    1.5px solid var(--input-border-color, transparent)
+  );
+  border-radius: var(--input-radius, 12px);
+  background: var(--input-background, var(--fill));
+  color: var(--text-secondary);
+  transition:
+    border-color 0.16s ease,
+    background-color 0.16s ease;
+}
+.my-input-box[data-my-input]:focus-within:not(.my-is-disabled) {
+  border-color: var(--input-focus-color, var(--primary));
+}
+.my-input-box.my-is-invalid[data-my-input] {
+  border-color: var(--danger);
+}
+.my-input-box[data-my-input] svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.my-input-prefix[data-my-input] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.my-input-box input[data-my-input] {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--input-color, var(--text));
+  font-size: inherit;
+}
+.my-input-box input[data-my-input]::placeholder {
+  color: var(--text-secondary);
+}
+.my-input-box input[data-my-input]::-ms-reveal,
+.my-input-box input[data-my-input]::-ms-clear {
+  display: none;
+}
+/* 图标盒与文字共享边距；尾部留白由最后一项接管，扩展热区而不放大圆形反馈。 */
+.my-input-actions[data-my-input] {
+  display: flex;
+  align-items: stretch;
+  align-self: stretch;
+  flex-shrink: 0;
+  gap: 0;
+  margin-inline-end: calc(-1 * var(--input-padding, 13px));
+}
+.my-input-suffix[data-my-input] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 24px;
+  flex-shrink: 0;
+  padding-inline: 4px;
+}
+.my-input-suffix[data-my-input]:last-child {
+  padding-inline-end: max(4px, var(--input-padding, 13px));
+}
+.my-input-action[data-my-input] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  transform: none;
+}
+.my-input-action[data-my-input]:last-child {
+  padding-inline-end: max(0px, calc(var(--input-padding, 13px) - 4px));
+}
+.my-input-action-visual[data-my-input] {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: transparent;
+  pointer-events: none;
+  transition: background-color 0.15s ease;
+}
+.my-input-action[data-my-input]:disabled {
+  cursor: not-allowed;
+}
+.my-input-action[data-my-input]:focus-visible {
+  outline: none;
+}
+.my-input-action:focus-visible .my-input-action-visual[data-my-input] {
+  outline: 2px solid var(--input-focus-color, var(--primary));
+  outline-offset: 1px;
+}
+.my-input-action:not(:disabled):active .my-input-action-visual[data-my-input] {
+  background-color: var(--press);
+}
+.my-is-disabled[data-my-input] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.my-is-disabled input[data-my-input] {
+  cursor: not-allowed;
+}
+@media (hover: hover) and (pointer: fine) {
+  .my-input-action:not(:disabled):hover:not(:active)
+    .my-input-action-visual[data-my-input] {
+    background-color: var(--hover);
+  }
+}
+
+/* ── Textarea ───────────────────────────────────────────── */
+
+.my-textarea[data-my-textarea] {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-height: var(--input-height, 76px);
+  height: var(--input-height, auto);
+  padding: var(--input-padding, 12px 13px);
+  border: var(
+    --input-border,
+    1.5px solid var(--input-border-color, transparent)
+  );
+  border-radius: var(--input-radius, 12px);
+  outline: 0;
+  background: var(--input-background, var(--fill));
+  color: var(--input-color, var(--text));
+  line-height: 1.65;
+  resize: vertical;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
+}
+.my-textarea[data-my-textarea]::placeholder {
+  color: var(--text-secondary);
+}
+.my-textarea[data-my-textarea]:focus {
+  border-color: var(--input-focus-color, var(--primary));
+}
+.my-textarea.my-is-invalid[data-my-textarea] {
+  border-color: var(--danger);
+}
+.my-textarea[data-my-textarea]:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  resize: none;
+}
+.my-textarea[readonly][data-my-textarea] {
+  resize: none;
+}
+.my-counter[data-my-textarea] {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Select ───────────────────────────────────────────── */
+
+button[data-my-select]:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+.my-field-label[data-my-select] {
+  display: block;
+  font-weight: var(--font-weight-action, 500);
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.my-input-box[data-my-select] {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  background: var(--input-background, var(--fill));
+  border: var(
+    --input-border,
+    1.5px solid var(--input-border-color, transparent)
+  );
+  color: var(--text-secondary);
+  transition: 0.2s;
+  height: var(--input-height, 44px);
+  border-radius: var(--input-radius, 12px);
+  padding: 0 var(--input-padding, 13px);
+  gap: 9px;
+}
+.my-input-box[data-my-select]:focus-within {
+  border-color: var(--input-focus-color, var(--primary));
+}
+.my-input-box svg[data-my-select] {
+  width: 18px;
+  height: 18px;
+}
+.my-field-foot[data-my-select] {
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.my-field-foot[data-my-select] .my-valid {
+  color: var(--success);
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.my-field-foot[data-my-select] svg {
+  width: 13px;
+  height: 13px;
+}
+.my-select-box[data-my-select] {
+  position: relative;
+}
+.my-select-trigger.my-input-box[data-my-select] {
+  display: flex;
+  text-align: left;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+.my-select-trigger.my-input-box[data-my-select]:focus-visible {
+  outline: 2px solid var(--input-focus-color, var(--primary));
+  outline-offset: 3px;
+}
+.my-select-box.my-open .my-select-trigger.my-input-box[data-my-select] {
+  border-color: var(--input-focus-color, var(--primary));
+}
+.my-select-value[data-my-select] {
+  font-size: 15px;
+  font-weight: var(--font-weight-action, 500);
+  color: var(--input-color, var(--text));
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.my-select-chevron[data-my-select] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  transform: rotate(90deg);
+  transition: transform 0.22s cubic-bezier(0.2, 0.78, 0.22, 1);
+}
+.my-select-box.my-open .my-select-chevron[data-my-select] {
+  transform: rotate(-90deg);
+}
+@media (hover: hover) and (pointer: fine) {
+  .my-select-trigger[data-my-select]:not(:disabled):hover {
+    background-color: var(--hover);
+  }
+}
+
+/* ── Combobox ───────────────────────────────────────────── */
+
+.my-combobox[data-my-combobox] {
+  min-width: 0;
+}
+.my-combobox-indicator[data-my-combobox] {
+  pointer-events: none;
+}
+.my-floating-panel.my-combobox-panel {
+  overflow-x: hidden;
+}
+.my-combobox-content[data-my-combobox],
+.my-combobox-list[data-my-combobox] {
+  margin: 0;
+  padding: 0;
+  outline: 0;
+}
+.my-combobox-option[data-my-combobox]:first-child {
+  padding-top: calc(var(--list-padding-block, 14px) + 2px);
+}
+.my-combobox-option[data-my-combobox]:last-child {
+  padding-bottom: calc(var(--list-padding-block, 14px) + 2px);
+}
+.my-combobox-option[data-my-combobox] {
+  color: var(--text);
+}
+.my-combobox-option[aria-selected="true"][data-my-combobox] {
+  color: var(--primary);
+}
+.my-combobox-option.my-is-active[data-my-combobox]:not(:disabled) {
+  background: var(--hover);
+}
+.my-combobox-check[data-my-combobox] {
+  width: 18px;
+  height: 18px;
+  color: var(--primary);
+  visibility: hidden;
+}
+.my-combobox-check.my-selected[data-my-combobox] {
+  visibility: visible;
+}
+.my-combobox-option[data-my-combobox] .my-leading-content {
+  width: auto;
+  height: auto;
+  min-width: 20px;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+}
+.my-combobox-status[data-my-combobox] {
+  margin: 0;
+  padding: 22px 16px;
+  color: var(--text-secondary);
+  text-align: center;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+/* ── Slider ───────────────────────────────────────────── */
+
+/* 九个变量覆盖轨道颜色/粗细和圆块的尺寸、颜色、边框、圆角、阴影。 */
+.my-slider[data-my-slider] {
+  min-width: 0;
+  color: var(--slider-color, var(--progress-color, var(--primary)));
+}
+.my-range-heading[data-my-slider] {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-secondary);
+  margin: 6px 0;
+  font-size: 13px;
+}
+.my-range-heading strong[data-my-slider] {
+  color: var(--slider-color, var(--progress-color, var(--primary)));
+  font-weight: var(--font-weight-subtitle, 600);
+  font-variant-numeric: tabular-nums;
+}
+.my-slider-control[data-my-slider] {
+  position: relative;
+  min-height: max(44px, var(--slider-thumb-size, 20px));
+  cursor: pointer;
+  touch-action: pan-y;
+}
+/* 轨道两端对齐原生圆块中心，填充终点始终跟随圆块。 */
+.my-slider .my-slider-track[data-my-slider] {
+  position: absolute;
+  top: 50%;
+  right: calc(var(--slider-thumb-size, 20px) / 2);
+  left: calc(var(--slider-thumb-size, 20px) / 2);
+  height: var(--slider-track-height, var(--progress-thickness, 6px));
+  transform: translateY(-50%);
+  background: var(--slider-track-color, var(--progress-track, var(--fill)));
+  pointer-events: none;
+}
+input[type="range"][data-my-slider] {
+  position: relative;
+  z-index: 1;
+  display: block;
+  appearance: none;
+  width: 100%;
+  height: max(44px, var(--slider-thumb-size, 20px));
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  touch-action: pan-y;
+}
+input[data-my-slider]::-webkit-slider-runnable-track {
+  height: var(--slider-track-height, var(--progress-thickness, 6px));
+  background: transparent;
+}
+input[data-my-slider]::-moz-range-track {
+  height: var(--slider-track-height, var(--progress-thickness, 6px));
+  background: transparent;
+}
+input[data-my-slider]::-moz-range-progress {
+  background: transparent;
+}
+input[data-my-slider]::-webkit-slider-thumb {
+  appearance: none;
+  box-sizing: border-box;
+  width: var(--slider-thumb-size, 20px);
+  height: var(--slider-thumb-size, 20px);
+  margin-top: calc(
+    (
+        var(--slider-track-height, var(--progress-thickness, 6px)) -
+          var(--slider-thumb-size, 20px)
+      ) /
+      2
+  );
+  border: var(--slider-thumb-border-width, 0px) solid
+    var(--slider-thumb-border-color, currentColor);
+  border-radius: var(--slider-thumb-radius, 50%);
+  background: var(--slider-thumb-color, currentColor);
+  box-shadow: var(--slider-thumb-shadow, 0 2px 5px rgb(0 0 0 / 0.22));
+}
+input[data-my-slider]::-moz-range-thumb {
+  box-sizing: border-box;
+  width: var(--slider-thumb-size, 20px);
+  height: var(--slider-thumb-size, 20px);
+  border: var(--slider-thumb-border-width, 0px) solid
+    var(--slider-thumb-border-color, currentColor);
+  border-radius: var(--slider-thumb-radius, 50%);
+  background: var(--slider-thumb-color, currentColor);
+  box-shadow: var(--slider-thumb-shadow, 0 2px 5px rgb(0 0 0 / 0.22));
+}
+input[data-my-slider]:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+input[data-my-slider]:focus-visible::-moz-range-thumb {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+.my-is-disabled[data-my-slider] {
+  opacity: 0.6;
+}
+input[data-my-slider]:disabled {
+  cursor: not-allowed;
+}
+.my-range-scale[data-my-slider] {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-secondary);
+  font-size: 11px;
+  margin-top: 2px;
+}
+.my-is-range input[data-my-slider] {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.my-is-range input.my-is-current[data-my-slider] {
+  z-index: 2;
+}
+.my-is-range input[data-my-slider]::-webkit-slider-thumb {
+  pointer-events: auto;
+}
+.my-is-range input[data-my-slider]::-moz-range-thumb {
+  pointer-events: auto;
+}
+.my-slider-thumb-anchor[data-my-slider] {
+  position: absolute;
+  top: 50%;
+  left: calc(
+    var(--slider-thumb-size, 20px) / 2 +
+      (100% - var(--slider-thumb-size, 20px)) * var(--slider-position)
+  );
+  width: var(--slider-thumb-size, 20px);
+  height: var(--slider-thumb-size, 20px);
+  translate: -50% -50%;
+  pointer-events: none;
+  transition-property: none;
+}
+/* 独立光圈保留完整的进出与反向过渡，不依赖原生 range 伪元素的动画支持。 */
+.my-slider-halo[data-my-slider] {
+  position: absolute;
+  inset: -15px;
+  border-radius: var(--slider-thumb-radius, 50%);
+  background: color-mix(
+    in srgb,
+    var(--slider-thumb-color, currentColor) 14%,
+    transparent
+  );
+  opacity: 0;
+  scale: 0.4;
+  transition:
+    scale 0.16s ease,
+    opacity 0.16s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .my-slider-thumb-anchor.my-is-hovered .my-slider-halo[data-my-slider] {
+    opacity: 1;
+    scale: calc(
+      (var(--slider-thumb-size, 20px) + 16px) /
+        (var(--slider-thumb-size, 20px) + 30px)
+    );
+  }
+}
+.my-slider-thumb-anchor.my-is-active .my-slider-halo[data-my-slider] {
+  opacity: 1;
+  scale: 1;
+}
+.my-slider-marks[data-my-slider] {
+  position: absolute;
+  top: 50%;
+  right: calc(var(--slider-thumb-size, 20px) / 2);
+  left: calc(var(--slider-thumb-size, 20px) / 2);
+  pointer-events: none;
+}
+.my-slider-marks > span[data-my-slider] {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.75;
+  translate: -50% -50%;
+}
+.my-slider-marks > span.my-selected[data-my-slider] {
+  background: var(--card-background);
+  opacity: 0.85;
+}
+.my-slider-mark-labels[data-my-slider] {
+  position: relative;
+  height: 20px;
+  margin: 2px calc(var(--slider-thumb-size, 20px) / 2) 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 20px;
+}
+.my-slider-mark-labels > span[data-my-slider] {
+  position: absolute;
+  translate: -50% 0;
+  white-space: nowrap;
+}
+.my-slider-mark-labels > span.my-start[data-my-slider] {
+  translate: 0 0;
+}
+.my-slider-mark-labels > span.my-end[data-my-slider] {
+  translate: -100% 0;
+}
+.my-slider-mark-labels > span.my-selected[data-my-slider] {
+  color: var(--slider-color, var(--progress-color, var(--primary)));
+}
+.my-is-disabled .my-slider-control[data-my-slider] {
+  cursor: not-allowed;
+}
+@media (prefers-reduced-motion: reduce) {
+  .my-slider-halo[data-my-slider] {
+    transition-property: none;
+  }
+}
+
+/* ── ProgressTrack ───────────────────────────────────────────── */
+
+.my-progress-track[data-my-progress-track] {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: var(--progress-thickness, 6px);
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--progress-track, var(--fill));
+}
+.my-progress-fill[data-my-progress-track],
+.my-progress-buffer[data-my-progress-track] {
+  position: absolute;
+  inset: 0 auto 0 0;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.2s ease;
+}
+.my-progress-fill[data-my-progress-track] {
+  left: calc(var(--progress-start-ratio) * 100%);
+  width: calc((var(--progress-ratio) - var(--progress-start-ratio)) * 100%);
+  background: currentColor;
+}
+.my-progress-buffer[data-my-progress-track] {
+  width: calc(var(--progress-buffer-ratio) * 100%);
+  background: var(
+    --progress-buffer-color,
+    color-mix(in srgb, currentColor 28%, var(--progress-track, var(--fill)))
+  );
+}
+/* 拖动时即时跟随圆块，避免进度轨道追赶滑块。 */
+.my-is-instant > span[data-my-progress-track] {
+  transition: none;
+}
+.my-is-indeterminate .my-progress-fill[data-my-progress-track] {
+  width: 32%;
+  transform: translateX(-110%);
+  animation: my-progress-travel-data-my-progress-track 1.4s ease-in-out infinite;
+}
+@keyframes my-progress-travel-data-my-progress-track {
+  to {
+    transform: translateX(420%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .my-progress-fill[data-my-progress-track],
+  .my-progress-buffer[data-my-progress-track] {
+    transition: none;
+  }
+  .my-is-indeterminate .my-progress-fill[data-my-progress-track] {
+    animation: none;
+    transform: translateX(100%);
+  }
+}
+
+/* ── Progress ───────────────────────────────────────────── */
+
+.my-progress[data-my-progress] {
+  --progress-state-color: var(--primary);
+  min-width: 0;
+  color: var(--progress-color, var(--progress-state-color));
+  font-size: 13px;
+  font-weight: var(--font-weight, 400);
+  line-height: 1.6;
+}
+.my-progress.my-success[data-my-progress] {
+  --progress-state-color: var(--success);
+}
+.my-progress.my-warning[data-my-progress] {
+  --progress-state-color: var(--warning);
+}
+.my-progress.my-error[data-my-progress] {
+  --progress-state-color: var(--danger);
+}
+.my-progress.my-line[data-my-progress] {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+.my-progress-text[data-my-progress] {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  min-height: 21px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.my-progress-text[data-my-progress] svg {
+  width: 18px;
+  height: 18px;
+  color: var(--progress-color, var(--progress-state-color));
+}
+.my-progress.my-circle[data-my-progress] {
+  display: inline-grid;
+  position: relative;
+  width: var(--progress-size, 96px);
+  height: var(--progress-size, 96px);
+  vertical-align: middle;
+}
+.my-progress-ring[data-my-progress] {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke-width: var(--progress-thickness, 6px);
+  transform: rotate(-90deg);
+}
+.my-ring-track[data-my-progress] {
+  stroke: var(--progress-track, var(--fill));
+}
+.my-ring-fill[data-my-progress],
+.my-ring-buffer[data-my-progress] {
+  stroke-linecap: round;
+  transition:
+    stroke-dasharray 0.2s ease,
+    opacity 0.2s ease;
+}
+.my-ring-fill[data-my-progress] {
+  stroke: currentColor;
+}
+.my-ring-buffer[data-my-progress] {
+  stroke: var(
+    --progress-buffer-color,
+    color-mix(in srgb, currentColor 28%, var(--progress-track, var(--fill)))
+  );
+}
+.my-circle .my-progress-text[data-my-progress] {
+  position: absolute;
+  inset: 0;
+  min-width: 0;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: var(--font-weight-action, 500);
+}
+.my-circle .my-progress-text[data-my-progress] svg {
+  width: 28%;
+  height: 28%;
+}
+.my-circle.my-indeterminate .my-progress-text[data-my-progress] {
+  font-size: 12px;
+  font-weight: var(--font-weight, 400);
+}
+.my-circle.my-indeterminate .my-ring-value[data-my-progress] {
+  transform-origin: 50px 50px;
+  animation: my-progress-rotate-data-my-progress 1s linear infinite;
+}
+@keyframes my-progress-rotate-data-my-progress {
+  to {
+    transform: rotate(1turn);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .my-ring-fill[data-my-progress],
+  .my-ring-buffer[data-my-progress] {
+    transition: none;
+  }
+  .my-circle.my-indeterminate .my-ring-value[data-my-progress] {
+    animation: none;
+  }
+}
+
+/* ── CellGroup ───────────────────────────────────────────── */
+
+.my-cell-group[data-my-cell-group] {
+  min-width: 0;
+}
+.my-group-heading[data-my-cell-group] {
+  padding: 0 2px;
+  margin-bottom: 11px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.my-group-heading strong[data-my-cell-group] {
+  font-size: 13px;
+  font-weight: var(--font-weight-subtitle, 600);
+}
+.my-group-heading p[data-my-cell-group] {
+  margin: 3px 0 0;
+}
+.my-group-body[data-my-cell-group] {
+  border: var(--list-border, 1px solid var(--border));
+  border-radius: var(--list-radius, 18px);
+  background: var(--card-background);
+  overflow: hidden;
+}
+.my-group-body[data-my-cell-group] > .my-list-row:first-child {
+  padding-top: calc(var(--list-padding-block, 14px) + 2px);
+}
+.my-group-body[data-my-cell-group] > .my-list-row:last-child {
+  padding-bottom: calc(var(--list-padding-block, 14px) + 2px);
+}
+/* 直接子元素的绝对定位边框兼容多根菜单，并通过物理像素取整统一厚度。 */
+.my-group-body[data-my-cell-group] > * {
+  position: relative;
+}
+.my-group-body[data-my-cell-group] > :not(:first-child)::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: var(--list-padding-inline, 16px);
+  right: var(--list-padding-inline, 16px);
+  height: 0;
+  border-top: 1px solid var(--list-divider-color, var(--border));
+  pointer-events: none;
+}
+
+/* ── ListRow ───────────────────────────────────────────── */
+
+.my-leading-content[data-my-list-row] {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: var(--fill);
+  color: var(--primary);
+}
+.my-leading-content[data-my-list-row] svg {
+  width: 18px;
+  height: 18px;
+}
+.my-trailing-content[data-my-list-row] {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.my-trailing-content[data-my-list-row]:empty {
+  display: none;
+}
+.my-list-row[data-my-list-row] {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  /* 容器提供默认间距，行上的局部变量可覆写；普通列表保持原有尺寸。 */
+  padding: var(--list-padding-block, 14px) var(--list-padding-inline, 16px);
+  position: relative;
+  min-width: 0;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: var(--font-weight-action, 500);
+  transition: background-color 0.14s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 绝对定位边框不占布局，并使用浏览器的物理像素取整来统一细线厚度。 */
+.my-list-row + .my-list-row[data-my-list-row]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: var(--list-padding-inline, 16px);
+  right: var(--list-padding-inline, 16px);
+  height: 0;
+  border-top: 1px solid var(--list-divider-color, var(--border));
+  pointer-events: none;
+}
+
+/* 独立的内缩圆角轮廓不改变行形状，也不会被列表外框裁掉。 */
+.my-list-row[data-my-list-row]:focus-visible {
+  outline: none;
+}
+.my-list-row[data-my-list-row]:focus-visible::after {
+  content: "";
+  position: absolute;
+  inset: 4px 6px;
+  border: 2px solid var(--primary);
+  border-radius: 10px;
+  pointer-events: none;
+}
+.my-list-row-copy[data-my-list-row] {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.my-list-row-copy strong[data-my-list-row] {
+  display: block;
+  font-size: inherit;
+  line-height: 22px;
+  color: inherit;
+  font-weight: inherit;
+}
+.my-list-row-copy small[data-my-list-row] {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: var(--font-weight, 400);
+  line-height: 20px;
+  color: var(--text-secondary);
+}
+.my-list-action[data-my-list-row] {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  color: var(--text);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.my-list-action svg.my-trailing-icon[data-my-list-row] {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.22s ease;
+  transform: none;
+  color: var(--text-secondary);
+}
+.my-list-selected-value[data-my-list-row] {
+  font-size: 14px;
+  font-weight: var(--font-weight, 400);
+  color: var(--text-secondary);
+  line-height: 20px;
+  text-align: right;
+  overflow-wrap: anywhere;
+  max-width: min(40%, 160px);
+  flex: 0 1 auto;
+  margin-left: auto;
+}
+.my-list-action[aria-expanded="true"]
+  .my-list-selected-value[data-my-list-row] {
+  color: var(--text-secondary);
+}
+.my-list-toggle[data-my-list-row] {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+.my-list-toggle .my-switch[data-my-list-row] {
+  margin-left: auto;
+}
+@media (hover: hover) and (pointer: fine) {
+  .my-list-row[data-my-list-row]:hover {
+    background-color: var(--hover);
+  }
+}
+@media (hover: none) and (pointer: coarse) {
+  .my-list-row[data-my-list-row]:active {
+    background-color: var(--press);
+  }
+}
+.my-is-disabled[data-my-list-row] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.my-is-disabled input[data-my-list-row] {
+  cursor: not-allowed;
+}
+.my-is-disabled[data-my-list-row]:hover {
+  background: inherit;
+}
+
+/* ── Tabs ───────────────────────────────────────────── */
+
+.my-tabs[data-my-tabs] {
+  min-width: 0;
+}
+.my-tab-strip[data-my-tabs] {
+  position: relative;
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.my-tab-strip[data-my-tabs]::-webkit-scrollbar {
+  display: none;
+}
+.my-tab-strip button[data-my-tabs] {
+  position: relative;
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 9px 9px 0 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  white-space: nowrap;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.my-tab-strip button[aria-selected="true"][data-my-tabs] {
+  color: var(--primary);
+}
+.my-tab-indicator[data-my-tabs] {
+  position: absolute;
+  height: 3px;
+  left: 0;
+  bottom: 0;
+  border-radius: 4px;
+  background: transparent;
+  pointer-events: none;
+}
+.my-tab-indicator[data-my-tabs]::after {
+  content: "";
+  position: absolute;
+  inset: 0 16px;
+  border-radius: inherit;
+  background: var(--primary);
+}
+.my-tab-strip button[data-my-tabs]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.my-tab-strip button[data-my-tabs]:focus-visible {
+  outline-offset: -3px;
+}
+.my-tab-viewport[data-my-tabs] {
+  position: relative;
+  overflow: hidden;
+}
+.my-tab-viewport[data-swipeable][data-my-tabs] {
+  touch-action: pan-y pinch-zoom;
+}
+.my-tab-track[data-my-tabs] {
+  position: relative;
+}
+.my-tab-viewport[data-swiping] .my-tab-track[data-my-tabs] {
+  will-change: transform;
+}
+.my-tab-panel[data-my-tabs] {
+  padding-top: 20px;
+  outline-offset: -3px;
+}
+.my-tab-panel.my-is-preview[data-my-tabs] {
+  position: absolute;
+  top: 0;
+  width: 100%;
+}
+.my-tab-panel[hidden][data-my-tabs] {
+  display: none;
+}
+.my-no-tabs[data-my-tabs] {
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 20px 0;
+}
+@media (hover: hover) and (pointer: fine) {
+  .my-tab-strip button[data-my-tabs]:not(:disabled):hover {
+    background-color: var(--hover);
+  }
+}
+@media (hover: none) and (pointer: coarse) {
+  .my-tab-strip button[data-my-tabs]:not(:disabled):active {
+    background-color: var(--press);
+  }
+}
+
+/* ── Segmented ───────────────────────────────────────────── */
+
+button[data-my-segmented]:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+.my-segmented[data-my-segmented] {
+  background: var(--segment-background, var(--fill));
+  border: 1px solid var(--border);
+  display: grid;
+  position: relative;
+  isolation: isolate;
+  gap: 0;
+  padding: 4px;
+  border-radius: 14px;
+  overflow: hidden;
+  --segment-shift: 0%;
+  grid-template-columns: repeat(var(--segment-count, 3), minmax(0, 1fr));
+}
+.my-segmented button[data-my-segmented] {
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  padding: 9px 8px;
+  position: relative;
+  z-index: 1;
+  min-height: 40px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: var(--font-weight-action, 500);
+  transform: none;
+  touch-action: manipulation;
+  transition: color 0.2s ease;
+}
+.my-segmented button.my-active[data-my-segmented] {
+  background: none;
+  box-shadow: none;
+  color: var(--primary);
+  font-weight: var(--font-weight-action, 500);
+}
+.my-segmented button[data-my-segmented]:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+.my-segmented[data-my-segmented]::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  border-radius: 10px;
+  background: var(
+    --segment-active-background,
+    var(--selected-background, var(--card-background))
+  );
+  box-shadow: var(--segment-active-shadow, var(--selected-shadow));
+  transform: translateX(var(--segment-shift));
+  transition: transform 0.28s cubic-bezier(0.2, 0.78, 0.22, 1);
+  pointer-events: none;
+  width: calc((100% - 8px) / var(--segment-count, 3));
+}
+@media (prefers-reduced-motion: reduce) {
+  .my-segmented[data-my-segmented]::before {
+    transition: none;
+  }
+}
+
+/* ── Navigation ───────────────────────────────────────────── */
+
+button[data-my-navigation]:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+.my-navigation[data-my-navigation] {
+  background: var(--fill);
+  border: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  height: 56px;
+  min-height: 56px;
+  padding: 3px 5px;
+  border-radius: 15px;
+  align-items: stretch;
+}
+.my-navigation button[data-my-navigation] {
+  min-width: 0;
+  flex: 1;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  color: var(--text-secondary);
+  opacity: 1;
+  transform: none;
+  touch-action: manipulation;
+  transition:
+    opacity 0.2s ease,
+    color 0.15s ease;
+  height: 100%;
+  min-height: 0;
+  padding: 3px 4px;
+  gap: 2px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.15;
+}
+.my-navigation button svg[data-my-navigation] {
+  height: 24px;
+  width: 24px;
+}
+.my-navigation button.my-active[data-my-navigation] {
+  color: var(--primary);
+  font-weight: var(--font-weight-action, 500);
+  background: transparent;
+  box-shadow: none;
+}
+.my-navigation button[data-my-navigation]:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+/* ── Stepper ───────────────────────────────────────────── */
+
+button[data-my-stepper]:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+.my-stepper[data-my-stepper] {
+  height: 44px;
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card-background);
+  overflow: hidden;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.my-stepper button[data-my-stepper] {
+  flex: 0 0 44px;
+  height: 100%;
+  padding: 0 11px;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 20px;
+  font-weight: var(--font-weight-action, 500);
+  text-align: center;
+  transform: none;
+  touch-action: manipulation;
+  transition:
+    background-color 0.14s ease,
+    color 0.14s ease;
+}
+.my-stepper input[data-my-stepper] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+  flex: 0 0 48px;
+  width: 48px;
+  min-width: 0;
+  height: 100%;
+  padding: 0 11px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: var(--font-weight-action, 500);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  border-inline: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: none;
+}
+.my-stepper input[data-my-stepper]::-webkit-outer-spin-button {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+}
+.my-stepper input[data-my-stepper]::-webkit-inner-spin-button {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+}
+.my-stepper input[data-my-stepper]:focus {
+  background: transparent;
+  outline: none;
+  box-shadow: none;
+}
+.my-stepper button[data-my-stepper]:focus-visible,
+.my-stepper input[data-my-stepper]:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -4px;
+  box-shadow: none;
+}
+.my-stepper button[data-my-stepper]:not(:disabled):active {
+  background-color: var(--press);
+  color: var(--primary);
+}
+@media (hover: hover) and (pointer: fine) {
+  .my-stepper button[data-my-stepper]:not(:disabled):hover:not(:active) {
+    background-color: var(--hover);
+    color: var(--primary);
+  }
+}
+
+/* ── Collapse ───────────────────────────────────────────── */
+
+.my-collapse[data-my-collapse] {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--collapse-radius, 16px);
+  background: var(--card-background);
+  overflow: hidden;
+}
+.my-collapse[data-my-collapse] > .my-collapse-item + .my-collapse-item {
+  border-top: 1px solid var(--border);
+}
+
+/* ── CollapseItem ───────────────────────────────────────────── */
+
+.my-collapse-trigger[data-my-collapse-item] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-height: 54px;
+  padding: 16px var(--collapse-padding, 16px);
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.14s ease;
+}
+.my-collapse-title[data-my-collapse-item] {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: var(--font-weight-action, 500);
+  line-height: 22px;
+  overflow-wrap: anywhere;
+}
+.my-collapse-arrow[data-my-collapse-item] {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  color: var(--text-secondary);
+  transform: rotate(90deg);
+  transition: transform 0.24s ease;
+}
+.my-collapse-arrow.my-open[data-my-collapse-item] {
+  transform: rotate(-90deg);
+}
+.my-collapse-trigger[data-my-collapse-item]:disabled {
+  color: var(--text-secondary);
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.my-collapse-trigger[data-my-collapse-item]:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -4px;
+}
+.my-collapse-region[data-my-collapse-item] {
+  display: grid;
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  transition:
+    grid-template-rows 0.24s ease,
+    visibility 0s 0.24s;
+}
+.my-collapse-region.my-open[data-my-collapse-item] {
+  grid-template-rows: 1fr;
+  visibility: visible;
+  transition:
+    grid-template-rows 0.24s ease,
+    visibility 0s;
+}
+.my-collapse-clip[data-my-collapse-item] {
+  min-height: 0;
+  overflow: hidden;
+}
+.my-collapse-content[data-my-collapse-item] {
+  padding: 0 var(--collapse-padding, 16px) 16px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: var(--font-weight, 400);
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+@media (hover: hover) and (pointer: fine) {
+  .my-collapse-trigger[data-my-collapse-item]:not(:disabled):hover {
+    background-color: var(--hover);
+  }
+}
+@media (hover: none) and (pointer: coarse) {
+  .my-collapse-trigger[data-my-collapse-item]:not(:disabled):active {
+    background-color: var(--press);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .my-collapse-region[data-my-collapse-item],
+  .my-collapse-region.my-open[data-my-collapse-item],
+  .my-collapse-arrow[data-my-collapse-item] {
+    transition: none;
+  }
+}
+
+/* ── Floating ───────────────────────────────────────────── */
+
+.my-floating-position[data-my-floating] {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 99;
+  visibility: hidden;
+  pointer-events: none;
+  transition-property: none;
+}
+.my-floating-position.my-ready[data-my-floating] {
+  visibility: visible;
+}
+.my-floating-panel[data-my-floating] {
+  position: relative;
+  width: var(--floating-width, 236px);
+  max-width: 100%;
+  padding: 0;
+  background: var(--card-background);
+  color: var(--text);
+  border: 0;
+  border-radius: var(--floating-radius, 17px);
+  box-shadow: var(--popup-shadow);
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray) transparent;
+  pointer-events: auto;
+  scale: 1;
+  translate: 0px 0px;
+  transition:
+    scale 0.22s cubic-bezier(0.18, 0.79, 0.22, 1),
+    translate 0.22s cubic-bezier(0.18, 0.79, 0.22, 1);
+}
+.my-floating-motion-enter-active[data-my-floating],
+.my-floating-motion-leave-active[data-my-floating] {
+  transition:
+    opacity 0.19s ease,
+    transform 0.26s cubic-bezier(0.18, 0.79, 0.22, 1),
+    scale 0.22s cubic-bezier(0.18, 0.79, 0.22, 1),
+    translate 0.22s cubic-bezier(0.18, 0.79, 0.22, 1);
+}
+.my-floating-motion-enter-from[data-my-floating],
+.my-floating-motion-leave-to[data-my-floating] {
+  opacity: 0;
+  transform: scale(0, 0);
+}
+[data-motion="slide"] .my-floating-motion-enter-active[data-my-floating],
+[data-motion="slide"] .my-floating-motion-leave-active[data-my-floating] {
+  transition:
+    opacity 0.17s ease,
+    transform 0.22s cubic-bezier(0.2, 0.78, 0.22, 1),
+    scale 0.22s cubic-bezier(0.18, 0.79, 0.22, 1),
+    translate 0.22s cubic-bezier(0.18, 0.79, 0.22, 1);
+}
+[data-motion="slide"] .my-floating-motion-enter-from[data-my-floating],
+[data-motion="slide"] .my-floating-motion-leave-to[data-my-floating] {
+  transform: translateY(-6px);
+}
+[data-motion="slide"][data-side="top"]
+  .my-floating-motion-enter-from[data-my-floating],
+[data-motion="slide"][data-side="top"]
+  .my-floating-motion-leave-to[data-my-floating] {
+  transform: translateY(6px);
+}
+[data-motion="slide"][data-side="right"]
+  .my-floating-motion-enter-from[data-my-floating],
+[data-motion="slide"][data-side="right"]
+  .my-floating-motion-leave-to[data-my-floating] {
+  transform: translateX(-6px);
+}
+[data-motion="slide"][data-side="left"]
+  .my-floating-motion-enter-from[data-my-floating],
+[data-motion="slide"][data-side="left"]
+  .my-floating-motion-leave-to[data-my-floating] {
+  transform: translateX(6px);
+}
+[data-motion="fade"] .my-floating-motion-enter-active[data-my-floating],
+[data-motion="fade"] .my-floating-motion-leave-active[data-my-floating] {
+  transition: opacity 0.2s ease;
+}
+[data-motion="fade"] .my-floating-motion-enter-from[data-my-floating],
+[data-motion="fade"] .my-floating-motion-leave-to[data-my-floating] {
+  transform: none;
+}
+/* 纵向级联从原条目衔接标题；终态的裁剪范围留出阴影，根窗口沿用原来的完整缩放。 */
+.my-floating-panel[data-cascade][data-my-floating] {
+  clip-path: inset(-64px -64px -64px -64px round var(--floating-radius, 17px));
+}
+.my-floating-panel[data-cascade].my-floating-motion-enter-active[data-my-floating],
+.my-floating-panel[data-cascade].my-floating-motion-leave-active[data-my-floating] {
+  transition:
+    transform 0.28s cubic-bezier(0.18, 0.79, 0.22, 1),
+    clip-path 0.28s cubic-bezier(0.18, 0.79, 0.22, 1),
+    scale 0.22s cubic-bezier(0.18, 0.79, 0.22, 1),
+    translate 0.22s cubic-bezier(0.18, 0.79, 0.22, 1);
+}
+.my-floating-panel[data-cascade].my-floating-motion-enter-from[data-my-floating],
+.my-floating-panel[data-cascade].my-floating-motion-leave-to[data-my-floating] {
+  opacity: 1;
+  transform: translate(
+    var(--floating-source-x, 0px),
+    var(--floating-source-y, 0px)
+  );
+  clip-path: inset(
+    0 0 max(0px, calc(100% - var(--floating-source-height, 50px))) 0 round
+      var(--floating-radius, 17px)
+  );
+}
+/* 整组关闭只淡出；位置、缩放与标题裁剪由菜单保持在离场前的姿态。 */
+.my-floating-panel[data-dismissing].my-floating-motion-leave-active[data-my-floating] {
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+.my-floating-panel[data-dismissing].my-floating-motion-leave-from[data-my-floating] {
+  opacity: var(--floating-dismiss-opacity, 1);
+}
+.my-floating-panel[data-dismissing].my-floating-motion-leave-to[data-my-floating] {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .my-floating-panel[data-my-floating] {
+    transition: none;
+  }
+  .my-floating-position .my-floating-motion-enter-active[data-my-floating],
+  .my-floating-position .my-floating-motion-leave-active[data-my-floating] {
+    transition-property: none;
+  }
+  .my-floating-panel[data-cascade].my-floating-motion-enter-active[data-my-floating],
+  .my-floating-panel[data-cascade].my-floating-motion-leave-active[data-my-floating] {
+    transition-property: none;
+  }
+  .my-floating-position[data-motion]
+    .my-floating-motion-enter-from[data-my-floating],
+  .my-floating-position[data-motion]
+    .my-floating-motion-leave-to[data-my-floating] {
+    opacity: 1;
+    transform: none;
+    clip-path: inset(
+      -64px -64px -64px -64px round var(--floating-radius, 17px)
+    );
+  }
+}
+
+/* ── MenuPanel ───────────────────────────────────────────── */
+
+.my-menu-panel-content[data-my-menu-panel],
+.my-menu-list[data-my-menu-panel] {
+  padding: 0;
+  margin: 0;
+  outline: none;
+  transition-property: none;
+}
+.my-menu-panel-content[data-my-menu-panel] {
+  position: relative;
+  border-radius: inherit;
+}
+/* 容器不参与过渡，避免减少动态效果规则让继承的 visibility 延后一帧。 */
+.my-menu-level[data-my-menu-panel] {
+  position: relative;
+  border-radius: inherit;
+  overflow: clip;
+  background: var(--card-background);
+  transition-property: none;
+}
+.my-menu-list[data-my-menu-panel] > .my-list-row:first-child {
+  padding-top: calc(var(--list-padding-block, 14px) + 2px);
+}
+.my-menu-list[data-my-menu-panel] > .my-list-row:last-child {
+  padding-bottom: calc(var(--list-padding-block, 14px) + 2px);
+}
+.my-menu-option[data-my-menu-panel] {
+  color: var(--text);
+}
+.my-selectable .my-menu-option[data-my-menu-panel] {
+  color: var(--text-secondary);
+}
+.my-menu-option[aria-selected="true"][data-my-menu-panel] {
+  color: var(--primary);
+}
+.my-menu-list[data-my-menu-panel] [data-menu-source] {
+  opacity: 0;
+}
+.my-menu-list[data-my-menu-panel]:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -6px;
+  border-radius: var(--floating-radius, 17px);
+}
+.my-menu-check[data-my-menu-panel] {
+  width: 17px;
+  height: 17px;
+  color: var(--primary);
+  visibility: hidden;
+}
+.my-menu-check.my-selected[data-my-menu-panel] {
+  visibility: visible;
+}
+.my-menu-chevron[data-my-menu-panel] {
+  width: 17px;
+  height: 17px;
+  color: inherit;
+}
+.my-menu-chevron-mobile[data-my-menu-panel] {
+  display: none;
+}
+/* 与页面共用 760px 断点，窄窗口使用移动布局；ListRow 菜单入口不受影响。 */
+@media (max-width: 760px) {
+  .my-menu-chevron-desktop[data-my-menu-panel] {
+    display: none;
+  }
+  .my-menu-chevron-mobile[data-my-menu-panel] {
+    display: block;
+  }
+}
+.my-menu-panel-content[data-my-menu-panel] .my-leading-content {
+  width: 20px;
+  height: 20px;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+}
+.my-menu-panel-content[data-my-menu-panel] .my-leading-content svg {
+  width: 20px;
+  height: 20px;
+}
+.my-menu-back[data-my-menu-panel] {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--card-background);
+  color: var(--text);
+}
+.my-menu-return-chevron[data-my-menu-panel] {
+  width: 17px;
+  height: 17px;
+  color: var(--primary);
+}
+.my-menu-back[data-my-menu-panel]::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: var(--list-padding-inline, 16px);
+  right: var(--list-padding-inline, 16px);
+  border-bottom: 1px solid var(--list-divider-color, var(--border));
+  pointer-events: none;
+}
+.my-menu-parent-return[data-my-menu-panel] {
+  position: absolute;
+  left: 0;
+  z-index: 2;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--card-background) 48%, transparent);
+  cursor: pointer;
+  touch-action: none;
+}
+.my-menu-return-enter-active[data-my-menu-panel],
+.my-menu-return-leave-active[data-my-menu-panel] {
+  transition: opacity 0.22s ease;
+}
+.my-menu-return-enter-from[data-my-menu-panel],
+.my-menu-return-leave-to[data-my-menu-panel] {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .my-menu-return-enter-active[data-my-menu-panel],
+  .my-menu-return-leave-active[data-my-menu-panel] {
+    transition: none;
+  }
+}
+
+/* ── Menu ───────────────────────────────────────────── */
+
+.my-menu-host[data-my-menu] {
+  min-width: 0;
+}
+
+/* ── Popover ───────────────────────────────────────────── */
+
+.my-popover-host[data-my-popover] {
+  border-top: var(--popover-trigger-border, 0);
+}
+
+/* ── PopupActions ───────────────────────────────────────────── */
+
+.my-popup-actions[data-my-popup-actions] {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  flex: 0 0 auto;
+}
+.my-popup-actions.my-paired[data-my-popup-actions] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+button[data-my-popup-actions] {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  font-size: 16px;
+  font-weight: var(--font-weight-action, 500);
+  line-height: 24px;
+  padding: 18px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+  min-height: 66px;
+  touch-action: manipulation;
+  transition: background-color 0.14s;
+}
+/* 短线由操作区居中定位，底部延伸留白仍属于按钮点击区。 */
+.my-popup-actions.my-paired[data-my-popup-actions]::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: 50%;
+  top: 20px;
+  height: 20px;
+  width: 0;
+  border-inline-start: 1px solid var(--border);
+  pointer-events: none;
+}
+button.my-danger[data-my-popup-actions] {
+  color: var(--danger);
+}
+button[data-my-popup-actions]:active {
+  background: var(--press);
+}
+button[data-my-popup-actions]:focus-visible {
+  outline: none;
+}
+button[data-my-popup-actions]:focus-visible::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 2px solid var(--primary);
+  border-radius: 12px;
+  pointer-events: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  button[data-my-popup-actions]:hover:not(:active) {
+    background: var(--hover);
+  }
+}
+
+/* ── Dialog ───────────────────────────────────────────── */
+
+button[data-my-dialog]:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+.my-overlay[data-my-dialog] {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-background, rgb(0 0 0 / 0.34));
+  backdrop-filter: var(--overlay-backdrop-filter, blur(4px));
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: var(--dialog-margin, 16px);
+}
+.my-overlay.my-at-bottom[data-my-dialog] {
+  align-items: end;
+}
+.my-dialog-motion-enter-active[data-my-dialog],
+.my-dialog-motion-leave-active[data-my-dialog] {
+  transition: opacity 0.25s ease;
+}
+.my-dialog-motion-enter-from[data-my-dialog],
+.my-dialog-motion-leave-to[data-my-dialog] {
+  opacity: 0;
+}
+.my-dialog-motion-enter-active .my-dialog[data-my-dialog],
+.my-dialog-motion-leave-active .my-dialog[data-my-dialog] {
+  transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.my-dialog-motion-enter-from .my-dialog[data-my-dialog],
+.my-dialog-motion-leave-to .my-dialog[data-my-dialog] {
+  transform: translateY(16px) scale(0.98);
+}
+.my-at-bottom.my-dialog-motion-enter-from .my-dialog[data-my-dialog],
+.my-at-bottom.my-dialog-motion-leave-to .my-dialog[data-my-dialog] {
+  transform: translateY(calc(100% + var(--dialog-margin, 16px)));
+}
+.my-dialog[data-my-dialog] {
+  border-radius: var(--dialog-radius, 28px);
+  width: min(var(--dialog-width, 420px), 100%);
+  padding: var(--dialog-padding, 32px);
+  text-align: center;
+  max-height: calc(100dvh - 2 * var(--dialog-margin, 16px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--card-background);
+  border: 0;
+  box-shadow: var(--modal-shadow, var(--popup-shadow));
+}
+.my-dialog-icon[data-my-dialog] {
+  width: 59px;
+  height: 59px;
+  border-radius: 20px;
+  background: var(--fill);
+  color: var(--primary);
+  display: grid;
+  place-items: center;
+  margin: 0 auto 18px;
+}
+.my-dialog-icon svg[data-my-dialog] {
+  width: 27px;
+  height: 27px;
+}
+.my-dialog h3[data-my-dialog] {
+  font-size: 22px;
+  font-weight: var(--font-weight-subtitle, 600);
+  margin: 0 0 10px;
+  overflow-wrap: anywhere;
+}
+.my-dialog-body[data-my-dialog] {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-wrap: anywhere;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray) transparent;
+  text-align: inherit;
+  font-size: 15px;
+  color: var(--text-secondary);
+  line-height: 1.9;
+  margin: 0 0 24px;
+}
+.my-dialog-header[data-my-dialog],
+.my-dialog-actions[data-my-dialog] {
+  flex-shrink: 0;
+}
+.my-dialog-body > p[data-my-dialog] {
+  margin: 0 0 16px;
+}
+.my-dialog-body > p[data-my-dialog]:last-child {
+  margin-bottom: 0;
+}
+.my-at-bottom .my-dialog-body[data-my-dialog] {
+  text-align: left;
+}
+.my-dialog-actions[data-my-dialog] {
+  margin: 0 calc(-1 * var(--dialog-padding, 32px))
+    calc(-1 * var(--dialog-padding, 32px));
+}
+.my-dialog-actions.my-custom-actions[data-my-dialog] {
+  margin: 0;
+}
+
+/* 减少动态效果时保持终态，首次挂载也能立即显示并聚焦。 */
+@media (prefers-reduced-motion: reduce) {
+  .my-dialog-motion-enter-active[data-my-dialog],
+  .my-dialog-motion-leave-active[data-my-dialog],
+  .my-dialog-motion-enter-active .my-dialog[data-my-dialog],
+  .my-dialog-motion-leave-active .my-dialog[data-my-dialog] {
+    transition: none;
+  }
+  .my-dialog-motion-enter-from[data-my-dialog],
+  .my-dialog-motion-leave-to[data-my-dialog] {
+    opacity: 1;
+  }
+  .my-overlay.my-dialog-motion-enter-from .my-dialog[data-my-dialog],
+  .my-overlay.my-dialog-motion-leave-to .my-dialog[data-my-dialog] {
+    transform: none;
+  }
+}
+
+/* ── Sheet ───────────────────────────────────────────── */
+
+.my-sheet-overlay[data-my-sheet] {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  padding: var(--sheet-margin, 16px);
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  z-index: 100;
+  isolation: isolate;
+}
+.my-sheet-scrim[data-my-sheet] {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--overlay-background);
+  backdrop-filter: var(--overlay-backdrop-filter, blur(4px));
+}
+.my-sheet-motion-enter-active[data-my-sheet],
+.my-sheet-motion-leave-active[data-my-sheet] {
+  /* 父层 opacity 必须保持 1，避免截断子遮罩读取页面的背景。 */
+  opacity: 1;
+}
+.my-sheet-motion-enter-active .my-sheet-scrim[data-my-sheet],
+.my-sheet-motion-leave-active .my-sheet-scrim[data-my-sheet] {
+  transition: opacity 0.25s ease;
+}
+.my-sheet-motion-enter-from .my-sheet-scrim[data-my-sheet],
+.my-sheet-motion-leave-to .my-sheet-scrim[data-my-sheet],
+.my-sheet-motion-enter-from .my-sheet-dialog[data-my-sheet],
+.my-sheet-motion-leave-to .my-sheet-dialog[data-my-sheet] {
+  opacity: 0;
+}
+.my-sheet-motion-enter-active .my-sheet-dialog[data-my-sheet],
+.my-sheet-motion-leave-active .my-sheet-dialog[data-my-sheet] {
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.my-sheet-motion-enter-from .my-sheet-dialog[data-my-sheet],
+.my-sheet-motion-leave-to .my-sheet-dialog[data-my-sheet] {
+  transform: translateY(calc(100% + var(--sheet-margin, 16px)));
+}
+/* 弹窗作为间距提供者，正文里的列表自动继承，调用方仍可在任意一层覆写。 */
+.my-sheet-dialog[data-my-sheet] {
+  --list-padding-inline: 24px;
+  --list-padding-block: 16px;
+  --list-divider-color: color-mix(
+    in srgb,
+    var(--border) 50%,
+    var(--card-background)
+  );
+}
+.my-sheet-dialog[data-my-sheet] {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: min(var(--sheet-width, 400px), 100%);
+  max-height: min(85dvh, calc(100dvh - 2 * var(--sheet-margin, 16px)));
+  background: var(--card-background);
+  color: var(--text);
+  border-radius: var(--sheet-radius, 28px);
+  box-shadow: var(--modal-shadow, var(--popup-shadow));
+  overflow: hidden;
+}
+.my-sheet-dialog[data-swipe-dragging][data-my-sheet] {
+  will-change: translate;
+  user-select: none;
+}
+.my-sheet-dialog[data-swipeable] > h3[data-my-sheet] {
+  touch-action: pan-x pinch-zoom;
+}
+.my-sheet-overlay[data-swipe-dismissed].my-sheet-motion-leave-active[data-my-sheet],
+.my-sheet-overlay[data-swipe-dismissed].my-sheet-motion-leave-active .my-sheet-scrim[data-my-sheet],
+.my-sheet-overlay[data-swipe-dismissed].my-sheet-motion-leave-active
+  .my-sheet-dialog[data-my-sheet] {
+  transition: none;
+}
+h3[data-my-sheet] {
+  margin: 0;
+  flex-shrink: 0;
+  padding: 28px var(--list-padding-inline, 24px) 16px;
+  font-size: 20px;
+  font-weight: var(--font-weight-subtitle, 600);
+  line-height: 1.4;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.my-sheet-body[data-my-sheet] {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray) transparent;
+}
+.my-sheet-option[data-my-sheet] .my-leading-content {
+  width: 20px;
+  height: 20px;
+  border-radius: 0;
+  background: transparent;
+}
+.my-sheet-option[data-my-sheet]:first-child {
+  padding-top: calc(var(--list-padding-block, 14px) + 2px);
+}
+.my-sheet-option[data-my-sheet]:last-child {
+  padding-bottom: calc(var(--list-padding-block, 14px) + 2px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .my-sheet-motion-enter-active[data-my-sheet],
+  .my-sheet-motion-leave-active[data-my-sheet],
+  .my-sheet-motion-enter-active .my-sheet-scrim[data-my-sheet],
+  .my-sheet-motion-leave-active .my-sheet-scrim[data-my-sheet],
+  .my-sheet-motion-enter-active .my-sheet-dialog[data-my-sheet],
+  .my-sheet-motion-leave-active .my-sheet-dialog[data-my-sheet] {
+    transition: none;
+  }
+  .my-sheet-motion-enter-from .my-sheet-scrim[data-my-sheet],
+  .my-sheet-motion-leave-to .my-sheet-scrim[data-my-sheet],
+  .my-sheet-motion-enter-from .my-sheet-dialog[data-my-sheet],
+  .my-sheet-motion-leave-to .my-sheet-dialog[data-my-sheet] {
+    opacity: 1;
+  }
+  .my-sheet-motion-enter-from .my-sheet-dialog[data-my-sheet],
+  .my-sheet-motion-leave-to .my-sheet-dialog[data-my-sheet] {
+    transform: none;
+  }
+}
+
+/* ── Drawer ───────────────────────────────────────────── */
+
+.my-drawer-overlay[data-my-drawer] {
+  position: fixed;
+  inset: 0;
+  padding: var(--drawer-margin, 0px);
+  display: flex;
+  z-index: 100;
+  isolation: isolate;
+}
+.my-drawer-scrim[data-my-drawer] {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--overlay-background);
+  backdrop-filter: var(--overlay-backdrop-filter, blur(4px));
+}
+.my-drawer-motion-enter-active[data-my-drawer],
+.my-drawer-motion-leave-active[data-my-drawer] {
+  opacity: 1;
+}
+.my-drawer-motion-enter-active .my-drawer-scrim[data-my-drawer],
+.my-drawer-motion-leave-active .my-drawer-scrim[data-my-drawer] {
+  transition: opacity 0.25s ease;
+}
+.my-drawer-motion-enter-from .my-drawer-scrim[data-my-drawer],
+.my-drawer-motion-leave-to .my-drawer-scrim[data-my-drawer],
+.my-drawer-motion-enter-from .my-drawer[data-my-drawer],
+.my-drawer-motion-leave-to .my-drawer[data-my-drawer] {
+  opacity: 0;
+}
+.my-drawer-motion-enter-active .my-drawer[data-my-drawer],
+.my-drawer-motion-leave-active .my-drawer[data-my-drawer] {
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.my-drawer[data-my-drawer] {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--card-background);
+  color: var(--text);
+  border-radius: var(--drawer-radius, 0px);
+  box-shadow: var(--modal-shadow, var(--popup-shadow));
+  overflow: hidden;
+}
+.my-drawer[data-swipe-dragging][data-my-drawer] {
+  will-change: translate;
+  user-select: none;
+}
+.my-left .my-drawer[data-swipeable] .my-drawer-header[data-my-drawer],
+.my-right .my-drawer[data-swipeable] .my-drawer-header[data-my-drawer] {
+  touch-action: pan-y pinch-zoom;
+}
+.my-top .my-drawer[data-swipeable] .my-drawer-header[data-my-drawer],
+.my-bottom .my-drawer[data-swipeable] .my-drawer-header[data-my-drawer] {
+  touch-action: pan-x pinch-zoom;
+}
+.my-drawer-overlay[data-swipe-dismissed].my-drawer-motion-leave-active[data-my-drawer],
+.my-drawer-overlay[data-swipe-dismissed].my-drawer-motion-leave-active .my-drawer-scrim[data-my-drawer],
+.my-drawer-overlay[data-swipe-dismissed].my-drawer-motion-leave-active
+  .my-drawer[data-my-drawer] {
+  transition: none;
+}
+.my-left[data-my-drawer],
+.my-right[data-my-drawer] {
+  align-items: stretch;
+}
+.my-right[data-my-drawer] {
+  justify-content: end;
+}
+.my-left .my-drawer[data-my-drawer],
+.my-right .my-drawer[data-my-drawer] {
+  width: min(var(--drawer-size, 360px), 100%);
+}
+.my-left.my-drawer-motion-enter-from .my-drawer[data-my-drawer],
+.my-left.my-drawer-motion-leave-to .my-drawer[data-my-drawer] {
+  transform: translateX(calc(-100% - var(--drawer-margin, 0px)));
+}
+.my-right.my-drawer-motion-enter-from .my-drawer[data-my-drawer],
+.my-right.my-drawer-motion-leave-to .my-drawer[data-my-drawer] {
+  transform: translateX(calc(100% + var(--drawer-margin, 0px)));
+}
+.my-top[data-my-drawer],
+.my-bottom[data-my-drawer] {
+  flex-direction: column;
+}
+.my-bottom[data-my-drawer] {
+  justify-content: end;
+}
+.my-top .my-drawer[data-my-drawer],
+.my-bottom .my-drawer[data-my-drawer] {
+  width: 100%;
+  height: min(var(--drawer-size, 420px), 100%);
+}
+.my-top.my-drawer-motion-enter-from .my-drawer[data-my-drawer],
+.my-top.my-drawer-motion-leave-to .my-drawer[data-my-drawer] {
+  transform: translateY(calc(-100% - var(--drawer-margin, 0px)));
+}
+.my-bottom.my-drawer-motion-enter-from .my-drawer[data-my-drawer],
+.my-bottom.my-drawer-motion-leave-to .my-drawer[data-my-drawer] {
+  transform: translateY(calc(100% + var(--drawer-margin, 0px)));
+}
+.my-drawer-header[data-my-drawer] {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 72px;
+  flex: 0 0 auto;
+  padding: 14px 16px 14px 24px;
+  border-bottom: 1px solid var(--border);
+}
+h3[data-my-drawer] {
+  min-width: 0;
+  margin: 0;
+  flex: 1;
+  font-size: 20px;
+  font-weight: var(--font-weight-subtitle, 600);
+  line-height: 28px;
+  overflow-wrap: anywhere;
+}
+.my-drawer-close[data-my-drawer] {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 12px;
+}
+.my-drawer-close[data-my-drawer]:active {
+  background: var(--press);
+}
+.my-drawer-body[data-my-drawer] {
+  min-height: 0;
+  flex: 1;
+  padding: var(--drawer-padding, 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray) transparent;
+}
+.my-drawer-actions[data-my-drawer] {
+  flex: 0 0 auto;
+  padding: 16px 24px calc(20px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--border);
+}
+@media (hover: hover) and (pointer: fine) {
+  .my-drawer-close[data-my-drawer]:hover:not(:active) {
+    background: var(--hover);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .my-drawer-motion-enter-active[data-my-drawer],
+  .my-drawer-motion-leave-active[data-my-drawer],
+  .my-drawer-motion-enter-active .my-drawer-scrim[data-my-drawer],
+  .my-drawer-motion-leave-active .my-drawer-scrim[data-my-drawer],
+  .my-drawer-motion-enter-active .my-drawer[data-my-drawer],
+  .my-drawer-motion-leave-active .my-drawer[data-my-drawer] {
+    transition: none;
+  }
+  .my-drawer-motion-enter-from .my-drawer-scrim[data-my-drawer],
+  .my-drawer-motion-leave-to .my-drawer-scrim[data-my-drawer],
+  .my-drawer-motion-enter-from .my-drawer[data-my-drawer],
+  .my-drawer-motion-leave-to .my-drawer[data-my-drawer] {
+    opacity: 1;
+  }
+  .my-drawer-overlay.my-drawer-motion-enter-from .my-drawer[data-my-drawer],
+  .my-drawer-overlay.my-drawer-motion-leave-to .my-drawer[data-my-drawer] {
+    transform: none;
+  }
+}
+
+/* ── TooltipPopup ───────────────────────────────────────────── */
+
+/* 留在组件内部，普通说明与滑块数值提示复用同一外观和定位。 */
+.my-floating-panel.my-tooltip-panel {
+  --floating-width: max-content;
+  --floating-gap: 0px;
+  display: flex;
+  flex-direction: column;
+  width: max-content;
+  max-width: min(calc(var(--tooltip-max-width, 280px) + 16px), 100%);
+  padding: 8px;
+  overflow: visible;
+  border-radius: 4px;
+  background: transparent;
+  box-shadow: none;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.my-floating-panel.my-tooltip-panel.my-tooltip-copyable {
+  pointer-events: auto;
+  -webkit-user-select: text;
+  user-select: text;
+}
+/* 圆角矩形与箭头的遮罩重叠 1px，背景只绘制一次，避免小数像素接缝与透明度叠色。 */
+.my-floating-panel.my-tooltip-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(
+    --tooltip-background,
+    light-dark(rgb(97 97 97 / 0.9), rgb(255 255 255 / 0.9))
+  );
+  mask:
+    url("data:image/svg+xml,%3Csvg xmlns=%22http://www.my-w3.my-org/2000/svg%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 rx=%224%22/%3E%3C/svg%3E")
+      center / calc(100% - 16px) calc(100% - 16px) no-repeat,
+    var(--_tooltip-arrow-mask, linear-gradient(transparent, transparent))
+      var(--_tooltip-arrow-position, 0 0) / var(--_tooltip-arrow-size, 0 0)
+      no-repeat;
+}
+.my-floating-position[data-side="top"] .my-tooltip-panel.my-tooltip-with-arrow {
+  --_tooltip-arrow-mask: conic-gradient(
+    from -45deg at 50% 100%,
+    #000 90deg,
+    transparent 0deg
+  );
+  --_tooltip-arrow-position: left
+    clamp(12px, calc(var(--floating-anchor-x) - 6px), calc(100% - 12px)) bottom
+    2px;
+  --_tooltip-arrow-size: 12px 7px;
+}
+.my-floating-position[data-side="bottom"]
+  .my-tooltip-panel.my-tooltip-with-arrow {
+  --_tooltip-arrow-mask: conic-gradient(
+    from 135deg at 50% 0%,
+    #000 90deg,
+    transparent 0deg
+  );
+  --_tooltip-arrow-position: left
+    clamp(12px, calc(var(--floating-anchor-x) - 6px), calc(100% - 12px)) top 2px;
+  --_tooltip-arrow-size: 12px 7px;
+}
+.my-floating-position[data-side="left"]
+  .my-tooltip-panel.my-tooltip-with-arrow {
+  --_tooltip-arrow-mask: conic-gradient(
+    from 225deg at 100% 50%,
+    #000 90deg,
+    transparent 0deg
+  );
+  --_tooltip-arrow-position: right 2px top
+    clamp(12px, calc(var(--floating-anchor-y) - 6px), calc(100% - 12px));
+  --_tooltip-arrow-size: 7px 12px;
+}
+.my-floating-position[data-side="right"]
+  .my-tooltip-panel.my-tooltip-with-arrow {
+  --_tooltip-arrow-mask: conic-gradient(
+    from 45deg at 0% 50%,
+    #000 90deg,
+    transparent 0deg
+  );
+  --_tooltip-arrow-position: left 2px top
+    clamp(12px, calc(var(--floating-anchor-y) - 6px), calc(100% - 12px));
+  --_tooltip-arrow-size: 7px 12px;
+}
+/* Flutter Tooltip 的紧凑圆角、90% 不透明背景和反色文字，不使用卡片阴影。 */
+.my-tooltip-content[data-my-tooltip-popup] {
+  position: relative;
+  box-sizing: border-box;
+  min-height: 24px;
+  max-width: var(--tooltip-max-width, 280px);
+  padding: 4px 8px;
+  overflow: hidden;
+  border-radius: inherit;
+  color: var(--tooltip-color, light-dark(#fff, #000));
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: var(--font-weight, 400);
+  line-height: 16px;
+  overflow-wrap: anywhere;
+}
+.my-tooltip-arrow[data-my-tooltip-popup] {
+  position: absolute;
+  width: 12px;
+  height: 6px;
+  pointer-events: none;
+}
+.my-floating-position[data-side="top"] .my-tooltip-panel .my-tooltip-arrow {
+  bottom: 2px;
+  left: clamp(18px, var(--floating-anchor-x, 50%), calc(100% - 18px));
+  translate: -50% 0;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+.my-floating-position[data-side="bottom"] .my-tooltip-panel .my-tooltip-arrow {
+  top: 2px;
+  left: clamp(18px, var(--floating-anchor-x, 50%), calc(100% - 18px));
+  translate: -50% 0;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.my-floating-position[data-side="left"] .my-tooltip-panel .my-tooltip-arrow {
+  right: 2px;
+  top: clamp(18px, var(--floating-anchor-y, 50%), calc(100% - 18px));
+  width: 6px;
+  height: 12px;
+  translate: 0 -50%;
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+.my-floating-position[data-side="right"] .my-tooltip-panel .my-tooltip-arrow {
+  left: 2px;
+  top: clamp(18px, var(--floating-anchor-y, 50%), calc(100% - 18px));
+  width: 6px;
+  height: 12px;
+  translate: 0 -50%;
+  clip-path: polygon(100% 0, 100% 100%, 0 50%);
+}
+@media (pointer: coarse) {
+  .my-tooltip-content[data-my-tooltip-popup] {
+    min-height: 32px;
+    padding: 6px 16px;
+    font-size: 14px;
+    line-height: 20px;
+  }
+}
+
+/* ── Tooltip ───────────────────────────────────────────── */
+
+.my-tooltip-trigger[data-my-tooltip] {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  min-width: 0;
+}
+/* 禁用表单控件不派发原生指针事件，由包裹元素接收悬停和长按。 */
+.my-tooltip-trigger[data-my-tooltip] :disabled {
+  pointer-events: none;
+}
+
+/* ── Avatar ───────────────────────────────────────────── */
+
+.my-avatar[data-my-avatar] {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: var(--avatar-size, 40px);
+  height: var(--avatar-size, 40px);
+  overflow: hidden;
+  vertical-align: middle;
+  border-radius: 50%;
+  background: var(--avatar-background, var(--fill));
+  color: var(--avatar-color, var(--text-secondary));
+  font-size: calc(var(--avatar-size, 40px) * 0.36);
+  font-weight: var(--font-weight-action, 500);
+  line-height: 1;
+  user-select: none;
+}
+.my-avatar.my-square[data-my-avatar] {
+  border-radius: 25%;
+}
+.my-avatar-fallback[data-my-avatar] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+.my-avatar-fallback > span[data-my-avatar] {
+  max-width: 100%;
+  padding-inline: 2px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.my-avatar-fallback[data-my-avatar] svg {
+  width: 50%;
+  height: 50%;
+}
+img[data-my-avatar] {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+/* ── Badge ───────────────────────────────────────────── */
+
+.my-badge[data-my-badge] {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  flex: 0 0 auto;
+  line-height: 1;
+}
+.my-badge-indicator[data-my-badge] {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding-inline: 4px;
+  border: 2px solid var(--badge-ring, var(--card-background));
+  border-radius: 999px;
+  background: var(--badge-background, var(--danger));
+  color: var(--badge-color, light-dark(#fff, #211013));
+  font-size: 11px;
+  font-weight: var(--font-weight-action, 500);
+  line-height: 16px;
+  white-space: nowrap;
+  translate: 50% -50%;
+  pointer-events: none;
+}
+.my-badge-indicator.my-dot[data-my-badge] {
+  min-width: 10px;
+  width: 10px;
+  height: 10px;
+  padding: 0;
+}
+/* 圆形头像的角点在圆外，沿圆周放置标记，避免出现悬空的状态圆点。 */
+.my-badge:has(> .my-avatar.my-circle) > .my-badge-indicator[data-my-badge] {
+  top: 14.65%;
+  right: 14.65%;
+}
+.my-standalone .my-badge-indicator[data-my-badge] {
+  position: static;
+  border: 0;
+  font-size: 12px;
+  padding-inline: 6px;
+  translate: none;
+}
+.my-standalone .my-badge-indicator.my-dot[data-my-badge] {
+  padding: 0;
+  width: 8px;
+  min-width: 8px;
+  height: 8px;
+}
+
+/* ── Card ───────────────────────────────────────────── */
+
+/* 展示页通过变量定制卡片，避免越过作用域修改卡片内部标题。 */
+.my-card[data-my-card] {
+  min-width: 0;
+  position: relative;
+  background: var(--card-background, #fff);
+  border: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  border-radius: var(--card-radius, 30px);
+  box-shadow: var(--shadow);
+  padding: var(--card-padding, 28px 29px 29px);
+}
+.my-surface-head[data-my-card] {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: var(--card-header-gap, 22px);
+}
+.my-surface-head h3[data-my-card] {
+  letter-spacing: -0.55px;
+  margin: 0 0 7px;
+  font-size: 20px;
+  font-weight: var(--font-weight-subtitle, 600);
+  line-height: 1.35;
+}
+.my-surface-head p[data-my-card] {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.my-sample-id[data-my-card] {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-weight: var(--font-weight, 400);
+  white-space: nowrap;
+  padding-top: 6px;
+  letter-spacing: 0.5px;
+}
+.my-tappable-card[data-my-card] {
+  cursor: pointer;
+  transform: scale(1);
+  transform-origin: center;
+  transition: transform 0.17s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.my-tappable-card[data-my-card]:active {
+  transform: scale(0.98);
+}
+@media (max-width: 1100px) {
+  .my-card[data-my-card] {
+    padding: var(--card-padding, 29px 28px 30px);
+  }
+}
+@media (max-width: 760px) {
+  .my-card[data-my-card] {
+    border-radius: var(--card-radius, 26px);
+    padding: var(--card-padding, 24px 22px 25px);
+  }
+  .my-surface-head h3[data-my-card] {
+    font-size: 20px;
+  }
+  .my-surface-head p[data-my-card] {
+    font-size: 13px;
+  }
+  .my-surface-head[data-my-card] {
+    margin-bottom: var(--card-header-gap, 23px);
+  }
+  .my-sample-id[data-my-card] {
+    font-size: 10px;
+    padding-top: 7px;
+  }
+}
+@media (max-width: 400px) {
+  .my-surface-head[data-my-card] {
+    gap: 10px;
+  }
+  .my-surface-head h3[data-my-card] {
+    font-size: 19px;
+  }
+  .my-sample-id[data-my-card] {
+    font-size: 9px;
+    letter-spacing: 0;
+  }
+}
+
+/* ── Loading ───────────────────────────────────────────── */
+
+.my-loading[data-my-loading] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  color: inherit;
+  font-size: 24px;
+}
+.my-loading.my-small[data-my-loading] {
+  font-size: 16px;
+}
+.my-loading.my-large[data-my-loading] {
+  font-size: 32px;
+}
+.my-spinner[data-my-loading] {
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 42 16;
+  animation: my-spin-data-my-loading 0.8s linear infinite;
+}
+.my-loading-text[data-my-loading] {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.my-sr-only[data-my-loading] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@keyframes my-spin-data-my-loading {
+  to {
+    transform: rotate(1turn);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .my-spinner[data-my-loading] {
+    animation: none;
+  }
+}
+
+/* ── Skeleton ───────────────────────────────────────────── */
+
+.my-skeleton[data-my-skeleton] {
+  min-width: 0;
+}
+.my-skeleton-visual[data-my-skeleton] {
+  display: flex;
+  gap: 14px;
+  width: 100%;
+  padding: 12px 0;
+  animation: my-pulse-data-my-skeleton 1.5s ease-in-out infinite;
+}
+.my-avatar[data-my-skeleton] {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--fill);
+}
+.my-skeleton-copy[data-my-skeleton] {
+  flex: 1;
+  min-width: 0;
+}
+.my-title[data-my-skeleton],
+.my-line[data-my-skeleton] {
+  background: var(--fill);
+  border-radius: 6px;
+}
+.my-title[data-my-skeleton] {
+  height: 18px;
+  width: 42%;
+  margin-bottom: 18px;
+}
+.my-line[data-my-skeleton] {
+  height: 13px;
+  margin-top: 12px;
+}
+.my-line[data-my-skeleton]:last-child {
+  width: 66%;
+}
+@keyframes my-pulse-data-my-skeleton {
+  50% {
+    opacity: 0.45;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .my-skeleton-visual[data-my-skeleton] {
+    animation: none;
+  }
+}
+
+/* ── Empty ───────────────────────────────────────────── */
+
+.my-empty[data-my-empty] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 218px;
+  padding: 28px 18px;
+  text-align: center;
+}
+.my-empty-mark[data-my-empty] {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  margin-bottom: 18px;
+  border-radius: 19px;
+  background: var(--fill);
+  color: var(--text-secondary);
+}
+.my-empty-mark svg[data-my-empty] {
+  width: 28px;
+  height: 28px;
+}
+.my-error .my-empty-mark[data-my-empty] {
+  color: var(--danger);
+  background: color-mix(in oklab, var(--danger) 10%, var(--card-background));
+}
+strong[data-my-empty] {
+  font-size: 15px;
+  font-weight: var(--font-weight-action, 500);
+  color: var(--text);
+}
+p[data-my-empty] {
+  margin: 9px 0 0;
+  max-width: 32ch;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+.my-empty-actions[data-my-empty] {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+/* ── Divider ───────────────────────────────────────────── */
+
+.my-divider[data-my-divider] {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin: var(--divider-spacing, 20px) 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: var(--font-weight, 400);
+  line-height: 1.6;
+}
+/* 用零高度边框绘制，保持与列表分隔线相同的栅格取整方式。 */
+.my-divider[data-my-divider]::before,
+.my-divider.my-labeled[data-my-divider]::after {
+  content: "";
+  flex: 1;
+  min-width: 0;
+  border-block-start: 1px solid var(--divider-color, var(--border));
+}
+.my-divider.my-dashed[data-my-divider]::before,
+.my-divider.my-dashed[data-my-divider]::after {
+  border-block-start-style: dashed;
+}
+.my-divider.my-start.my-labeled[data-my-divider]::before,
+.my-divider.my-end.my-labeled[data-my-divider]::after {
+  flex: 0 0 24px;
+}
+.my-divider-label[data-my-divider] {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.my-divider.my-vertical[data-my-divider] {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 1px;
+  height: var(--divider-height, 1em);
+  margin: 0 var(--divider-spacing, 12px);
+  vertical-align: middle;
+}
+.my-divider.my-vertical[data-my-divider]::before {
+  flex: none;
+  height: 100%;
+  border-block-start: 0;
+  border-inline-start: 1px solid var(--divider-color, var(--border));
+}
+.my-divider.my-vertical.my-dashed[data-my-divider]::before {
+  border-inline-start-style: dashed;
+}
+
+/* ── Toast ───────────────────────────────────────────── */
+
+.my-toast[data-my-toast] {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translate(-50%, 24px);
+  opacity: 0;
+  visibility: hidden;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100% - 32px);
+  background: var(--text);
+  backdrop-filter: blur(10px);
+  color: var(--background);
+  box-shadow: var(--popup-shadow);
+  border-radius: 16px;
+  padding: 15px 20px;
+  font-size: 14px;
+  z-index: 120;
+  transition:
+    opacity 0.22s,
+    transform 0.22s,
+    visibility 0.22s;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.my-toast svg[data-my-toast] {
+  width: 18px;
+  height: 18px;
+  color: currentColor;
+}
+.my-toast.my-show[data-my-toast] {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+
+/* ── 组合布局：插槽占位不增加留白，首尾间距和分割线仍由列表负责 ── */
+.my-row-slot:first-child > .my-list-row {
+  padding-top: calc(var(--list-padding-block, 14px) + 2px);
+}
+.my-row-slot:last-child > .my-list-row {
+  padding-bottom: calc(var(--list-padding-block, 14px) + 2px);
+}
+.my-row-slot + .my-row-slot > .my-list-row::before,
+.my-list-stack .my-choice-control + .my-choice-control::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: var(--list-padding-inline, 16px);
+  right: var(--list-padding-inline, 16px);
+  height: 0;
+  border-top: 1px solid var(--list-divider-color, var(--border));
+  pointer-events: none;
+}
+.my-list-stack .my-choice-control:first-child {
+  padding-top: calc(var(--list-padding-block, 14px) + 2px);
+}
+.my-list-stack .my-choice-control:last-child {
+  padding-bottom: calc(var(--list-padding-block, 14px) + 2px);
+}
+.my-sheet-header,
+.my-sheet-actions {
+  flex: 0 0 auto;
+}
+.my-sheet-dialog[data-swipeable] > .my-sheet-header {
+  touch-action: pan-x pinch-zoom;
+}
+.my-button.my-icon-button,
+.my-button.my-round-arrow {
+  padding: 0;
+  flex-shrink: 0;
+}
+.my-badge:has(> span > .my-avatar.my-circle) > .my-badge-indicator {
+  top: 14.65%;
+  right: 14.65%;
+}
+.my-button-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.my-counter {
+  order: 1;
+}

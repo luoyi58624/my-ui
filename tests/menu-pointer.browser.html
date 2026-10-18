@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>菜单指针交互回归</title>
+<style>
+main { max-width: 900px; margin: auto; padding: 24px; }
+.targets { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; margin: 24px 0; }
+.target { min-height: 110px; padding: 16px; background: var(--card-background); border: 1px solid var(--border); border-radius: 12px; }
+.target strong { display: block; margin-bottom: 8px; }
+.tools { display: flex; flex-wrap: wrap; gap: 12px; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+</style>
+<div id="app"></div>
+<script type="module">
+import { createApp, h, nextTick, ref } from 'vue'
+import { Button, Menu } from '/vue/index.ts'
+import { applyTheme } from '/src/theme/index.ts'
+
+applyTheme({ mode: 'light' })
+const frame = () => new Promise(resolve => requestAnimationFrame(resolve))
+const tick = async () => { await nextTick(); await nextTick(); await nextTick() }
+const settle = async () => { await tick(); await frame(); await frame() }
+const pause = ms => new Promise(resolve => setTimeout(resolve, ms))
+const assert = (value, message) => { if (!value) throw new Error(message) }
+const roots = () => Array.from(document.querySelectorAll(".my-floating-position[aria-hidden=\"false\"]"))
+const inactive = root => assert(root?.inert && root.getAttribute('aria-hidden') === 'true' && !roots().length, '旧窗口没有立即关闭交互')
+const point = (element, dx = 24, dy = 12) => { const rect = element.getBoundingClientRect(); return { x: rect.left + dx, y: rect.top + dy } }
+const pointer = (type, element, position, button = 2, extras = {}) => element.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', isPrimary: true, button, buttons: type === 'pointerup' ? 0 : button === 2 ? 2 : 1, clientX: position.x, clientY: position.y, ...extras }))
+const context = (element, position, button = 2) => { const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button, clientX: position.x, clientY: position.y }); element.dispatchEvent(event); return event.defaultPrevented }
+const click = (element, position) => element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0, detail: 1, clientX: position.x, clientY: position.y }))
+const leftClick = async (element, position = point(element)) => { pointer('pointerdown', element, position, 0); await tick(); pointer('pointerup', element, position, 0); click(element, position); await settle() }
+
+createApp({ setup() {
+  const first = ref(), second = ref(), normal = ref(), multiple = ref()
+  const running = ref(false), result = ref('尚未运行'), disabled = ref(false), mounted = ref(true), values = ref(['one']), callback = ref(null), innerClicks = ref(0)
+  const options = [{ value: 'one', label: '第一项' }, { value: 'two', label: '第二项' }]
+  const firstSource = () => document.getElementById('right-a'), secondSource = () => document.getElementById('right-b')
+  async function clear() { pointer('pointerdown', document.body, { x: 1, y: 1 }, 0); await settle() }
+  async function right(element, position = point(element)) {
+    pointer('pointerdown', element, position); await tick()
+    assert(roots().length === 0, '按下后旧窗口未清除')
+    assert(context(element, position), '没有阻止浏览器默认菜单')
+    await tick(); assert(roots().length === 0, 'contextmenu 提前打开窗口')
+    pointer('pointerup', element, position); await tick()
+    const root = roots()[0], panel = root?.querySelector(".my-floating-panel")
+    assert(root && panel, '有效抬起未打开窗口')
+    const start = { transform: getComputedStyle(panel).transform, opacity: +getComputedStyle(panel).opacity }
+    if (!matchMedia('(prefers-reduced-motion:reduce)').matches) assert(start.opacity === 0 && start.transform === 'matrix(0, 0, 0, 0, 0, 0)', '重开未重新完整展开')
+    await settle()
+    return { root, start }
+  }
+  async function run() {
+    if (running.value) return
+    running.value = true; result.value = '运行中'; disabled.value = false; mounted.value = true; callback.value = null; values.value = ['one']
+    await settle()
+    const reports = []
+    async function check(name, work) { await clear(); await work(); reports.push({ name, passed: true }) }
+    try {
+      await check('按下不打开，抬起才打开', async () => { await right(firstSource()); assert(roots()[0].querySelector('[role=menu]').getAttribute('aria-label') === '菜单 A', '菜单来源错误') })
+      await check('左键按下原触发区域立即关闭交互并淡出，抬起不重开', async () => {
+        const { root } = await right(firstSource()), position = point(firstSource(), 24, 6)
+        pointer('pointerdown', firstSource(), position, 0); await tick()
+        inactive(root)
+        pointer('pointerup', firstSource(), position, 0); click(firstSource(), position); await settle()
+        assert(!roots().length, '左键抬起重新打开右键菜单')
+      })
+      await check('任意外部按下立即隔离，完整执行 200ms 淡出后卸载', async () => {
+        const { root } = await right(firstSource()); await pause(290)
+        const panel = root.querySelector(".my-floating-panel"), transform = getComputedStyle(panel).transform
+        pointer('pointerdown', document.body, { x: 1, y: 1 }, 0); await tick(); await frame(); inactive(root)
+        if (!matchMedia('(prefers-reduced-motion:reduce)').matches) {
+          const fade = panel.getAnimations().find(animation => animation.effect?.getTiming().duration === 200)
+          assert(root.isConnected && fade, '外部关闭没有保留 200ms 淡出')
+          // 固定动画时间验证中间帧，避免后台标签页的帧节流使两次 rAF 跨过整个动画。
+          fade.pause(); fade.currentTime = 65; const style = getComputedStyle(panel)
+          assert(+style.opacity > 0 && +style.opacity < 1 && style.transform === transform, '外部关闭缺少淡出中间帧或改变了姿态')
+          pointer('pointerdown', document.body, { x: 1, y: 1 }, 0); await tick()
+          assert(root.isConnected, '重复外部按下打断了正在执行的淡出')
+          fade.play()
+        }
+        await pause(260); await settle(); assert(!root.isConnected, '外部淡出结束后未卸载旧窗口')
+      })
+      await check('另一目标右键按下淡出旧窗口，抬起立即打开新窗口', async () => {
+        const { root } = await right(firstSource()), position = point(secondSource())
+        pointer('pointerdown', secondSource(), position); await tick()
+        inactive(root)
+        context(secondSource(), position); pointer('pointerup', secondSource(), position); await settle()
+        assert(roots().length === 1 && roots()[0].querySelector('[role=menu]').getAttribute('aria-label') === '菜单 B', '未在新目标打开唯一窗口')
+      })
+      await check('同一目标再次右键重新创建窗口和展开动画', async () => {
+        const old = await right(firstSource()), position = point(firstSource(), 44, 6)
+        const next = await right(firstSource(), position)
+        assert(!old.root.isConnected && next.root !== old.root, '仍然复用了退出中的旧窗口')
+      })
+      await check('淡出完成不取消正在等待抬起的同目标右键手势', async () => {
+        const { root } = await right(firstSource()), position = point(firstSource(), 44, 6)
+        pointer('pointerdown', firstSource(), position); context(firstSource(), position); await tick(); inactive(root)
+        await pause(280); await settle(); assert(!root.isConnected, '旧窗口没有完成清理')
+        pointer('pointerup', firstSource(), position); await tick()
+        assert(roots().length === 1 && roots()[0] !== root, '淡出清理取消了仍有效的按压')
+      })
+      await check('20px 临界位移允许打开，并使用按下坐标', async () => {
+        const element = firstSource(), from = point(element), to = { x: from.x + 20, y: from.y }
+        pointer('pointerdown', element, from); context(element, from); pointer('pointermove', document, to)
+        pointer('pointerup', element, to); await settle()
+        assert(roots().length === 1, '20px 临界位移被拒绝')
+        assert(Math.abs(roots()[0].getBoundingClientRect().left - from.x) < 1, '没有使用实际按下坐标')
+      })
+      await check('超过 20px 的拖动取消打开', async () => {
+        const element = firstSource(), from = point(element), to = { x: from.x + 21, y: from.y }
+        pointer('pointerdown', element, from); context(element, from); pointer('pointermove', document, to)
+        pointer('pointerup', element, to); context(element, to); await settle()
+        assert(!roots().length, '拖动或晚到的 contextmenu 重新打开了窗口')
+      })
+      await check('越过阈值后移回起点仍取消', async () => {
+        const element = firstSource(), from = point(element)
+        pointer('pointerdown', element, from); context(element, from)
+        pointer('pointermove', document, { x: from.x + 25, y: from.y }); pointer('pointermove', document, from)
+        pointer('pointerup', element, from); await settle(); assert(!roots().length, '回到起点绕过了拖动限制')
+      })
+      await check('小于 20px 但抬起离开目标仍取消', async () => {
+        const element = firstSource(), rect = element.getBoundingClientRect(), from = { x: rect.right - 4, y: rect.top + 8 }, to = { x: rect.right + 4, y: from.y }
+        pointer('pointerdown', element, from); context(element, from); pointer('pointerup', element, to); await settle()
+        assert(!roots().length, '离开目标的抬起仍打开了窗口')
+      })
+      await check('取消事件与晚到的 contextmenu 不打开', async () => {
+        const element = firstSource(), position = point(element)
+        pointer('pointerdown', element, position); pointer('pointercancel', element, position)
+        context(element, position); context(element, { x: 0, y: 0 }, 0); pointer('pointerup', element, position); await settle(); assert(!roots().length, '取消手势仍打开了窗口')
+      })
+      await check('按下后禁用组件取消打开', async () => {
+        const element = firstSource(), position = point(element)
+        pointer('pointerdown', element, position); context(element, position); disabled.value = true; await tick()
+        pointer('pointerup', element, position); await settle(); assert(!roots().length, '禁用组件仍打开窗口')
+        disabled.value = false; await tick()
+      })
+      await check('目标卸载后旧手势不可打开', async () => {
+        const element = firstSource(), position = point(element)
+        pointer('pointerdown', element, position); context(element, position); mounted.value = false; await tick()
+        pointer('pointerup', document, position); await settle(); assert(!roots().length, '卸载后残留手势')
+        mounted.value = true; await tick()
+      })
+      await check('普通菜单再次按下淡出旧窗口，抬起从新位置完整展开', async () => {
+        const element = document.getElementById('normal-source')
+        await leftClick(element); assert(roots().length === 1, '普通菜单不能打开')
+        const old = roots()[0], position = point(element, 44, 6)
+        pointer('pointerdown', element, position, 0); await tick()
+        inactive(old)
+        pointer('pointerup', element, position, 0); await tick()
+        const next = roots()[0], panel = next?.querySelector(".my-floating-panel")
+        assert(next && next !== old, '抬起没有创建新窗口')
+        if (!matchMedia('(prefers-reduced-motion:reduce)').matches) assert(getComputedStyle(panel).transform === 'matrix(0, 0, 0, 0, 0, 0)', '再次按压没有保留原完整展开动画')
+        click(element, position); await settle()
+        assert(roots()[0] === next, '兼容 click 又关闭了刚打开的窗口')
+        assert(Math.abs(next.getBoundingClientRect().left - position.x) < 1, '重开没有使用新的按压位置')
+      })
+      await check('普通菜单仅 pointerup 即打开，兼容 click 不重复触发', async () => {
+        const element = document.getElementById('normal-source'), position = point(element)
+        pointer('pointerdown', element, position, 0); await tick(); assert(!roots().length, '普通按下提前打开')
+        pointer('pointerup', element, position, 0); await settle(); const root = roots()[0]
+        assert(root, '普通抬起必须依赖 click 才能打开')
+        click(element, position); await settle(); assert(roots()[0] === root, '兼容 click 重复切换窗口')
+      })
+      await check('普通菜单超过移动阈值后兼容 click 不能补开', async () => {
+        const element = document.getElementById('normal-source'), from = point(element)
+        pointer('pointerdown', element, from, 0); pointer('pointermove', document, { x: from.x + 21, y: from.y }, 0)
+        pointer('pointerup', element, from, 0); click(element, from); await settle()
+        assert(!roots().length, '取消拖动仍被 click 打开')
+        await leftClick(element); assert(roots().length === 1, '取消后下一次按压无法打开')
+      })
+      await check('普通菜单移出目标或取消后不打开', async () => {
+        const element = document.getElementById('normal-source'), rect = element.getBoundingClientRect(), from = { x: rect.right - 4, y: rect.top + 6 }, to = { x: rect.right + 4, y: from.y }
+        pointer('pointerdown', element, from, 0); pointer('pointerup', element, to, 0); click(element, from); await settle(); assert(!roots().length, '离开目标仍然打开')
+        pointer('pointerdown', element, from, 0); pointer('pointercancel', element, from, 0); click(element, from); await settle(); assert(!roots().length, '取消后兼容 click 仍打开')
+      })
+      await check('条目选择仍执行，并在回调前关闭', async () => {
+        await leftClick(document.getElementById('normal-source'))
+        await leftClick(roots()[0].querySelector('[data-menu-item=one]'), point(roots()[0].querySelector('[data-menu-item=one]'), 8, 8))
+        assert(callback.value?.selected === 'one' && callback.value.open === 0, '条目选择回调丢失或早于关闭')
+      })
+      await check('连续多选保持同一窗口', async () => {
+        await leftClick(document.getElementById('multiple-source')); const root = roots()[0]
+        const row = root.querySelector('[data-menu-item=two]'); await leftClick(row, point(row, 8, 8))
+        assert(roots()[0] === root && values.value.includes('two'), '多选条目按下时被错误销毁')
+      })
+      await check('短触摸不打开右键菜单，也不留下长按定时器', async () => {
+        const element = firstSource(), position = point(element), touch = { pointerType: 'touch' }
+        pointer('pointerdown', element, position, 0, touch); pointer('pointerup', element, position, 0, touch); await settle()
+        assert(!roots().length, '普通触摸被当成右键')
+        await pause(560); assert(!roots().length, '抬起后残留长按定时器')
+      })
+      await check('触摸原生长按通知立即打开，抬起不重复打开', async () => {
+        const element = firstSource(), position = point(element), touch = { pointerType: 'touch' }
+        pointer('pointerdown', element, position, 0, touch); context(element, position, 0)
+        await settle(); const root = roots()[0]; assert(root, '原生长按通知仍等待抬起')
+        pointer('pointerup', element, position, 0, touch); click(element, position); await settle(); assert(roots()[0] === root, '长按抬起重新创建了窗口')
+      })
+      await check('无原生 contextmenu 时，保持触摸 500ms 即打开', async () => {
+        const element = firstSource(), position = point(element), touch = { pointerType: 'touch' }
+        pointer('pointerdown', element, position, 0, touch); await pause(60); assert(!roots().length, '长按条件未满足就打开')
+        await pause(500); await settle(); const root = roots()[0]; assert(root, '未抬起的持续触摸不能打开')
+        pointer('pointerup', element, position, 0, touch); context(element, position, 0); await settle(); assert(roots()[0] === root, '抬起或晚到的通知重复打开')
+      })
+      await check('长按超出 20px 后不能通过定时器或原生通知打开', async () => {
+        const element = firstSource(), position = point(element), touch = { pointerType: 'touch' }
+        pointer('pointerdown', element, position, 0, touch); pointer('pointermove', document, { x: position.x + 21, y: position.y }, 0, touch)
+        pointer('pointermove', document, position, 0, touch); context(element, position, 0); await pause(560)
+        pointer('pointerup', element, position, 0, touch); await settle(); assert(!roots().length, '长按拖动取消失效')
+      })
+      await check('长按移动小于 20px，但离开目标也不打开', async () => {
+        const element = firstSource(), rect = element.getBoundingClientRect(), from = { x: rect.right - 4, y: rect.top + 8 }, to = { x: rect.right + 4, y: from.y }, touch = { pointerType: 'touch' }
+        pointer('pointerdown', element, from, 0, touch); pointer('pointermove', document, to, 0, touch); context(element, to, 0); await pause(560)
+        pointer('pointerup', element, to, 0, touch); await settle(); assert(!roots().length, '目标外长按仍然打开')
+      })
+      await check('长按取消、滚动、失焦、第二根手指和禁用均清理计时器', async () => {
+        const touch = { pointerType: 'touch' }
+        for (const reason of ['cancel', 'scroll', 'blur', 'second-touch', 'disabled']) {
+          const element = firstSource(), position = point(element)
+          pointer('pointerdown', element, position, 0, touch)
+          if (reason === 'cancel') pointer('pointercancel', element, position, 0, touch)
+          if (reason === 'scroll' || reason === 'blur') window.dispatchEvent(new Event(reason))
+          if (reason === 'second-touch') pointer('pointerdown', element, position, 0, { ...touch, pointerId: 2, isPrimary: false })
+          if (reason === 'disabled') { disabled.value = true; await tick() }
+          await pause(560); pointer('pointerup', element, position, 0, touch); context(element, position, 0); await settle()
+          assert(!roots().length, reason + ' 没有清理长按')
+          disabled.value = false; await tick()
+        }
+      })
+      await check('长按目标卸载后不留定时器或监听', async () => {
+        const element = firstSource(), position = point(element), touch = { pointerType: 'touch' }
+        pointer('pointerdown', element, position, 0, touch); mounted.value = false; await tick(); await pause(560)
+        pointer('pointerup', document, position, 0, touch); await settle(); assert(!roots().length, '卸载后的长按仍打开')
+        mounted.value = true; await tick()
+      })
+      await check('长按后兼容 click 不激活区域里的按钮，下次正常点击仍可用', async () => {
+        const element = document.getElementById('inner-action'), position = point(element, 8, 8), touch = { pointerType: 'touch' }
+        innerClicks.value = 0
+        pointer('pointerdown', element, position, 0, touch); await pause(560); await settle(); const root = roots()[0]
+        assert(root, '子按钮长按未打开上下文菜单')
+        pointer('pointerup', element, position, 0, touch); click(element, position); await settle()
+        assert(innerClicks.value === 0 && roots()[0] === root, '长按抬起触发了原按钮')
+        await leftClick(element, position); assert(innerClicks.value === 1 && !roots().length, '长按阻断了之后的正常点击')
+      })
+      await check('重复长按在按下时淡出旧菜单，保持触摸时打开新菜单', async () => {
+        const touch = { pointerType: 'touch' }, firstPoint = point(firstSource()), secondPoint = point(secondSource())
+        pointer('pointerdown', firstSource(), firstPoint, 0, touch); await pause(560); await settle(); const root = roots()[0]
+        pointer('pointerup', firstSource(), firstPoint, 0, touch)
+        pointer('pointerdown', secondSource(), secondPoint, 0, touch); await tick(); inactive(root)
+        await pause(560); await settle(); assert(roots()[0]?.querySelector('[role=menu]').getAttribute('aria-label') === '菜单 B', '新位置长按仍等待抬起')
+        pointer('pointerup', secondSource(), secondPoint, 0, touch)
+      })
+      await check('键盘右键快捷方式保持可用', async () => {
+        firstSource().dispatchEvent(new KeyboardEvent('keydown', { key: 'F10', shiftKey: true, bubbles: true, cancelable: true }))
+        await settle(); assert(roots().length === 1, 'Shift + F10 不能打开菜单')
+      })
+      await clear()
+      result.value = JSON.stringify({ passed: true, cases: reports.length, reduced: matchMedia('(prefers-reduced-motion:reduce)').matches, viewport: { width: innerWidth, height: innerHeight }, reports }, null, 2)
+    } catch (error) { result.value = JSON.stringify({ passed: false, error: String(error), reports }, null, 2); await clear() }
+    finally { running.value = false }
+  }
+  return () => h('main', {}, [h('h1', '菜单指针交互回归'), h(Button, { onClick: run }, () => '运行指针回归'),
+    h('div', { class: 'targets' }, [mounted.value ? h(Menu, { ref: first, options, trigger: 'contextmenu', label: '菜单 A', disabled: disabled.value }, { default: ({ trigger }) => h('div', { ...trigger, id: 'right-a', class: 'target' }, [h('strong', '右键区域 A'), h('button', { id: 'inner-action', onClick: () => innerClicks.value++ }, '区域内操作')]) }) : null,
+      h(Menu, { ref: second, options, trigger: 'contextmenu', label: '菜单 B' }, { default: ({ trigger }) => h('div', { ...trigger, id: 'right-b', class: 'target' }, [h('strong', '右键区域 B'), '在新位置打开']) })]),
+    h('div', { class: 'tools' }, [h(Menu, { ref: normal, options, label: '普通菜单', onSelect: item => { callback.value = { selected: item.value, open: roots().length } } }, { default: ({ trigger }) => h(Button, { ...trigger, id: 'normal-source' }, () => '普通菜单') }),
+      h(Menu, { ref: multiple, options, mode: 'multiple', modelValue: values.value, 'onUpdate:modelValue': value => { values.value = value }, label: '多选菜单' }, { default: ({ trigger }) => h(Button, { ...trigger, id: 'multiple-source' }, () => '连续多选') })]),
+    h('pre', { role: 'status' }, result.value),
+  ])
+} }).mount('#app')
+</script>
+</html>

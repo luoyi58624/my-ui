@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>级联菜单交互回归</title>
+<style>
+main { max-width: 900px; margin: auto; padding: 24px; }
+.tools { display: flex; gap: 12px; flex-wrap: wrap; margin: 24px 0; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+</style>
+<div id="app"></div>
+<script type="module">
+import { createApp, h, nextTick, ref } from 'vue'
+import { Button, Dialog, Icon, ListRow, Menu } from '/vue/index.ts'
+import { applyTheme } from '/src/theme/index.ts'
+
+applyTheme({ mode: 'light' })
+const pause = ms => new Promise(resolve => setTimeout(resolve, ms))
+const frame = () => new Promise(resolve => requestAnimationFrame(resolve))
+const tick = async () => { await nextTick(); await nextTick(); await nextTick() }
+const settle = async () => { await tick(); await frame(); await frame() }
+const assert = (condition, message) => { if (!condition) throw new Error(message) }
+const roots = () => Array.from(document.querySelectorAll(".my-floating-position[aria-hidden=\"false\"]"))
+const row = value => Array.from(document.querySelectorAll(".my-floating-position[aria-hidden=\"false\"] [data-menu-item]")).find(element => element.dataset.menuItem === value && !element.closest('[inert]'))
+const key = (element, key, extra = {}) => element.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...extra }))
+const point = element => { const rect = element.getBoundingClientRect(); return { x: rect.left + 24, y: rect.top + 12 } }
+const pointer = (type, element, position = point(element), extra = {}) => element.dispatchEvent(new PointerEvent(type, { bubbles: !['pointerenter', 'pointerleave'].includes(type), cancelable: true, pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, clientX: position.x, clientY: position.y, ...extra }))
+const baseOptions = () => [
+  { value: 'open', label: 'Alpha' },
+  { value: 'move', label: 'Move', description: 'Choose a destination', children: [
+    { value: 'docs', label: 'Documents' },
+    { value: 'blocked', label: 'Disabled child', disabled: true },
+    { value: 'travel', label: 'Travel' },
+    { value: 'nested', label: 'Nested', children: [{ value: 'deep', label: 'Deep item' }] },
+  ] },
+  { value: 'export', label: 'Export', children: [{ value: 'pdf', label: 'PDF' }, { value: 'txt', label: 'Text' }] },
+  { value: 'disabled', label: 'Disabled branch', disabled: true, children: [{ value: 'no', label: 'Unavailable' }] },
+  { value: 'empty', label: 'Empty children', children: [] },
+]
+
+createApp({ setup() {
+  const menu = ref(), other = ref(), running = ref(false), result = ref('尚未运行'), mounted = ref(true)
+  const options = ref(baseOptions()), mode = ref('normal'), value = ref(), custom = ref(false), callback = ref()
+  const calls = ref(0)
+  let afterSelect
+  const hoverDelay = ref(120)
+  const modalOpen = ref(false), modalMenu = ref()
+  const wide = () => innerWidth > 760
+  const source = () => document.getElementById('cascade-source')
+  function selected(item) {
+    calls.value++; callback.value = { value: item.value, visible: roots().length, focus: document.activeElement?.id, panels: Array.from(document.querySelectorAll(".my-floating-position.my-ready .my-floating-panel")).filter(panel => getComputedStyle(panel).display !== 'none').length }
+    afterSelect?.(item)
+  }
+  async function clear() { menu.value?.close(); other.value?.close(); modalMenu.value?.close(); modalOpen.value = false; await settle() }
+  async function open(x = 28, y = 170) { menu.value.show({ x, y, contextElement: source() }); await settle(); await pause(290) }
+  async function activate(value) { assert(row(value), '没有找到选项：' + value); row(value).click(); await settle(); await pause(290) }
+  const currentList = () => roots().at(-1)?.querySelector('[role=menu], [role=listbox]')
+  const backButton = () => roots().at(-1)?.querySelector('[data-menu-back]')
+  async function checkBranch() {
+    assert(roots().length === 2, '父子窗口没有独立保留')
+    assert(currentList()?.getAttribute('aria-label') === 'Move', '未进入子菜单')
+    if (!wide()) assert(document.querySelector('[data-menu-back]'), '窄屏缺少返回入口')
+    assert(calls.value === 0, '父节点错误触发了选择')
+  }
+  async function run() {
+    if (running.value) return
+    running.value = true; result.value = '运行中'
+    const reports = []
+    async function check(name, work) {
+      await clear(); mounted.value = true; options.value = baseOptions(); mode.value = 'normal'; value.value = undefined; custom.value = false; hoverDelay.value = 120; calls.value = 0; callback.value = undefined; afterSelect = undefined
+      await settle(); await work(); reports.push({ name, passed: true })
+    }
+    try {
+      await check('Tab 与 Shift+Tab 在根菜单循环，跳过禁用项并阻止默认跳出', async () => {
+        await open()
+        for (const value of ['move', 'export', 'empty', 'open']) {
+          assert(key(document.activeElement, 'Tab') === false, 'Tab 没有阻止浏览器默认跳出')
+          await tick(); assert(document.activeElement === row(value) && roots().length === 1, 'Tab 跳出或聚焦了错误条目：' + value)
+        }
+        key(document.activeElement, 'Tab', { shiftKey: true }); await tick()
+        assert(document.activeElement === row('empty'), 'Shift+Tab 未从首项回到末项')
+      })
+      await check('根层与子层初次定位前的 Tab 被拦截，定位后进入首尾项', async () => {
+        for (const reverse of [false, true]) {
+          await clear(); menu.value.show({ x: 28, y: 170, contextElement: source() })
+          assert(key(source(), 'Tab', { shiftKey: reverse }) === false, '初次定位前 Tab 跳出')
+          await settle(); await pause(290)
+          assert(document.activeElement === row(reverse ? 'empty' : 'open'), '定位后没有恢复待处理的 Tab 焦点')
+        }
+        for (const reverse of [false, true]) {
+          await clear(); await open(); const triggerRow = row('move'); triggerRow.focus(); key(triggerRow, 'ArrowRight')
+          assert(key(triggerRow, 'Tab', { shiftKey: reverse }) === false, '子层初次定位前 Tab 跳出')
+          await settle(); await pause(290)
+          assert(roots().length === 2 && document.activeElement === row(reverse ? 'nested' : 'docs'), '子层定位后丢失待处理的 Tab 焦点')
+        }
+      })
+      await check('单项循环、全部禁用时聚焦列表，关闭后释放 Tab', async () => {
+        options.value = [{ value: 'only', label: 'Only item' }]; await open()
+        for (const reverse of [false, true]) { key(document.activeElement, 'Tab', { shiftKey: reverse }); await tick(); assert(document.activeElement === row('only'), '单项菜单焦点跳出') }
+        options.value = [{ value: 'only', label: 'Only item', disabled: true }]; await tick()
+        key(currentList(), 'Tab'); await tick(); assert(document.activeElement === currentList() && roots().length === 1, '全部禁用时未保留列表焦点')
+        key(document.activeElement, 'Escape'); await tick()
+        assert(document.activeElement === source() && key(source(), 'Tab') === true, '关闭后没有还原焦点或仍拦截 Tab')
+      })
+      await check('焦点临时移到窗口外时，Tab 从当前菜单首尾继续', async () => {
+        await open()
+        for (const reverse of [false, true]) {
+          source().focus(); key(source(), 'Tab', { shiftKey: reverse }); await tick()
+          assert(document.activeElement === row(reverse ? 'empty' : 'open'), '窗口外的 Tab 没有回到菜单')
+        }
+      })
+      await check('自定义行中的输入控件参与循环，隐藏及禁用控件被跳过', async () => {
+        custom.value = 'fields'; options.value = [{ value: 'settings', label: 'Settings' }]; await open()
+        for (const id of ['field-settings', 'notes-settings', 'editable-settings', 'action-settings']) {
+          key(document.activeElement, 'Tab'); await tick(); assert(document.activeElement.id === id && roots().length === 1, '自定义控件焦点顺序错误：' + id)
+        }
+        key(document.activeElement, 'Tab'); await tick(); assert(document.activeElement === row('settings'), '自定义控件末尾未循环到行')
+        key(document.activeElement, 'Tab', { shiftKey: true }); await tick(); assert(document.activeElement.id === 'action-settings', '自定义控件反向循环失败')
+        const editable = document.getElementById('editable-settings'); editable.focus()
+        assert(key(editable.firstElementChild, 'ArrowDown') === true && key(editable.firstElementChild, 'x') === true && !calls.value, '可编辑区域的子元素被菜单接管')
+        document.getElementById('field-settings').focus(); assert(key(document.activeElement, 'ArrowDown') === true && !calls.value, '输入框的编辑键被菜单接管')
+        key(document.activeElement, 'Escape'); await tick(); assert(!roots().length && document.activeElement === source(), '输入框内 Escape 未关闭当前菜单并恢复焦点')
+      })
+      await check('Tab 遍历长列表只滚动当前窗口，首尾循环不滚动页面', async () => {
+        options.value = Array.from({ length: 40 }, (_, i) => ({ value: 'tab' + i, label: 'Tab item ' + i })); await open()
+        const pageTop = scrollY, panel = roots()[0].querySelector(".my-floating-panel")
+        for (let i = 1; i < 40; i++) { key(document.activeElement, 'Tab'); await tick() }
+        const rect = document.activeElement.getBoundingClientRect(), bounds = panel.getBoundingClientRect()
+        assert(document.activeElement === row('tab39') && panel.scrollTop > 0 && rect.top >= bounds.top - 1 && rect.bottom <= bounds.bottom + 1, 'Tab 聚焦的长列表条目不可见')
+        key(document.activeElement, 'Tab'); await tick()
+        assert(document.activeElement === row('tab0') && panel.scrollTop === 0 && scrollY === pageTop, '首尾循环丢失滚动位置或滚动了页面')
+      })
+      if (wide()) {
+        await check('父级普通项与禁用项立即收起子层，不受展开延迟影响', async () => {
+          hoverDelay.value = 900
+          for (const value of ['open', 'disabled']) {
+            await clear(); await open(); await activate('move')
+            const child = roots().at(-1)
+            pointer('pointerenter', row(value))
+            assert(child.querySelector(".my-menu-panel-content").inert && !row('docs'), '收起等待了悬停延迟：' + value)
+            await tick(); assert(roots().length === 1 && !calls.value, '旧子层仍展开或禁用项被激活')
+          }
+        })
+        await check('切换父级分支时旧层立即收起，新层仍等待 200ms', async () => {
+          hoverDelay.value = undefined; await open(); await activate('move')
+          const child = roots().at(-1)
+          pointer('pointerenter', row('export'))
+          assert(child.querySelector(".my-menu-panel-content").inert && !row('docs'), '旧分支仍在等待新分支展开')
+          await tick(); assert(roots().length === 1 && !row('pdf'), '新分支没有保留展开延迟')
+          await pause(120); assert(!row('pdf'), '新分支提前展开')
+          await pause(140); await settle(); assert(roots().length === 2 && row('pdf'), '新分支未按时展开')
+        })
+      }
+      await check('children 自动展示箭头，点击父节点仅展开', async () => {
+        await open(); assert(row('move').getAttribute('aria-haspopup') === 'menu' && row('move').querySelector(".my-menu-chevron"), '父节点标识不完整')
+        await activate('move'); await checkBranch()
+      })
+      await check('根项与二三级选择立即回调，整组保持姿态淡出后卸载', async () => {
+        for (const path of [['open'], ['move', 'travel'], ['move', 'nested', 'deep']]) {
+          await open()
+          for (const value of path.slice(0, -1)) {
+            pointer('pointerdown', row(value), point(row(value)), { pointerType: 'touch' }); await activate(value)
+          }
+          const old = roots(), panels = old.map(root => root.querySelector(".my-floating-panel"))
+          const before = panels.map(panel => ({ rect: panel.getBoundingClientRect(), transform: getComputedStyle(panel).transform, scale: getComputedStyle(panel).scale, clip: getComputedStyle(panel).clipPath }))
+          row(path.at(-1)).click(); await tick()
+          assert(callback.value?.value === path.at(-1) && callback.value.visible === 0 && callback.value.focus === 'cascade-source', '回调等待了动画，或旧层仍可交互')
+          if (!matchMedia('(prefers-reduced-motion:reduce)').matches) {
+            assert(callback.value.panels === old.length && old.every(element => element.isConnected && element.inert), '淡出前提前销毁或未隔离交互')
+            panels.forEach((panel, i) => {
+              const style = getComputedStyle(panel), rect = panel.getBoundingClientRect()
+              assert(style.transitionProperty === 'opacity' && style.transitionDuration === '0.2s', '整组没有采用统一的 200ms 透明度过渡')
+              assert(style.transform === before[i].transform && style.scale === before[i].scale && style.clipPath === before[i].clip && Math.abs(rect.top - before[i].rect.top) < 1, '离场时父层复原或子层标题回缩')
+            })
+            await pause(65)
+            const opacity = panels.map(panel => +getComputedStyle(panel).opacity)
+            assert(opacity.every(value => value > 0 && value < 1) && Math.max(...opacity) - Math.min(...opacity) < .15, '父子菜单没有同步淡出：' + opacity)
+          }
+          await pause(260); await settle()
+          assert(old.every(element => !element.isConnected) && !document.querySelector('[data-menu-source]'), '淡出后旧窗口或共享标题没有卸载')
+        }
+      })
+      await check('尚在展开时关闭，冻结当帧姿态并从当前透明度淡出', async () => {
+        menu.value.show({ x: 28, y: 170, contextElement: source() }); await settle(); await pause(55)
+        const old = roots()[0], panel = old.querySelector(".my-floating-panel"), style = getComputedStyle(panel)
+        const before = { transform: style.transform, opacity: +style.opacity }
+        menu.value.close(); await tick()
+        if (!matchMedia('(prefers-reduced-motion:reduce)').matches) {
+          assert(old.isConnected && getComputedStyle(panel).transform === before.transform, '关闭时展开姿态发生跳变')
+          assert(Math.abs(+getComputedStyle(panel).opacity - before.opacity) < .02, '关闭时透明度跳回了 1')
+          await pause(65); assert(+getComputedStyle(panel).opacity < before.opacity, '没有从当前透明度继续淡出')
+        }
+        await pause(260); await settle(); assert(!old.isConnected, '中途关闭后窗口没有卸载')
+      })
+      await check('回调立即重开同一菜单，不带回旧级联也不关闭新窗口', async () => {
+        await open(); await activate('move'); const old = roots()
+        afterSelect = () => menu.value.show({ x: 40, y: 110, contextElement: source() })
+        row('travel').click(); await settle(); await pause(330)
+        assert(callback.value?.visible === 0 && old.every(element => !element.isConnected), '重开时旧级联仍然连接')
+        assert(roots().length === 1 && row('move') && !row('travel') && !document.querySelector('[data-menu-source]'), '回调打开的新菜单被旧动画干扰')
+      })
+      await check('级联箭头只按 760px 断点切换，列表入口始终上下箭头', async () => {
+        await open()
+        const icon = Array.from(row('move').querySelectorAll(".my-menu-chevron")).filter(element => getComputedStyle(element).display !== 'none')
+        assert(icon.length === 1 && icon[0].querySelector('path').getAttribute('d') === (!wide() ? 'm8 8 4-4 4 4m-8 8 4 4 4-4' : 'm9 5 7 7-7 7'), '级联箭头没有按视口宽度区分')
+        for (const id of ['list-menu-icon', 'listbox-menu-icon']) assert(document.getElementById(id).querySelector(".my-trailing-icon path").getAttribute('d') === 'm8 8 4-4 4 4m-8 8 4 4 4-4', '列表菜单入口丢失上下箭头')
+      })
+      await check('叶子项先关闭整组，再返回选项并恢复根触发器焦点', async () => {
+        await open(); await activate('move'); await activate('travel')
+        assert(calls.value === 1 && callback.value.value === 'travel' && callback.value.visible === 0 && callback.value.focus === 'cascade-source', '选择或关闭顺序错误')
+        assert(!roots().length, '仍有子面板残留')
+      })
+      await check('单选值使用叶子 value，父级反映后代选中态', async () => {
+        mode.value = 'single'; value.value = 'travel'; await open()
+        assert(row('move').getAttribute('aria-selected') === 'true', '父级未反映选中后代')
+        key(row('move'), 'ArrowRight'); await settle(); await pause(290)
+        assert(document.activeElement === row('travel'), '未聚焦已选中的子项')
+        await activate('docs'); assert(value.value === 'docs' && !roots().length, '单选未更新叶子值')
+      })
+      await check('多选子项保持所有面板，可重复切换且选中不铺背景', async () => {
+        mode.value = 'multiple'; value.value = []; await open(); await activate('move'); await activate('docs')
+        assert(value.value.includes('docs') && roots().length === 2, '多选关闭了面板')
+        assert(row('docs').getAttribute('aria-selected') === 'true' && getComputedStyle(row('docs')).backgroundColor === 'rgba(0, 0, 0, 0)', '选中态不符合原设计')
+        await activate('docs'); assert(!value.value.length && calls.value === 2, '多选未取消')
+      })
+      await check('方向键进入返回，Escape 逐层返回，根 Escape 全部关闭', async () => {
+        await open(); key(row('open'), 'ArrowDown'); key(document.activeElement, 'ArrowRight'); await settle(); await pause(290)
+        assert(document.activeElement === row('docs'), '右方向键未进入子菜单')
+        key(document.activeElement, 'ArrowLeft'); await settle(); assert(document.activeElement === row('move') && roots().length === 1, '左方向键未恢复父节点焦点')
+        key(row('move'), 'ArrowRight'); await settle(); await pause(290); key(document.activeElement, 'Escape'); await settle()
+        assert(document.activeElement === row('move') && roots().length === 1, 'Escape 未返回上一层')
+        key(row('move'), 'Escape'); await settle(); assert(!roots().length, '根 Escape 未关闭')
+      })
+      await check('子菜单上下键跳过禁用项，Home End 与文字查找保持可用', async () => {
+        await open(); await activate('move'); key(row('docs'), 'ArrowDown'); assert(document.activeElement === row('travel'), '未跳过禁用项')
+        key(document.activeElement, 'End'); assert(document.activeElement === row('nested'), 'End 错误')
+        key(document.activeElement, 'Home'); key(document.activeElement, 't'); assert(document.activeElement === row('travel'), '文字查找错误')
+      })
+      await check('Tab 只在当前子层循环，移动端包含返回入口', async () => {
+        await open(); await activate('move')
+        for (const value of ['travel', 'nested', ...(!wide() ? ['back'] : []), 'docs']) {
+          key(document.activeElement, 'Tab'); await tick()
+          assert(document.activeElement === (value === 'back' ? backButton() : row(value)) && roots().length === 2, '子层 Tab 跳出或顺序错误：' + value)
+        }
+        key(document.activeElement, 'Tab', { shiftKey: true }); await tick()
+        assert(document.activeElement === (!wide() ? backButton() : row('nested')), '子层反向 Tab 没有循环')
+        key(document.activeElement, 'Escape'); await tick(); assert(document.activeElement === row('move') && roots().length === 1, '返回父层未恢复焦点')
+        key(document.activeElement, 'Tab'); await tick(); assert(document.activeElement === row('export') && roots().length === 1, 'Tab 重新进入了退出中的旧子层')
+      })
+      await check('禁用父节点不可展开，空 children 作为普通叶子项', async () => {
+        await open(); row('disabled').click(); await settle(); assert(roots().length === 1 && !calls.value, '禁用分支仍可展开')
+        await activate('empty'); assert(callback.value.value === 'empty', '空 children 被当作分组')
+      })
+      await check('三级数据沿用同一 API，逐级返回', async () => {
+        await open(); await activate('move'); await activate('nested')
+        assert(row('deep') && !calls.value, '后续层级未复用 children')
+        key(document.activeElement, 'Tab'); await tick(); assert(roots().length === 3 && currentList().parentElement.contains(document.activeElement), '三级 Tab 跳到了父层或页面')
+        key(row('deep'), 'ArrowLeft'); await settle(); assert(document.activeElement === row('nested'), '深层返回焦点错误')
+        key(row('nested'), 'ArrowLeft'); await settle(); assert(document.activeElement === row('move'), '二次返回错误')
+      })
+      await check('点击外部立即关闭整组交互，重新按压只打开新根面板', async () => {
+        await open(); await activate('move'); const old = roots()
+        pointer('pointerdown', source()); await tick(); assert(!roots().length && old.every(element => element.inert), '旧子面板未隔离')
+        pointer('pointerup', source()); await settle(); assert(roots().length === 1 && currentList().getAttribute('aria-label') === '级联测试', '再次抬起未恢复根菜单')
+        assert(old.every(element => !element.isConnected), '新位置打开后仍保留旧级联')
+      })
+      await check('另一菜单打开时整个旧菜单树互斥关闭', async () => {
+        await open(); await activate('move'); other.value.show(source()); await settle()
+        assert(roots().length === 1 && currentList().getAttribute('aria-label') === '另一菜单', '父子窗口没有一起关闭')
+      })
+      await check('长子菜单滚动和滚动条按压不关闭父子窗口', async () => {
+        options.value = [{ value: 'long', label: 'Long', children: Array.from({ length: 35 }, (_, i) => ({ value: 'item' + i, label: 'Item ' + i })) }]
+        await open(); await activate('long'); const count = roots().length, panel = roots().at(-1).querySelector(".my-floating-panel")
+        assert(panel.scrollHeight > panel.clientHeight, '未形成内部滚动')
+        panel.scrollTop = 450; panel.dispatchEvent(new Event('scroll')); await settle()
+        assert(roots().length === count && panel.scrollTop > 0, '滚动关闭了窗口')
+        pointer('pointerdown', panel); pointer('pointerup', panel); await settle()
+        assert(roots().length === count && calls.value === 0, '滚动条被当作外部或触发选择')
+      })
+      await check('自定义行插槽传递到子层，复用 row 绑定', async () => {
+        custom.value = true; await open(); await activate('move'); assert(row('docs').classList.contains('custom-menu-row'), '子层丢失自定义插槽')
+        await activate('docs'); assert(callback.value.value === 'docs', '自定义子项无法选择')
+      })
+      await check('动态移除当前分支安全返回，不保留幽灵面板', async () => {
+        await open(); await activate('move'); options.value = [{ value: 'fresh', label: 'Fresh' }]; await settle()
+        assert(roots().length === 1 && row('fresh') && !row('docs'), '动态移除后仍有旧分支')
+      })
+      await check('触摸移入不展开，点击父节点可进入', async () => {
+        await open(); pointer('pointerenter', row('move'), point(row('move')), { pointerType: 'touch' }); await pause(160)
+        assert(roots().length === 1 && !row('docs'), '触摸移入错误触发展开')
+        pointer('pointerenter', row('move')); pointer('pointerdown', row('move'), point(row('move')), { pointerType: 'touch' }); await pause(160)
+        assert(roots().length === 1 && !row('docs'), '触摸按下未取消已排队的鼠标悬停')
+        await activate('move'); await checkBranch()
+      })
+      if (!wide()) {
+        await check('移动布局点击露出的父区域只返回，外部按下整组同步淡出', async () => {
+          await open(); pointer('pointerdown', row('move'), point(row('move')), { pointerType: 'touch' }); await activate('move')
+          const parent = roots()[0], background = parent.querySelector(".my-floating-panel").getBoundingClientRect(), child = roots().at(-1).querySelector(".my-floating-panel").getBoundingClientRect()
+          const position = { x: (background.left + background.right) / 2, y: roots().at(-1).dataset.side === 'top' ? (child.bottom + background.bottom) / 2 : (background.top + child.top) / 2 }
+          const target = document.elementFromPoint(position.x, position.y)
+          assert(target?.matches('[data-menu-parent-return]'), '露出的父区域无法命中返回入口')
+          pointer('pointerdown', target, position, { pointerType: 'touch' }); await tick(); assert(roots().length === 2, '父区域按下被当成外部销毁')
+          pointer('pointerup', target, position, { pointerType: 'touch' }); target.click(); await settle(); await pause(310)
+          assert(roots().length === 1 && row('move') && !calls.value && document.activeElement === row('move'), '父区域点击没有正确返回')
+          pointer('pointerdown', row('move'), point(row('move')), { pointerType: 'touch' }); await activate('move')
+          const old = roots(); pointer('pointerdown', document.body, { x: innerWidth - 2, y: innerHeight - 2 }, { pointerType: 'touch' }); await tick()
+          assert(!roots().length && old.every(element => element.inert), '外部按下没有立即隔离整组')
+          if (!matchMedia('(prefers-reduced-motion:reduce)').matches) {
+            assert(old.every(element => element.isConnected), '外部按下提前销毁了级联')
+            await pause(75); const opacity = old.map(element => +getComputedStyle(element.querySelector(".my-floating-panel")).opacity)
+            assert(opacity.every(value => value > 0 && value < 1) && Math.max(...opacity) - Math.min(...opacity) < .15, '外部关闭没有同步淡出父子层：' + opacity)
+          }
+          await pause(260); await settle(); assert(old.every(element => !element.isConnected), '外部淡出结束后仍有旧级联')
+        })
+        await check('触屏标题从原行连续移动展开，保留二级说明且返回后恢复源行', async () => {
+          await open(); const sourceRow = row('move'), origin = sourceRow.getBoundingClientRect()
+          pointer('pointerdown', sourceRow, point(sourceRow), { pointerType: 'touch' }); sourceRow.click(); await tick()
+          const panel = roots().at(-1).querySelector(".my-floating-panel"), header = backButton(), reduced = matchMedia('(prefers-reduced-motion:reduce)').matches
+          assert(panel.hasAttribute('data-cascade') && header.querySelector('small')?.textContent === 'Choose a destination', '标题丢失原行内容')
+          if (!reduced) {
+            assert(Math.abs(header.getBoundingClientRect().top - origin.top) < 1, '标题没有从原条目位置开始')
+            assert(+getComputedStyle(panel).opacity === 1 && getComputedStyle(panel).clipPath !== 'none', '子层变成整体淡入缩放')
+          }
+          await pause(330); assert(getComputedStyle(sourceRow).opacity === '0', '共享标题出现两份')
+          header.click(); await settle(); await pause(330)
+          assert(getComputedStyle(sourceRow).opacity === '1' && !sourceRow.hasAttribute('data-menu-source'), '返回后没有恢复原条目')
+        })
+        await check('底部空间不足时上移整组，子菜单放得下就不提前出现滚动条', async () => {
+          options.value = [baseOptions()[1]]
+          await open(28, innerHeight - 80)
+          const parent = roots()[0].querySelector(".my-floating-panel"), original = parent.getBoundingClientRect()
+          pointer('pointerdown', row('move'), point(row('move')), { pointerType: 'touch' }); await activate('move')
+          const child = roots().at(-1).querySelector(".my-floating-panel"), rect = child.getBoundingClientRect(), background = parent.getBoundingClientRect()
+          assert(child.scrollHeight <= child.clientHeight + 1, '视口放得下完整内容，却提前产生滚动条')
+          assert(rect.bottom <= innerHeight - 8 + 1 && background.top < original.top - 1 && rect.top > background.top + 24, '未同步上移父层并保留返回区域')
+          backButton().click(); await settle(); await pause(310)
+          assert(Math.abs(parent.getBoundingClientRect().top - original.top) < 1, '返回后父层停在避让位置')
+        })
+        await check('三级菜单上移会传递给所有祖先，逐级返回还原位置', async () => {
+          options.value = [{ value: 'outer', label: 'Outer', children: [{ value: 'inner', label: 'Inner', children: Array.from({ length: 8 }, (_, i) => ({ value: 'deep' + i, label: 'Deep ' + i })) }, ...Array.from({ length: 5 }, (_, i) => ({ value: 'peer' + i, label: 'Peer ' + i }))] }]
+          await open(28, innerHeight - 80); pointer('pointerdown', row('outer'), point(row('outer')), { pointerType: 'touch' }); await activate('outer')
+          const before = roots().map(root => root.querySelector(".my-floating-panel").getBoundingClientRect())
+          await activate('inner'); const panels = roots().map(root => root.querySelector(".my-floating-panel")), rects = panels.map(panel => panel.getBoundingClientRect())
+          assert(panels.length === 3 && panels.at(-1).scrollHeight <= panels.at(-1).clientHeight + 1, '三级菜单被提前压缩')
+          assert(rects[0].top >= 8 - 1 && rects[1].top > rects[0].top + 15 && rects[2].top > rects[1].top + 24 && rects[2].bottom <= innerHeight - 8 + 1, '祖先未同步避让或父层被遮住')
+          key(row('deep0'), 'ArrowLeft'); await settle(); await pause(310)
+          assert(roots().length === 2 && roots().every((root, i) => Math.abs(root.querySelector(".my-floating-panel").getBoundingClientRect().top - before[i].top) < 1), '返回后祖先位移没有逐级还原')
+        })
+      }
+      await check('关闭或卸载时清理悬停计时器', async () => {
+        await open(); pointer('pointerenter', row('move')); menu.value.close(); await pause(180); assert(!roots().length, '关闭后延迟打开')
+        await open(); pointer('pointerenter', row('move')); mounted.value = false; await settle(); await pause(350)
+        assert(!roots().length, '卸载后仍然打开子菜单')
+      })
+      await check('屏幕边缘不截断子面板，侧边不足时保留返回', async () => {
+        await open(innerWidth - 250, innerHeight - 70); await activate('move')
+        const tolerance = 1 / devicePixelRatio + .02
+        for (const root of roots()) {
+          const rect = root.querySelector(".my-floating-panel").getBoundingClientRect()
+          assert(rect.left >= 8 - tolerance && rect.right <= innerWidth - 8 + tolerance && rect.top >= 8 - tolerance && rect.bottom <= innerHeight - 8 + tolerance && rect.width >= 220, '面板越界或被挤得太窄')
+        }
+        if (wide()) assert(roots().at(-1).dataset.side === 'left', '右侧空间不足未向左展开')
+        else assert(document.querySelector('[data-menu-back]'), '窄屏缺少返回')
+      })
+      await check('模态中的父子面板保留挂载容器、局部样式与独立 Escape', async () => {
+        modalOpen.value = true; await settle(); await pause(300)
+        const trigger = document.getElementById('modal-cascade-source'), overlay = trigger.closest(".my-overlay")
+        modalMenu.value.show(trigger); await settle(); await pause(290); await activate('move')
+        assert(roots().length === 2 && row('docs'), '模态内不能进入子层')
+        for (const root of roots()) {
+          assert(root.parentElement === overlay && !root.closest('[inert]'), '子面板丢失模态上下文')
+          assert(getComputedStyle(root.querySelector(".my-floating-panel")).getPropertyValue('--list-padding-inline').trim() === '25px', '子面板丢失局部样式')
+        }
+        assert(document.activeElement === row('docs'), '模态内焦点不能进入子面板')
+        key(document.activeElement, 'Tab'); await tick(); assert(document.activeElement === row('travel') && modalOpen.value && roots().length === 2, '外层模态抢走了子菜单的 Tab')
+        key(document.activeElement, 'Tab', { shiftKey: true }); await tick(); assert(document.activeElement === row('docs'), '模态内子菜单不能反向循环')
+        key(row('docs'), 'Escape'); await settle(); assert(modalOpen.value && roots().length === 1, '子层 Escape 关闭了整个模态')
+        key(row('move'), 'Escape'); await settle(); assert(modalOpen.value && !roots().length, '根 Escape 未独立关闭菜单')
+      })
+      if (wide()) {
+        await check('默认悬停延迟 200ms，可配置为更短；点击无需等待', async () => {
+          hoverDelay.value = undefined; await open(); const start = performance.now(); let elapsed = 0
+          const observer = new MutationObserver(() => { if (!elapsed && row('docs')) elapsed = performance.now() - start })
+          observer.observe(document.body, { childList: true, subtree: true })
+          pointer('pointerenter', row('move')); await pause(120); assert(!row('docs'), '默认 200ms 提前展开')
+          await pause(140); await settle(); observer.disconnect(); assert(row('docs') && elapsed >= 195 && elapsed < 400, '默认悬停延迟错误：' + elapsed)
+          await clear(); hoverDelay.value = 20; await open(); pointer('pointerenter', row('move')); await pause(60); await settle(); assert(row('docs'), '自定义悬停延迟未生效')
+          await clear(); hoverDelay.value = 900; await open(); row('move').click(); await settle(); assert(row('docs'), '点击被悬停延迟阻塞')
+        })
+        await check('宽屏触摸点击仍使用桌面布局，设备类型不决定移动布局', async () => {
+          await open(); pointer('pointerdown', row('move'), point(row('move')), { pointerType: 'touch' }); await activate('move')
+          assert(roots().length === 2 && row('docs') && !backButton() && !roots()[0].querySelector('[data-menu-parent-return]'), '宽屏触摸错误采用了移动布局')
+          assert(+getComputedStyle(roots()[0].querySelector(".my-floating-panel")).scale === 1, '宽屏父层不应因触摸而缩小')
+          await activate('docs'); assert(callback.value.value === 'docs' && !roots().length, '触屏叶子选择失效')
+        })
+        await check('触屏收起后立即用键盘展开，子窗口跟随父层复原', async () => {
+          await open(); pointer('pointerdown', row('move'), point(row('move')), { pointerType: 'touch' }); await activate('move')
+          key(row('docs'), 'ArrowLeft'); await tick(); key(row('move'), 'ArrowRight'); await settle(); await pause(340)
+          const parent = row('move').getBoundingClientRect(), child = roots().at(-1).getBoundingClientRect()
+          assert(roots().length === 2 && Math.abs(child.left - parent.right + 4) < 1 && Math.abs(child.top - parent.top) < 1, '子窗口停在父层复原动画中途')
+        })
+        await check('根窗口尚在展开时立即进入，子窗口继续跟随到最终位置', async () => {
+          menu.value.show({ x: 28, y: 170, contextElement: source() }); await settle(); row('move').click(); await settle(); await pause(340)
+          const parent = row('move').getBoundingClientRect(), child = roots().at(-1).getBoundingClientRect()
+          assert(roots().length === 2 && Math.abs(child.left - parent.right + 4) < 1 && Math.abs(child.top - parent.top) < 1, '子窗口停在父级动画中途的位置')
+        })
+        await check('滚动父菜单跟随子层锚点，锚点裁出后仅收起子层', async () => {
+          const group = baseOptions()[1]
+          options.value = [...Array.from({ length: 20 }, (_, i) => ({ value: 'before' + i, label: 'Before ' + i })), group, { value: 'after', label: 'After' }]
+          mode.value = 'single'; value.value = 'docs'; await open(); await activate('move')
+          const parent = roots()[0].querySelector(".my-floating-panel")
+          assert(parent.scrollTop > 0 && roots().length === 2, '父菜单未滚动到分支')
+          parent.scrollTop = 0; parent.dispatchEvent(new Event('scroll')); await settle(); await pause(60)
+          assert(roots().length === 1 && parent.scrollTop === 0, '锚点裁剪未关闭子层，或错误滚回父节点')
+          assert(roots()[0].contains(document.activeElement), '子层关闭后焦点丢失')
+        })
+        await check('桌面左右展开都重叠父菜单 4px', async () => {
+          for (const x of [28, innerWidth - 250]) {
+            await clear(); await open(x); await activate('move')
+            const parent = roots()[0].querySelector(".my-floating-panel").getBoundingClientRect(), child = roots()[1].querySelector(".my-floating-panel").getBoundingClientRect()
+            const side = roots()[1].dataset.side
+            assert(side === (x === 28 ? 'right' : 'left'), '桌面展开方向错误')
+            assert(Math.abs((side === 'right' ? parent.right - child.left : child.right - parent.left) - 4) < 1, '父子菜单没有重叠 4px')
+          }
+        })
+        await check('鼠标悬停展开，离开父子区域仍保持子菜单', async () => {
+          await open(); pointer('pointerenter', row('move')); await pause(160); await settle(); await pause(290)
+          assert(roots().length === 2 && !calls.value, '悬停未打开子菜单')
+          pointer('pointerleave', row('move')); pointer('pointerleave', roots()[0].querySelector(".my-menu-panel-content"))
+          await pause(100); pointer('pointerenter', roots()[1].querySelector(".my-menu-panel-content")); await pause(270)
+          assert(roots().length === 2, '进入子菜单后仍被延迟关闭')
+          const child = roots()[1]; pointer('pointerleave', child.querySelector(".my-menu-panel-content")); await pause(380); await settle()
+          assert(roots().length === 2 && roots()[1] === child, '移出整组窗口后子菜单被自动收起')
+        })
+        await check('父级其他分支切换子菜单，普通项与禁用项收起子层', async () => {
+          await open(); await activate('move'); pointer('pointerenter', row('export')); await pause(360); await settle()
+          assert(roots().length === 2 && row('pdf') && !row('docs'), '兄弟子菜单未替换')
+          pointer('pointerleave', roots().at(-1).querySelector(".my-menu-panel-content")); await pause(380); await settle()
+          assert(roots().length === 2 && row('pdf'), '移出子菜单后不应关闭')
+          pointer('pointerenter', row('open')); await pause(250); await settle(); assert(roots().length === 1, '进入父级普通项后未收起子层')
+          await activate('move'); pointer('pointerenter', row('disabled')); await pause(250); await settle()
+          assert(roots().length === 1 && !row('no') && !calls.value, '禁用行未收起旧子层或被错误激活')
+        })
+        await check('离开三级菜单保留整组，只在对应父级其他项收起后代', async () => {
+          await open(); await activate('move'); await activate('nested')
+          const old = roots(); for (const root of old) pointer('pointerleave', root.querySelector(".my-menu-panel-content"))
+          await pause(380); await settle(); assert(roots().length === 3 && old.every(root => root.isConnected), '离开三级菜单后窗口被自动关闭')
+          pointer('pointerenter', row('docs')); await tick(); assert(roots().length === 2 && row('nested'), '二级普通项应立即只收起三级')
+          pointer('pointerenter', row('open')); await tick(); assert(roots().length === 1, '根级普通项未立即收起整组后代')
+        })
+        await check('子窗口保留完整展开动画和减少动态效果', async () => {
+          await open(); row('move').click(); await tick()
+          const panel = roots().at(-1).querySelector(".my-floating-panel"), style = getComputedStyle(panel)
+          const reduced = matchMedia('(prefers-reduced-motion:reduce)').matches
+          assert(reduced ? style.transform === 'none' : style.transform === 'matrix(0, 0, 0, 0, 0, 0)' && +style.opacity === 0, '子窗口进入风格改变')
+          await pause(320); assert(getComputedStyle(panel).transform === 'none' && +getComputedStyle(panel).opacity === 1, '子窗口未到达动画终态')
+        })
+      } else {
+        await check('子窗口保留完整内容和父层露出区域，返回还原原位置', async () => {
+          await open(28, 450); const parent = roots()[0].getBoundingClientRect(), side = roots()[0].dataset.side
+          const trigger = row('move').getBoundingClientRect()
+          await activate('move'); const current = roots().at(-1).getBoundingClientRect(), background = roots()[0].querySelector(".my-floating-panel").getBoundingClientRect()
+          assert(Math.abs(current.left - parent.left) < 1 && current.top > background.top + 20 && background.top >= 8 - 1, '子窗口盖住父层或整体避让越界')
+          assert(Math.abs(roots()[0].getBoundingClientRect().height - parent.height) < 1 && roots()[0].dataset.side === side, '父窗口被改变高度或根展开方向')
+          backButton().click(); await settle(); await pause(280)
+          const restored = roots()[0].getBoundingClientRect(); assert(Math.abs(restored.top - parent.top) < 1 && Math.abs(restored.left - parent.left) < 1, '返回未恢复原窗口位置')
+        })
+        await check('顶部、中间与底部展开第一项和末项，都保留父层且可以命中返回', async () => {
+          // 窄屏鼠标模拟时，窗口可能恰好出现在静止光标下；本场景只检查点击后的几何。
+          hoverDelay.value = 10000
+          for (const y of [60, 260, innerHeight - 60]) for (const branch of ['move', 'export']) {
+            await clear(); options.value = baseOptions().filter(item => ['move', 'export'].includes(item.value)); await open(28, y)
+            const parent = roots()[0].getBoundingClientRect(), trigger = row('move').getBoundingClientRect()
+            await activate(branch)
+            const child = roots().at(-1).getBoundingClientRect(), scaled = roots()[0].querySelector(".my-floating-panel").getBoundingClientRect()
+            assert(Math.abs(child.left - parent.left) < 1 && child.top >= 8 && child.bottom <= innerHeight - 8 + 1, '子窗口越界或水平漂移')
+            const position = { x: (scaled.left + scaled.right) / 2, y: roots().at(-1).dataset.side === 'top' ? (child.bottom + scaled.bottom) / 2 : (scaled.top + child.top) / 2 }
+            assert(document.elementFromPoint(position.x, position.y)?.matches('[data-menu-parent-return]'), '父层未露出或返回区域被挡住')
+            assert(scaled.width < parent.width && scaled.top >= 8 - 1 && scaled.top <= parent.top + 1, '父层缩小或整体向上避让错误')
+          }
+        })
+        await check('进入和返回长父菜单保留滚动位置，子级从顶部显示', async () => {
+          options.value = [...Array.from({ length: 20 }, (_, i) => ({ value: 'before' + i, label: 'Before ' + i })), baseOptions()[1]]
+          mode.value = 'single'; value.value = 'docs'; await open(); const panel = roots()[0].querySelector(".my-floating-panel"), previous = panel.scrollTop
+          assert(previous > 0, '未产生父级滚动'); await activate('move'); assert(roots().at(-1).querySelector(".my-floating-panel").scrollTop === 0 && panel.scrollTop === previous, '子级继承或改变了父级滚动位置')
+          backButton().click(); await settle(); await pause(280)
+          assert(Math.abs(panel.scrollTop - previous) < 1 && document.activeElement === row('move'), '返回丢失父级位置或焦点：' + JSON.stringify({ previous, current: panel.scrollTop, focused: document.activeElement === row('move') }))
+        })
+        await check('进入子级保留并缩小父面板，返回恢复原尺寸且不重复标识', async () => {
+          await open(); const parent = roots()[0].querySelector(".my-floating-panel"), reduced = matchMedia('(prefers-reduced-motion:reduce)').matches
+          row('move').click(); await tick(); await pause(90)
+          const middle = getComputedStyle(parent).scale
+          if (!reduced) { const scale = +middle; assert(scale > .94 && scale < 1, '父面板没有缩小过渡：' + middle) }
+          await pause(190)
+          assert(parent.isConnected && parent.querySelector(".my-menu-panel-content").inert && !parent.inert && parent.querySelector('[data-menu-parent-return]') && Math.abs(+getComputedStyle(parent).scale - .94) < .001, '父层没有保留缩小、选项隔离或返回入口')
+          backButton().click(); await tick()
+          const ids = roots().flatMap(root => [...root.querySelectorAll('[id]')].map(element => element.id))
+          assert(ids.length === new Set(ids).size, '返回过渡出现重复 id')
+          await pause(270); assert(!parent.inert && +getComputedStyle(parent).scale === 1 && !roots()[0].querySelector('.history'), '返回未恢复父层')
+        })
+        await check('纵向菜单忽略悬停与兼容鼠标移动，返回后仍需点击进入', async () => {
+          await open(); await activate('move'); backButton().click(); await settle()
+          pointer('pointerenter', row('move')); await pause(180); assert(row('move') && !row('docs'), '返回后自动重新进入')
+          pointer('pointermove', row('move')); await pause(160); await settle(); assert(row('move') && !row('docs'), '纵向菜单被鼠标兼容事件误开')
+          await activate('move'); assert(row('docs'), '关闭悬停后点击不能进入')
+        })
+        await check('窄屏返回入口可点击，也可使用 Enter 激活', async () => {
+          await open(); await activate('move'); backButton().click(); await settle()
+          assert(row('move') && document.activeElement === row('move'), '点击返回错误')
+          await activate('move'); key(backButton(), 'Enter'); await settle()
+          assert(row('move') && !row('docs') && !calls.value, '返回按钮 Enter 错误选择了子项')
+        })
+      }
+      await clear(); result.value = JSON.stringify({ passed: true, cases: reports.length, viewport: [innerWidth, innerHeight], reduced: matchMedia('(prefers-reduced-motion:reduce)').matches, reports }, null, 2)
+    } catch (error) {
+      result.value = JSON.stringify({ passed: false, after: reports.length, error: String(error), stack: error.stack, reports }, null, 2)
+    } finally { running.value = false }
+  }
+  return () => h('main', [
+    h('h1', '级联菜单交互回归'), h(Button, { onClick: run, disabled: running.value }, () => '运行级联回归'),
+    h('div', { class: 'tools' }, [
+      mounted.value && h(Menu, { ref: menu, options: options.value, mode: mode.value, hoverDelay: hoverDelay.value, modelValue: value.value, 'onUpdate:modelValue': next => value.value = next, label: '级联测试', onSelect: selected }, {
+        default: ({ trigger }) => h(Button, { ...trigger, id: 'cascade-source', variant: 'outline' }, () => '打开级联菜单'),
+        ...(custom.value ? { item: ({ item, row }) => custom.value === 'fields' ? h('div', { ...row, class: 'custom-menu-row' }, [
+          h('span', item.label), h('input', { id: 'field-' + item.value, 'aria-label': 'Field' }), h('textarea', { id: 'notes-' + item.value, 'aria-label': 'Notes' }),
+          h('div', { id: 'editable-' + item.value, contenteditable: 'plaintext-only', role: 'textbox', 'aria-label': 'Editable' }, [h('span', 'Editable content')]),
+          h('button', { id: 'action-' + item.value, type: 'button' }, 'Action'), h('button', { disabled: true }, 'Disabled'), h('button', { hidden: true }, 'Hidden'),
+        ]) : h(ListRow, { ...row, title: item.label, class: 'custom-menu-row' }, { trailing: () => item.children?.length ? h(Icon, { name: 'chevron-right' }) : null }) } : {}),
+      }),
+      h(Button, { variant: 'outline', onClick: () => { options.value = [{ value: 'long', label: 'Long', children: Array.from({ length: 35 }, (_, i) => ({ value: 'item' + i, label: 'Item ' + i })) }]; mode.value = 'multiple'; value.value = []; menu.value.show(source()) } }, () => '检查长子菜单'),
+      h(Menu, { ref: other, options: [{ value: 'other', label: 'Other' }], label: '另一菜单' }, { default: ({ trigger }) => h(Button, { ...trigger, variant: 'outline' }, () => '打开另一菜单') }),
+    ]), h('pre', { role: 'status', 'aria-live': 'polite' }, result.value),
+    h('div', [h(ListRow, { id: 'list-menu-icon', title: '列表动作菜单', 'aria-haspopup': 'menu' }), h(ListRow, { id: 'listbox-menu-icon', title: '列表选择菜单', 'aria-haspopup': 'listbox' })]),
+    h(Dialog, { modelValue: modalOpen.value, 'onUpdate:modelValue': next => modalOpen.value = next, title: '模态级联', icon: false, style: { '--dialog-width': '92%' } }, {
+      default: () => h(Menu, { ref: modalMenu, options: options.value, label: '模态菜单', style: { '--list-padding-inline': '25px' }, onSelect: selected }, { default: ({ trigger }) => h(Button, { ...trigger, id: 'modal-cascade-source' }, () => '模态内级联') }),
+    }),
+  ])
+} }).mount('#app')
+</script>
+</html>

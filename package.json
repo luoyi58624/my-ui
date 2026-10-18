@@ -1,0 +1,26 @@
+{
+  "name": "my-ui",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "my-ui：可直接复制修改的 CSS + JavaScript 组件，附 Vue 3 薄封装与示例",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5178 --strictPort",
+    "build": "vue-tsc --noEmit && vite build && node scripts/copy-native.mjs",
+    "preview": "vite preview --host 127.0.0.1 --port 4178 --strictPort",
+    "check": "vue-tsc --noEmit",
+    "test:theme": "node --test tests/theme.test.mjs",
+    "test:components": "node --test tests/components.test.mjs",
+    "test:popup": "node --test tests/popup.test.mjs",
+    "test:floating": "node --test tests/floating.test.mjs"
+  },
+  "dependencies": {
+    "vue": "3.5.43"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "6.0.10",
+    "typescript": "5.9.3",
+    "vite": "8.3.4",
+    "vue-tsc": "3.3.13"
+  }
+}

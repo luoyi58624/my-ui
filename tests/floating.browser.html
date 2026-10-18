@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>浮动菜单浏览器回归</title>
+<style>
+  main { padding: 24px; max-width: 900px; margin: auto; }
+  .source { position: fixed; right: 12px; top: 12px; }
+  .tools { display: flex; flex-wrap: wrap; gap: 12px; margin: 20px 0; }
+  .clip { height: 90px; overflow: auto; border: 1px solid gray; margin: 18px 0; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+</style>
+<div id="app"></div>
+<script type="module">
+import { createApp, defineComponent, h, nextTick, ref } from 'vue'
+import { Button, Floating, Input, Menu, Popup, Select, popup } from '/vue/index.ts'
+import { applyTheme } from '/src/theme/index.ts'
+
+applyTheme({ mode: 'light' })
+const pause = ms => new Promise(resolve => setTimeout(resolve, ms))
+const frame = () => new Promise(resolve => requestAnimationFrame(resolve))
+const assert = (condition, message) => { if (!condition) throw new Error(message) }
+const options = [{ value: 'a', label: 'Alpha' }, { value: 'b', label: 'Beta', disabled: true }, { value: 'c', label: 'Cherry' }, { value: 'd', label: 'Delta' }]
+const visible = () => Array.from(document.querySelectorAll(".my-floating-position[aria-hidden=\"false\"]")).filter(root => root.classList.contains("my-ready"))
+function key(element, key, extra = {}) { element.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...extra })) }
+function sample(root) { const panel = root.querySelector(".my-floating-panel"); const rect = panel.getBoundingClientRect(); return { opacity: +getComputedStyle(panel).opacity, transform: getComputedStyle(panel).transform, origin: getComputedStyle(panel).transformOrigin, side: root.dataset.side, left: rect.left, top: rect.top, width: rect.width, height: rect.height, scrollHeight: panel.scrollHeight, inert: root.inert } }
+async function opened(action, animate = true) {
+  action()
+  await nextTick(); await nextTick(); await nextTick()
+  const root = visible().at(-1)
+  assert(root, '没有显示浮动窗口')
+  const start = sample(root), samples = []
+  const time = performance.now()
+  while (performance.now() - time < 340) { await frame(); samples.push(sample(root)) }
+  const last = samples.at(-1)
+  assert(last.opacity === 1 && last.transform === 'none', '进入没有到达终态')
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (animate && !reduced) assert(start.opacity === 0 && samples.some(item => item.opacity > 0 && item.opacity < 1), '缺少首次进入过程')
+  if (animate && !reduced && root.dataset.motion === 'expand') assert(start.transform === 'matrix(0, 0, 0, 0, 0, 0)', '菜单没有保留完整展开动画')
+  if (reduced) assert(start.opacity === 1 && samples.every(item => item.transform === 'none'), '减少动态效果仍有位移')
+  const viewport = { left: visualViewport?.offsetLeft ?? 0, top: visualViewport?.offsetTop ?? 0, width: visualViewport?.width ?? innerWidth, height: visualViewport?.height ?? innerHeight }
+  const tolerance = 1 / devicePixelRatio + .01
+  assert(last.left >= viewport.left + 8 - tolerance && last.top >= viewport.top + 8 - tolerance && last.left + last.width <= viewport.left + viewport.width - 8 + tolerance && last.top + last.height <= viewport.top + viewport.height - 8 + tolerance, '窗口越过视口边界：' + JSON.stringify({ last, viewport, active: document.activeElement.outerHTML }))
+  return { root, report: { start, end: last } }
+}
+async function closed(close) {
+  const root = visible().at(-1), panel = root.querySelector(".my-floating-panel"), events = []
+  panel.addEventListener('transitionend', event => events.push(event.propertyName))
+  close(); await nextTick()
+  assert(root.inert && root.getAttribute('aria-hidden') === 'true', '关闭未即时隔离交互')
+  const fading = panel.hasAttribute('data-dismissing'), reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (fading && !reduced) {
+    const transform = getComputedStyle(panel).transform
+    assert(root.isConnected && getComputedStyle(panel).transitionProperty === 'opacity', '淡出前提前卸载或改变了其他属性')
+    await pause(65); await frame()
+    const style = getComputedStyle(panel)
+    assert(+style.opacity > 0 && +style.opacity < 1 && style.transform === transform, '没有实际淡出的中间帧，或退出时发生缩放')
+  }
+  await pause(340)
+  assert(fading ? !root.isConnected : getComputedStyle(panel).display === 'none', '退出后窗口未清理')
+  if (!fading && !reduced) assert(events.includes('opacity') && events.includes('transform'), '退出过渡被截断')
+  return { exited: true }
+}
+
+createApp({ setup() {
+  const menu = ref(), longMenu = ref(), rightMenu = ref(), clipMenu = ref(), mounted = ref(true)
+  const running = ref(false), result = ref('尚未运行'), selected = ref('id23'), inputValue = ref('a'), multi = ref(['a']), popupMounted = ref(true)
+  const longOptions = Array.from({ length: 24 }, (_, i) => ({ value: 'id' + i, label: '项目 ' + (i + 1), description: '用于检查高度限制与内部滚动' }))
+  const counts = ref(0), callback = ref(null), customOpen = ref(false), customAnchor = ref()
+  function chosen() { counts.value++; callback.value = { visible: visible().length, focus: document.activeElement.id } }
+  const modalMenu = ref()
+  const modalContent = defineComponent({ setup: () => () => h('div', { style: { '--list-padding-inline': '28px' } }, [
+    h(Menu, { ref: modalMenu, options, label: '模态内菜单' }, { default: ({ trigger }) => h(Button, { ...trigger, id: 'modal-trigger' }, () => '打开模态内菜单') }),
+    h(Input, { modelValue: '', label: '下一项输入' }),
+  ]) })
+  async function run() {
+    if (running.value) return
+    running.value = true; result.value = '运行中'; counts.value = 0; callback.value = null; mounted.value = true; selected.value = 'id23'
+    await nextTick()
+    const reports = []
+    try {
+      const source = document.getElementById('source')
+      for (const [name, x, y] of [['左上', 12, 12], ['右上', innerWidth - 12, 12], ['左下', 12, innerHeight - 12], ['右下', innerWidth - 12, innerHeight - 12], ['中部', innerWidth / 2, innerHeight / 2]]) {
+        const info = await opened(() => menu.value.show({ x, y, contextElement: source }))
+        await closed(() => menu.value.close())
+        reports.push({ name, ...info.report })
+      }
+      const pointerX = 60, pointerY = 170
+      const press = await opened(() => source.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1, clientX: pointerX, clientY: pointerY })))
+      assert(Math.abs(press.report.end.left - pointerX) < 1, '点击仍然固定在触发元素边缘')
+      await closed(() => menu.value.close()); reports.push({ name: '原生点击按压点', passed: true })
+
+      const contextSource = document.getElementById('right-source')
+      const contextRect = contextSource.getBoundingClientRect(), contextX = contextRect.left + 8, contextY = contextRect.top + 8
+      const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2, clientX: contextX, clientY: contextY })
+      contextSource.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 2, pointerId: 1, pointerType: 'mouse', isPrimary: true, clientX: contextX, clientY: contextY }))
+      contextSource.dispatchEvent(event)
+      assert(visible().length === 0, '右键还没抬起就打开了窗口')
+      await opened(() => contextSource.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, button: 2, pointerId: 1, pointerType: 'mouse', isPrimary: true, clientX: contextX, clientY: contextY })))
+      assert(event.defaultPrevented, '右键未阻止原生菜单')
+      await closed(() => rightMenu.value.close())
+      await opened(() => key(contextSource, 'F10', { shiftKey: true }))
+      await closed(() => rightMenu.value.close()); reports.push({ name: '右键与 Shift+F10', passed: true })
+
+      await opened(() => menu.value.show({ x: 40, y: 130, contextElement: source }))
+      key(document.activeElement, 'ArrowDown'); await nextTick()
+      assert(document.activeElement.dataset.menuItem === 'c', '方向键未跳过禁用项：' + JSON.stringify({ active: document.activeElement.outerHTML, menus: visible().map(root => ({ rect: sample(root), visibility: getComputedStyle(root.querySelector(".my-floating-panel")).visibility, bodyInert: root.querySelector(".my-menu-list").inert })) }))
+      key(document.activeElement, 'End'); await nextTick()
+      assert(document.activeElement.dataset.menuItem === 'd', 'End 未聚焦最后一项')
+      key(document.activeElement, 'Home'); await nextTick()
+      key(document.activeElement, 'c'); await nextTick()
+      assert(document.activeElement.dataset.menuItem === 'c', '文字查找失败')
+      key(document.activeElement, 'Enter'); await nextTick(); await nextTick()
+      assert(counts.value === 1 && callback.value.visible === 0 && callback.value.focus === 'source', '回调早于关闭或焦点恢复')
+      await pause(340); reports.push({ name: '键盘导航和先关闭后回调', passed: true })
+
+      await opened(() => menu.value.show({ x: 40, y: 150, contextElement: source }))
+      const inputSource = document.querySelector('button[aria-label="适配输入：Alpha"]')
+      await opened(() => inputSource.click())
+      assert(visible().length === 1, '多个菜单同时展开')
+      const list = visible()[0], panel = list.querySelector(".my-floating-panel")
+      assert(Math.abs(panel.offsetWidth - inputSource.offsetWidth) < 1, '下拉宽度没有跟随输入')
+      for (const value of ['c', 'd', 'a']) { key(document.activeElement, 'Tab'); await nextTick(); assert(document.activeElement.dataset.menuItem === value && visible().length === 1, 'Select 的 Tab 未在下拉中循环') }
+      key(document.activeElement, 'Tab', { shiftKey: true }); await nextTick(); assert(document.activeElement.dataset.menuItem === 'd', 'Select 的 Shift+Tab 没有回到末项')
+      key(document.activeElement, 'Escape'); await pause(340)
+      assert(document.activeElement === inputSource, 'Select 关闭后焦点未回到触发器')
+      reports.push({ name: '互斥展开与 Select 复用', passed: true })
+
+      const long = await opened(() => longMenu.value.show({ x: innerWidth - 20, y: innerHeight - 20, contextElement: source }))
+      const longPanel = long.root.querySelector(".my-floating-panel")
+      assert(longPanel.scrollHeight > longPanel.offsetHeight && longPanel.scrollTop > 0, '长菜单未滚动到当前项')
+      const activeRect = document.activeElement.getBoundingClientRect(), panelRect = longPanel.getBoundingClientRect()
+      assert(activeRect.top >= panelRect.top - 1 && activeRect.bottom <= panelRect.bottom + 1, '进入后当前项没有完整显示')
+      longPanel.scrollTop = 0; await pause(80)
+      assert(visible().length === 1, '菜单内部滚动导致窗口关闭')
+      const gutter = { x: panelRect.right - 2, y: panelRect.top + 40 }
+      const scrollbarPointer = (type, target, position, buttons) => target.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 9, pointerType: 'mouse', isPrimary: true, button: type === 'pointermove' ? -1 : 0, buttons, clientX: position.x, clientY: position.y }))
+      scrollbarPointer('pointerdown', longPanel, gutter, 1); await nextTick()
+      assert(visible()[0] === long.root && long.root.isConnected && !long.root.inert, '按压滚动条被误判为点击外部')
+      const outsidePanel = { x: panelRect.left - 20, y: panelRect.bottom + 20 }
+      scrollbarPointer('pointermove', document, outsidePanel, 1)
+      longPanel.scrollTop = 100; await pause(80)
+      scrollbarPointer('pointerup', document, outsidePanel, 0); await nextTick()
+      assert(visible()[0] === long.root && longPanel.scrollTop > 0 && selected.value === 'id23', '拖出面板后释放滚动条关闭窗口或触发选择')
+      reports.push({ name: '滚动条按压、拖动与面板外释放', passed: true })
+      await closed(() => longMenu.value.close()); reports.push({ name: '长菜单与内部滚动', passed: true })
+
+      const afterScrollbar = await opened(() => longMenu.value.show({ x: innerWidth - 20, y: innerHeight - 20, contextElement: source }))
+      const afterPanel = afterScrollbar.root.querySelector(".my-floating-panel"), afterRect = afterPanel.getBoundingClientRect(), track = { x: afterRect.right - 2, y: afterRect.top + 20 }
+      scrollbarPointer('pointerdown', afterPanel, track, 1); scrollbarPointer('pointerup', afterPanel, track, 0); await nextTick()
+      assert(visible()[0] === afterScrollbar.root && selected.value === 'id23', '滚动条轨道按压导致关闭或误选')
+      key(document.activeElement, 'Home'); await nextTick(); key(document.activeElement, 'Enter'); await nextTick(); await nextTick()
+      assert(selected.value === 'id0' && visible().length === 0, '滚动条操作后无法正常选择并关闭')
+      await pause(340); reports.push({ name: '滚动条轨道按压与滚动后选择', passed: true })
+
+      const clipSource = document.getElementById('clip-source'), clip = document.getElementById('clip')
+      clip.scrollTop = 0
+      clipMenu.value.show(clipSource); await pause(80)
+      assert(visible().length === 0, '被裁剪的触发器仍显示菜单')
+      reports.push({ name: '触发器裁剪边界', passed: true })
+      clip.scrollTop = 225; await pause(80)
+      const following = await opened(() => clipMenu.value.show(clipSource))
+      const beforeScroll = following.root.getBoundingClientRect().top
+      clip.scrollTop += 10; await pause(80)
+      assert(visible().length === 1 && Math.abs(following.root.getBoundingClientRect().top - beforeScroll + 10) < 1, '元素菜单没有跟随滚动')
+      clip.scrollTop = 0; await pause(340)
+      assert(visible().length === 0, '元素菜单在触发器移出裁剪区域后未关闭')
+      reports.push({ name: '元素跟随滚动与滚出关闭', passed: true })
+
+      await opened(() => menu.value.show({ x: 30, y: 180, contextElement: source }))
+      window.dispatchEvent(new Event('scroll')); await pause(340)
+      assert(visible().length === 0, '按压点菜单未在外部滚动时关闭')
+      reports.push({ name: '按压菜单外部滚动关闭', passed: true })
+
+      menu.value.show({ x: 50, y: 160, contextElement: source }); await pause(40)
+      menu.value.close(); await pause(30)
+      await opened(() => menu.value.show({ x: 30, y: 160, contextElement: source }), false)
+      assert(document.activeElement.closest('[role="menu"]'), '退出途中重开没有重新获得焦点')
+      await closed(() => menu.value.close()); reports.push({ name: '快速关闭后重开', passed: true })
+
+      const drawer = popup.showDrawer({ title: '菜单嵌套验证', content: () => h(modalContent) })
+      await pause(330)
+      const modalSource = document.getElementById('modal-trigger')
+      const inside = await opened(() => modalMenu.value.show({ x: innerWidth - 40, y: 180, contextElement: modalSource }))
+      const dialog = modalSource.closest('[aria-modal="true"]')
+      assert(inside.root.parentElement === dialog.parentElement, '菜单没有保留模态上下文')
+      assert(!inside.root.inert && getComputedStyle(inside.root.querySelector('[data-menu-item]')).paddingLeft === '28px', '局部间距或背景隔离丢失')
+      key(document.activeElement, 'Escape'); await pause(340)
+      assert(document.querySelector(".my-drawer-overlay.my-show") && document.activeElement === modalSource, 'Escape 连带关闭外层抽屉')
+      drawer.close(); await drawer.closed; await pause(320)
+      reports.push({ name: '模态内菜单、继承间距与 Escape', passed: true })
+
+      const custom = await opened(() => { customAnchor.value = { x: 20, y: 150, contextElement: source }; customOpen.value = true })
+      assert(custom.root.querySelector('input'), '通用窗口无法放置自定义内容')
+      await closed(() => { customOpen.value = false }); reports.push({ name: 'Floating 自定义内容', passed: true })
+
+      const old = menu.value
+      await opened(() => old.show({ x: 20, y: 160, contextElement: source }))
+      mounted.value = false; await nextTick(); await pause(340)
+      assert(visible().length === 0, '卸载后残留窗口')
+      old.show({ x: 20, y: 160 }); await nextTick()
+      assert(visible().length === 0, '旧引用重新打开了窗口')
+      mounted.value = true; await nextTick()
+      await opened(() => menu.value.show({ x: 20, y: 160, contextElement: document.getElementById('source') }))
+      await closed(() => menu.value.close()); reports.push({ name: '卸载和旧引用隔离', passed: true })
+      assert(document.documentElement.style.overflow !== 'hidden' && !document.querySelector('main').closest('[inert]'), '遗留模态状态')
+      result.value = JSON.stringify({ passed: true, cases: reports.length, reduced: matchMedia('(prefers-reduced-motion: reduce)').matches, viewport: { width: innerWidth, height: innerHeight }, reports }, null, 2)
+    } catch (error) {
+      result.value = JSON.stringify({ passed: false, error: String(error), reports }, null, 2)
+      for (const instance of [menu, longMenu, rightMenu, clipMenu]) instance.value?.close()
+      mounted.value = false; popupMounted.value = false; customOpen.value = false
+      await nextTick(); popupMounted.value = true; mounted.value = true
+    }
+    finally { running.value = false }
+  }
+  return () => h('main', {}, [h('h1', '浮动菜单浏览器回归'), h(Button, { onClick: run, 'aria-busy': running.value }, () => '运行菜单回归'),
+    mounted.value ? h(Menu, { ref: menu, options, label: '按压菜单', onSelect: chosen }, { default: ({ trigger }) => h(Button, { ...trigger, id: 'source', class: 'source' }, () => '测试菜单触发器') }) : null,
+    h(Button, { id: 'after-source' }, () => '触发器后的按钮'),
+    h('div', { class: 'tools' }, [h(Menu, { ref: rightMenu, options, trigger: 'contextmenu', label: '右键测试' }, { default: ({ trigger }) => h('div', { ...trigger, id: 'right-source' }, '右键测试区域') }),
+      h(Menu, { ref: longMenu, options: longOptions, mode: 'single', modelValue: selected.value, 'onUpdate:modelValue': value => { selected.value = value }, label: '长菜单' }, { default: ({ trigger }) => h(Button, trigger, () => '查看长菜单') }),
+      h(Menu, { options, mode: 'multiple', modelValue: multi.value, 'onUpdate:modelValue': value => { multi.value = value }, label: '多选测试' }, { default: ({ trigger }) => h(Button, trigger, () => '查看多选菜单') })]),
+    h(Select, { modelValue: inputValue.value, options, label: '适配输入', 'onUpdate:modelValue': value => { inputValue.value = value } }),
+    h('div', { class: 'clip', id: 'clip' }, [h('div', { style: { height: '250px' } }, '滚动裁剪区域'), h(Menu, { ref: clipMenu, options }, { default: ({ trigger }) => h(Button, { ...trigger, id: 'clip-source' }, () => '裁剪内触发器') }), h('div', { style: { height: '90px' } })]),
+    h(Floating, { modelValue: customOpen.value, anchor: customAnchor.value, 'onUpdate:modelValue': value => { customOpen.value = value } }, () => h(Input, { modelValue: '任意 Vue 内容', label: '自定义浮动内容' })),
+    h('pre', { role: 'status' }, result.value), popupMounted.value ? h(Popup) : null,
+  ])
+} }).mount('#app')
+</script>
+</html>

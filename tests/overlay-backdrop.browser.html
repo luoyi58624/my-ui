@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN" class="my-no-zoom">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>遮罩模糊与触控回归</title>
+<style>
+  main { max-width: 780px; margin: auto; padding: 24px; }
+  h1 { font-size: 24px; }
+  .tools { display: flex; flex-wrap: wrap; gap: 12px; }
+  .scene { margin-top: 24px; padding: 24px; background: var(--card-background); border: 1px solid var(--border); border-radius: 24px; }
+  .scene p { line-height: 1.8; }
+  .stripes { height: 32px; margin-top: 24px; background: repeating-linear-gradient(90deg, var(--text) 0 2px, transparent 2px 8px); }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+</style>
+<div id="app"></div>
+<script type="module">
+import { createApp, h, nextTick, ref } from 'vue'
+import { Button, Input, Popup, popup, applyTheme } from '/vue/index.ts'
+import SelectionPanel from '/src/demo/SelectionPanel.vue'
+
+applyTheme({ mode: 'dark', backdropBlur: true })
+const pause = ms => new Promise(resolve => setTimeout(resolve, ms))
+const frame = () => new Promise(resolve => requestAnimationFrame(resolve))
+const assert = (condition, message) => { if (!condition) throw new Error(message) }
+const reduced = () => matchMedia('(prefers-reduced-motion:reduce)').matches
+const currentRoot = () => [...document.querySelectorAll('.my-sheet-overlay,.my-drawer-overlay')].find(root => root.getAttribute('aria-hidden') === 'false')
+function snapshot(root) {
+  const scrim = root.querySelector('.my-sheet-scrim,.my-drawer-scrim')
+  const panel = root.querySelector('[role=dialog]')
+  return { root: +getComputedStyle(root).opacity, scrim: +getComputedStyle(scrim).opacity, panel: +getComputedStyle(panel).opacity, blur: getComputedStyle(scrim).backdropFilter }
+}
+const options = [{ value: 'lock', label: '锁屏' }, { value: 'widget', label: '时钟桌面插件' }, { value: 'both', label: '锁屏与时钟桌面插件' }]
+createApp({ setup() {
+  const result = ref('尚未运行'), running = ref(false), selected = ref('lock'), many = ref(['lock', 'widget'])
+  function open(mode) {
+    if (mode === 'drawer') return popup.showDrawer({ title: '抽屉模糊验证', content: () => h('p', '遮罩独立渐变，保留跟手关闭。') })
+    return popup.showSheet({
+      title: mode === 'single' ? '在以下位置显示双时钟' : '选择需要同步的内容', confirmText: mode === 'multiple' ? '完成' : undefined,
+      content: context => h(SelectionPanel, { mode, modelValue: mode === 'single' ? selected.value : many.value, options, position: 'trailing', label: '位置选择',
+        'onUpdate:modelValue': value => { if (mode === 'single') selected.value = value; else many.value = value },
+        onSelect: item => { if (mode === 'single') context.close(item.value) },
+      }),
+    })
+  }
+  async function sample(mode, reports) {
+    const handle = open(mode)
+    await nextTick()
+    const root = currentRoot(), samples = [snapshot(root)]
+    const started = performance.now()
+    while (performance.now() - started < 380) { await frame(); samples.push(snapshot(root)) }
+    assert(samples.every(sample => sample.root === 1), mode + ' 的父容器改变了透明度，截断了背景模糊')
+    assert(samples.every(sample => sample.blur === 'blur(4px)'), mode + ' 的模糊被延后应用')
+    assert(samples.at(-1).scrim === 1 && samples.at(-1).panel === 1, mode + ' 没有到达终态')
+    if (!reduced()) {
+      assert(samples[0].scrim === 0 && samples[0].panel === 0, mode + ' 没有淡入起点')
+      assert(samples.some(sample => sample.scrim > 0 && sample.scrim < 1), mode + ' 遮罩没有渐变中间帧')
+    }
+    handle.close('done')
+    assert(root.inert && await handle.closed === 'done', mode + ' 未及时关闭交互与返回结果')
+    const leaving = [], exitStarted = performance.now()
+    while (root.isConnected && performance.now() - exitStarted < 450) { leaving.push(snapshot(root)); await frame() }
+    assert(!root.isConnected, mode + ' 动画后未清理')
+    assert(leaving.every(sample => sample.root === 1), mode + ' 退出时重新引入了父层透明度')
+    if (!reduced()) assert(leaving.some(sample => sample.scrim > 0 && sample.scrim < 1), mode + ' 遮罩没有渐退')
+    reports.push({ name: mode + ' 进入/退出时遮罩连续渐变且保持背景读取边界', passed: true })
+  }
+  async function run() {
+    if (running.value) return
+    running.value = true; result.value = '运行中'
+    const reports = []
+    try {
+      const zoom = getComputedStyle(document.documentElement).touchAction, viewport = document.querySelector('meta[name=viewport]').content
+      assert(zoom.includes('pan-x') && zoom.includes('pan-y') && !zoom.includes('pinch-zoom') && /maximum-scale=1/.test(viewport) && /user-scalable=no/.test(viewport), '缩放限制或单指滚动策略错误')
+      reports.push({ name: '示例禁用缩放，同时允许横向和纵向单指滚动', passed: true })
+      const button = document.querySelector('#run'), input = document.querySelector('input')
+      assert(getComputedStyle(button).userSelect === 'none' && getComputedStyle(button.querySelector('span')).userSelect === 'none', '按钮或内部文字仍可选中')
+      assert(getComputedStyle(input).userSelect !== 'none' && getComputedStyle(document.querySelector('.copyable')).userSelect !== 'none', '按钮禁选影响了输入或正文复制')
+      reports.push({ name: '按钮及其文字禁选，输入和正文仍可选', passed: true })
+      for (const mode of ['single', 'multiple', 'drawer']) await sample(mode, reports)
+      applyTheme({ mode: 'dark', backdropBlur: false })
+      const noBlur = open('single'); await nextTick()
+      assert(snapshot(currentRoot()).blur === 'none', '主题关闭模糊后仍有模糊')
+      noBlur.close(); await noBlur.closed; await pause(350)
+      reports.push({ name: '主题关闭模糊后保留遮罩并正常关闭', passed: true })
+      result.value = JSON.stringify({ passed: true, cases: reports.length, reports }, null, 2)
+    } catch (error) { result.value = JSON.stringify({ passed: false, error: String(error), reports }, null, 2) }
+    finally { applyTheme({ mode: 'dark', backdropBlur: true }); running.value = false }
+  }
+  async function preview() {
+    open('single'); await nextTick(); await frame()
+    // 视觉验收停在中间帧，页面条纹应已经开始模糊，不能等窗口落定才突然模糊。
+    for (const animation of currentRoot().getAnimations({ subtree: true })) {
+      if (typeof animation.transitionProperty === 'string') { animation.pause(); animation.currentTime = 90 }
+    }
+  }
+  return () => h('main', [h('h1', '选择面板 · 背景模糊'), h('div', { class: 'tools' }, [h(Button, { id: 'run', disabled: running.value, onClick: run }, () => '运行遮罩回归'), h(Button, { onClick: preview }, () => '查看展开中间帧')]),
+    h('section', { class: 'scene' }, [h('h2', '自由组合的选择面板'), h('p', { class: 'copyable' }, '单选、多选、抽屉的遮罩独立渐变。按钮不能选中文字，正文与输入保持复制能力。'), h(Input, { label: '可复制的输入', modelValue: '输入文字仍可选择' }), h('div', { class: 'stripes' })]),
+    h('pre', { id: 'result', role: 'status' }, result.value), h(Popup)])
+} }).mount('#app')
+</script>
+</html>

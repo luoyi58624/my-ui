@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>选择控件与折叠面板回归</title>
+<style>main{max-width:900px;margin:24px auto;padding:24px}.fixtures{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;margin-top:24px}.fixtures>div{min-width:0}.full{grid-column:1/-1}pre{white-space:pre-wrap;font-size:12px;overflow-wrap:anywhere}.local{--choice-size:26px;--collapse-padding:24px;--collapse-radius:22px}@media(max-width:760px){.fixtures{grid-template-columns:1fr}}</style>
+<div id="app"></div><script type="module">
+import {createApp,h,nextTick,ref} from 'vue'
+import {Radio,RadioGroup,Checkbox,CheckboxGroup,Choices,Collapse,CollapseItem,Button,applyTheme} from '/vue/index.ts'
+
+applyTheme({mode:'light'})
+const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms)), frame=()=>new Promise(resolve=>requestAnimationFrame(resolve))
+const flush=async()=>{await nextTick();await nextTick();await frame()}
+const assert=(value,message)=>{if(!value)throw new Error(message)}
+const get=id=>document.getElementById(id), input=(group,value)=>document.querySelector('[data-test="'+group+'"] input[value="'+value+'"]')
+const button=(group,value)=>document.querySelector('[data-collapse="'+group+'"] > [data-item="'+value+"\"]>.my-collapse-trigger")
+const region=(group,value)=>get(button(group,value).getAttribute('aria-controls'))
+const key=(element,key)=>{const e=new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true});element.dispatchEvent(e);return e}
+const toggle=async(group,value)=>{button(group,value).click();await flush()}
+const options=[{value:'a',label:'选项甲',description:'甲的说明'},{value:'b',label:'选项乙'},{value:'off',label:'禁用选项',disabled:true},{value:'c',label:'选项丙'}]
+
+createApp({setup(){
+  const running=ref(false),result=ref('尚未运行'),standalone=ref('a'),checked=ref(false),mixed=ref(true),single=ref('a'),second=ref('a'),multiple=ref(['a']),disabled=ref(false)
+  const legacySingle=ref('a'),legacyMulti=ref(['a']),listDisabled=ref(false),multiOpen=ref(['one']),accordion=ref('one'),collapseDisabled=ref(false),note=ref('保留内容'),more=ref(false),mounted=ref(true)
+  async function run(){
+    if(running.value)return;running.value=true;result.value='运行中'
+    standalone.value='a';checked.value=false;mixed.value=true;single.value='a';second.value='a';multiple.value=['a'];disabled.value=false;legacySingle.value='a';legacyMulti.value=['a'];listDisabled.value=false;multiOpen.value=['one'];accordion.value='one';collapseDisabled.value=false;note.value='保留内容';more.value=false;mounted.value=true
+    await flush();const reports=[],saved=localStorage.getItem('chenglan:theme');const check=async(name,action)=>{await action();reports.push({name,passed:true})}
+    try{
+      await check('独立 Radio 整个标签命中，选中值保持字符串且不反选',async()=>{
+        get('stand-b').closest('label').click();await flush();assert(standalone.value==='b'&&get('stand-b').checked&&!get('stand-a').checked,'独立单选未同步')
+        get('stand-b').click();await flush();assert(standalone.value==='b','Radio 被反选')
+        assert(get('stand-a').name===get('stand-b').name,'显式同名未透传')
+      })
+      await check('独立 Checkbox 支持布尔值、半选与原生属性透传',async()=>{
+        assert(get('bool-check').indeterminate&&get('bool-check').getAttribute('aria-checked')==='mixed','缺少原生半选状态')
+        get('bool-check').closest('label').click();await flush();assert(checked.value&&!mixed.value&&get('bool-check').checked&&!get('bool-check').indeterminate,'点击没有清除半选或同步布尔值')
+        assert(get('bool-check').required&&get('bool-check').getAttribute('aria-describedby')==='choice-hint','原生属性没有落到 input')
+        get('bool-check').click();await flush();assert(!checked.value,'取消勾选失败')
+      })
+      await check('RadioGroup 选项、禁用、原生名称隔离和外部值更新',async()=>{
+        input('radios','b').click();await flush();assert(single.value==='b'&&input('other','a').checked,'分组串值')
+        assert(input('radios','a').name===input('radios','c').name&&input('radios','a').name!==input('other','a').name,'原生分组名称不正确')
+        input('radios','off').click();await flush();assert(single.value==='b','禁用项被选择')
+        single.value='c';await flush();assert(input('radios','c').checked&&!input('radios','b').checked,'外部更新未反映')
+      })
+      await check('CheckboxGroup 维护新数组，增删不修改输入数组',async()=>{
+        const before=multiple.value;input('checks','b').click();await flush();assert(JSON.stringify(multiple.value)===JSON.stringify(['a','b'])&&before.length===1&&before!==multiple.value,'新增时修改旧数组')
+        input('checks','a').click();await flush();assert(JSON.stringify(multiple.value)===JSON.stringify(['b']),'取消项目失败')
+        input('checks','off').click();await flush();assert(multiple.value.length===1,'禁用多选被改变')
+        multiple.value=[];await flush();assert(!input('checks','b').checked,'清空绑定没有更新')
+      })
+      await check('整组禁用阻止点击与伪造 change，恢复后可继续',async()=>{
+        disabled.value=true;await flush();const before=single.value
+        for(const group of ['radios','checks']){const el=input(group,'b');assert(el.matches(':disabled'),'原生禁用没有生效');el.click();el.dispatchEvent(new Event('change',{bubbles:true}))}
+        await flush();assert(single.value===before&&!multiple.value.length,'禁用操作仍然修改绑定')
+        disabled.value=false;await flush();input('checks','c').click();await flush();assert(multiple.value.includes('c'),'恢复后不能选中')
+      })
+      await check('插槽分组复用控件，内部嵌套异类分组不串上下文',async()=>{
+        input('slot-radio','b').closest('label').click();await flush();assert(second.value==='b','插槽单选没有使用组值')
+        input('nested-check','c').click();await flush();assert(multiple.value.length===0&&second.value==='b','异类组串值')
+        assert(document.querySelector('[data-test="slot-radio"] strong').textContent==='自定义乙','标签插槽未渲染')
+      })
+      await check('可见图例、外部标签和错误描述只关联一次',async()=>{
+        const ordinary=document.querySelector('[data-test="radios"]'),external=document.querySelector('[data-test="slot-radio"]')
+        assert(ordinary.tagName==='FIELDSET'&&ordinary.querySelector('legend').textContent==='原生单选组','缺少可见组名')
+        assert(!external.querySelector(':scope>legend')&&external.getAttribute('aria-labelledby')==='external-label'&&external.getAttribute('aria-describedby')==='choice-hint','外部标签没有透传或重复图例')
+      })
+      await check('原生表单可读取单选值、复选值和独立布尔控件',async()=>{
+        checked.value=true;single.value='b';multiple.value=['a','c'];await flush();const data=new FormData(get('selection-form'))
+        assert(data.get('standalone')==='b'&&data.get('consent')==='yes'&&data.get('group-radio')==='b','原生提交值不正确')
+        assert(JSON.stringify(data.getAll('group-check'))===JSON.stringify(['a','c']),'多选表单值不正确')
+      })
+      await check('原有 Choices 普通和列表单选、多选兼容',async()=>{
+        input('legacy-radio','b').click();input('legacy-check','c').click();await flush();assert(legacySingle.value==='b'&&legacyMulti.value.includes('c'),'普通 Choices 回归')
+        input('list-radio','c').closest('label').click();input('list-check','a').click();await flush();assert(legacySingle.value==='c'&&!legacyMulti.value.includes('a'),'列表选择未同步')
+      })
+      await check('Choices 列表保留首尾 16px、中间 14px 和一致分割线',async()=>{
+        const rows=[...document.querySelectorAll("[data-test=\"list-radio\"]>.my-choice-control")]
+        assert(parseFloat(getComputedStyle(rows[0]).paddingTop)===16&&parseFloat(getComputedStyle(rows[1]).paddingTop)===14&&parseFloat(getComputedStyle(rows.at(-1)).paddingBottom)===16,'列表内边距发生变化')
+        const widths=rows.slice(1).map(row=>getComputedStyle(row,'::before').borderTopWidth)
+        assert(new Set(widths).size===1&&parseFloat(widths[0])>0,'分割线丢失或粗细不一致')
+      })
+      await check('Choices 列表整组禁用不允许改变选择',async()=>{
+        listDisabled.value=true;await flush();const before=legacySingle.value;input('list-radio','a').click();input('list-check','b').click();await flush()
+        assert(legacySingle.value===before&&!legacyMulti.value.includes('b')&&input('list-radio','a').matches(':disabled'),'列表禁用失效');listDisabled.value=false
+      })
+      await check('Collapse 多项增删不修改原数组，手风琴按字符串互斥和清空',async()=>{
+        const before=multiOpen.value;await toggle('multi','two');assert(multiOpen.value.length===2&&before.length===1&&before!==multiOpen.value,'多项展开未保留旧数组')
+        await toggle('multi','one');assert(JSON.stringify(multiOpen.value)===JSON.stringify(['two']),'多项收起错误')
+        await toggle('accordion','two');assert(accordion.value==='two'&&button('accordion','one').getAttribute('aria-expanded')==='false','手风琴没有收起前一项')
+        await toggle('accordion','two');assert(accordion.value==='','手风琴无法全部收起')
+      })
+      await check('折叠标题与面板标识关联且在多实例中唯一',async()=>{
+        const ids=[...document.querySelectorAll(".my-collapse-trigger")].map(el=>el.id)
+        assert(new Set(ids).size===ids.length,'重复标题标识')
+        for(const el of document.querySelectorAll(".my-collapse-trigger")){const body=get(el.getAttribute('aria-controls'));assert(body?.getAttribute('aria-labelledby')===el.id&&body.getAttribute('role')==='region','展开区域没有关联标题')}
+      })
+      await check('收起立即隔离焦点与语义，展开恢复内容且最终高度为零',async()=>{
+        multiOpen.value=['one'];await flush();assert(!region('multi','one').inert&&region('multi','one').getAttribute('aria-hidden')==='false','展开区域仍被隔离')
+        await toggle('multi','one');assert(region('multi','one').inert&&region('multi','one').getAttribute('aria-hidden')==='true','收起没有立即隔离')
+        await pause(300);assert(region('multi','one').getBoundingClientRect().height<1&&getComputedStyle(region('multi','one')).visibility==='hidden','收起后占据空间或仍可见')
+      })
+      await check('程序收起焦点在内部的面板时，焦点返回对应标题',async()=>{
+        multiOpen.value=['one'];await flush();await pause(280);get('preserved-input').focus();assert(document.activeElement===get('preserved-input'),'输入框未聚焦')
+        multiOpen.value=[];await flush();assert(document.activeElement===button('multi','one'),'焦点遗留在隐藏区域')
+      })
+      await check('折叠后保留输入值，动态内容自然撑高',async()=>{
+        note.value='继续保留的内容';multiOpen.value=['one'];await flush();await pause(280)
+        const before=region('multi','one').getBoundingClientRect().height;more.value=true;await flush();await pause(280)
+        assert(region('multi','one').getBoundingClientRect().height>before+20,'动态内容未撑开')
+        await toggle('multi','one');await pause(280);await toggle('multi','one');await pause(280)
+        assert(get('preserved-input').value==='继续保留的内容','收起时丢失内容状态');more.value=false
+      })
+      await check('连续反向展开从当前高度衔接并最终稳定',async()=>{
+        multiOpen.value=[];await flush();await pause(280);await toggle('multi','one');await pause(70);await toggle('multi','one');await pause(45);await toggle('multi','one');await pause(300)
+        const panel=region('multi','one');assert(!panel.inert&&panel.getBoundingClientRect().height>40,'快速反向切换没有展开到终态')
+      })
+      await check('正常动画具有中间高度，减少动态效果直接到达终态',async()=>{
+        multiOpen.value=[];await flush();await pause(280);const reduced=matchMedia('(prefers-reduced-motion:reduce)').matches
+        await toggle('multi','one');const samples=[];const start=performance.now();do{samples.push(region('multi','one').getBoundingClientRect().height);await frame()}while(performance.now()-start<280)
+        const final=samples.at(-1);assert(final>40,'展开缺少有效终态');if(!reduced)assert(samples.some(h=>h>0&&h<final-1),'没有展开的中间高度')
+        else assert(samples.every(h=>Math.abs(h-final)<1),'减少动态效果仍有高度动画')
+      })
+      await check('单项和整组禁用保留状态，标题方向键跳过禁用项',async()=>{
+        button('multi','one').focus();key(button('multi','one'),'End');assert(document.activeElement===button('multi','three'),'End 没有跳过禁用项')
+        key(button('multi','three'),'ArrowDown');assert(document.activeElement===button('multi','one'),'方向键没有首尾循环')
+        key(button('multi','one'),'ArrowDown');assert(document.activeElement===button('multi','two'),'方向键没有前进')
+        key(button('multi','two'),'Home');assert(document.activeElement===button('multi','one'),'Home 没有返回首项')
+        const before=[...multiOpen.value];button('multi','disabled').click();await flush();assert(JSON.stringify(before)===JSON.stringify(multiOpen.value),'禁用项仍能切换')
+        collapseDisabled.value=true;await flush();button('multi','one').click();await flush();assert(button('multi','one').disabled&&JSON.stringify(before)===JSON.stringify(multiOpen.value),'整组禁用失效');collapseDisabled.value=false
+      })
+      await check('内容中的方向键不被折叠标题拦截，Tab 保持原生行为',async()=>{
+        multiOpen.value=['one'];await flush();await pause(280);get('preserved-input').focus()
+        assert(!key(get('preserved-input'),'ArrowDown').defaultPrevented&&document.activeElement===get('preserved-input'),'拦截输入内容方向键')
+        assert(!key(button('multi','one'),'Tab').defaultPrevented,'折叠组锁住 Tab')
+      })
+      await check('嵌套折叠键盘导航只作用于所属层级',async()=>{
+        button('nested','one').focus();key(button('nested','one'),'End');assert(document.activeElement===button('nested','two'),'嵌套组的标题串入外层')
+        button('outer','one').focus();key(button('outer','one'),'End');assert(document.activeElement===button('outer','two'),'外层组的标题串入内层')
+      })
+      await check('标题插槽收到展开状态，局部样式变量有效',async()=>{
+        accordion.value='custom';await flush();assert(document.querySelector('[data-collapse="accordion"] [data-slot-state]').textContent==='展开','标题插槽没有展开状态')
+        assert(parseFloat(getComputedStyle(get('local-check')).width)>25&&parseFloat(getComputedStyle(document.querySelector('[data-collapse="local"]')).borderRadius)===22,'局部样式覆写无效')
+        assert(parseFloat(getComputedStyle(button('local','one')).paddingLeft)===24,'折叠内边距覆写无效')
+      })
+      await check('明暗主题选中与半选使用已有主题色，禁用悬停无底色',async()=>{
+        checked.value=true;mixed.value=true;await flush()
+        for(const mode of ['light','dark']){applyTheme({mode});await flush();const el=get('bool-check'),style=getComputedStyle(el);assert(style.backgroundColor!=='rgba(0, 0, 0, 0)'&&style.backgroundColor===style.borderTopColor,'选择状态未统一主题色');assert(getComputedStyle(get('disabled-check').closest('label')).backgroundColor==='rgba(0, 0, 0, 0)','禁用底色非透明')}
+        applyTheme({mode:'light'});assert(localStorage.getItem('chenglan:theme')===saved,'修改了保存的用户主题')
+      })
+      await check('卸载和重新挂载无残留节点与旧焦点',async()=>{
+        const old=button('multi','one');mounted.value=false;await flush();assert(!old.isConnected&&!document.querySelector('[data-collapse="multi"]'),'卸载后残留折叠组');mounted.value=true;await flush();assert(button('multi','one')!==old,'复用了已卸载的节点')
+      })
+      result.value=JSON.stringify({passed:reports.length,viewport:[innerWidth,innerHeight],dpr:devicePixelRatio,reduced:matchMedia('(prefers-reduced-motion:reduce)').matches,reports},null,2)
+    }catch(error){result.value=JSON.stringify({passed:reports.length,error:String(error),reports},null,2)}finally{running.value=false}
+  }
+  const item=(group,value,title,content,disabled=false)=>h(CollapseItem,{'data-item':value,value,title,disabled},()=>content)
+  return()=>h('main',[
+    h('h1','选择控件与折叠面板'),h(Button,{id:'run',disabled:running.value,onClick:run},()=> '运行选择折叠回归'),h('p',{id:'choice-hint'},'共用选择说明'),h('span',{id:'external-label'},'外部选择标签'),
+    h('form',{id:'selection-form',onSubmit:e=>e.preventDefault()},[h('div',{class:'fixtures'},[
+      h('div',[h(Radio,{id:'stand-a',modelValue:standalone.value,'onUpdate:modelValue':v=>standalone.value=v,value:'a',name:'standalone'},()=> '独立甲'),h(Radio,{id:'stand-b',modelValue:standalone.value,'onUpdate:modelValue':v=>standalone.value=v,value:'b',name:'standalone'},()=> '独立乙'),h(Checkbox,{id:'bool-check',modelValue:checked.value,'onUpdate:modelValue':v=>checked.value=v,indeterminate:mixed.value,'onUpdate:indeterminate':v=>mixed.value=v,name:'consent',value:'yes',required:true,'aria-describedby':'choice-hint'},()=> '独立布尔与半选'),h(Checkbox,{id:'disabled-check',disabled:true,label:'禁用复选'}),h(Checkbox,{id:'local-check',class:'local',label:'自定义尺寸'})]),
+      h(RadioGroup,{'data-test':'radios',name:'group-radio',modelValue:single.value,'onUpdate:modelValue':v=>single.value=v,label:'原生单选组',options,disabled:disabled.value,inline:true}),
+      h(CheckboxGroup,{'data-test':'checks',name:'group-check',modelValue:multiple.value,'onUpdate:modelValue':v=>multiple.value=v,label:'原生多选组',options,disabled:disabled.value}),
+      h(RadioGroup,{'data-test':'other',modelValue:second.value,'onUpdate:modelValue':v=>second.value=v,label:'另一单选组',options}),
+    ])]),
+    h('div',{class:'fixtures'},[
+      h(RadioGroup,{'data-test':'slot-radio',modelValue:second.value,'onUpdate:modelValue':v=>second.value=v,label:'不重复图例','aria-labelledby':'external-label','aria-describedby':'choice-hint'},()=>[h('div',[h(Radio,{value:'b'},()=>h('strong','自定义乙'))]),h(CheckboxGroup,{'data-test':'nested-check',modelValue:multiple.value,'onUpdate:modelValue':v=>multiple.value=v,label:'异类嵌套'},()=>h(Checkbox,{value:'c',label:'内层复选丙'}))]),
+      ...[['legacy-radio','radio',false],['legacy-check','checkbox',false],['list-radio','radio',true],['list-check','checkbox',true]].map(([test,type,list])=>h(Choices,{'data-test':test,modelValue:type==='radio'?legacySingle.value:legacyMulti.value,'onUpdate:modelValue':v=>type==='radio'?legacySingle.value=v:legacyMulti.value=v,label:test,options,type,list,disabled:list&&listDisabled.value})),
+      mounted.value&&h(Collapse,{'data-collapse':'multi',modelValue:multiOpen.value,'onUpdate:modelValue':v=>multiOpen.value=v,label:'多项折叠',disabled:collapseDisabled.value},()=>[
+        item('multi','one','多项第一项',[h('p','收起时保留输入状态'),h('input',{id:'preserved-input',value:note.value,onInput:e=>note.value=e.target.value}),more.value&&h('p','动态内容会增加面板的自然高度。'.repeat(12))]),item('multi','two','多项第二项',h('p','第二项的说明')),item('multi','disabled','多项禁用项',h('p','禁用内容'),true),item('multi','three','多项第三项',h('p','第三项说明'))]),
+      h(Collapse,{'data-collapse':'accordion',modelValue:accordion.value,'onUpdate:modelValue':v=>accordion.value=v,label:'手风琴'},()=>[item('accordion','one','手风琴第一项',h('p','第一项内容')),item('accordion','two','手风琴第二项',h('p','第二项内容')),h(CollapseItem,{'data-item':'custom',value:'custom',title:'自定义标题'},{title:({open})=>h('span',{'data-slot-state':''},open?'展开':'收起'),default:()=>h('p','自定义标题内容')})]),
+      h(Collapse,{'data-collapse':'outer',modelValue:['one'],'onUpdate:modelValue':()=>{},label:'外层折叠'},()=>[item('outer','one','外层第一项',h(Collapse,{'data-collapse':'nested',modelValue:[],'onUpdate:modelValue':()=>{},label:'内层折叠'},()=>[item('nested','one','内层第一项','一'),item('nested','two','内层第二项','二')])),item('outer','two','外层第二项','外二')]),
+      h(Collapse,{'data-collapse':'local',class:'local',modelValue:[],'onUpdate:modelValue':()=>{},label:'局部样式'},()=>item('local','one','覆写样式','内容')),
+    ]),h('pre',{role:'status'},result.value)
+  ])
+}}).mount('#app')
+</script></html>

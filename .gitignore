@@ -1,0 +1,27 @@
+# 依赖与构建产物
+node_modules/
+dist/
+coverage/
+.vite/
+*.tsbuildinfo
+
+# 本地开发工具配置
+.idea/
+.vscode/
+.claude/
+.codex/
+
+# 临时验证与发布产物，发布副本应放在项目目录外
+qa/
+.sites-checkout*/
+*.tgz
+*.log
+
+# 本地环境与系统文件
+.env
+.env.*
+!.env.example
+.openai/execution-profile.json
+.DS_Store
+Thumbs.db
+Desktop.ini

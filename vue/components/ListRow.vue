@@ -1,0 +1,29 @@
+<script setup lang="ts">
+import { useNative } from '../adapter'
+
+defineOptions({ inheritAttrs: false })
+const props = defineProps<{
+  /** 行标题，使用 15px、500 字重。 */
+  title: string
+  /** 二级说明，使用 14px、400 字重并按内容换行。 */
+  description?: string
+  /** 右侧的当前设置值，长内容自动换行。 */
+  value?: string
+  /** 使用整行可点击的开关样式。 */
+  toggle?: boolean
+  /** 开关模式下的选中状态。 */
+  modelValue?: boolean
+  /** 禁止当前操作。 */
+  disabled?: boolean
+}>()
+const emit = defineEmits<{
+  /** 导航行被激活时的原生点击事件。 */
+  click: [event: MouseEvent]
+  /** 同步开关模式的新状态。 */
+  'update:modelValue': [value: boolean]
+}>()
+const bridge = useNative('ListRow', props, emit)
+defineExpose(bridge.exposed)
+</script>
+
+<template><component :is="bridge.render" /></template>

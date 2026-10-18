@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>提示、分割线与进度浏览器回归</title>
+<style>
+  main { max-width: 920px; margin: 70px auto; padding: 24px; }
+  .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; margin-block: 24px; }
+  .edge { position: fixed; z-index: 2; }
+  .edge-tl { left: 12px; top: 12px; } .edge-tr { right: 12px; top: 12px; }
+  .edge-bl { left: 12px; bottom: 12px; } .edge-br { right: 12px; bottom: 12px; }
+  .progress-fixtures { display: grid; gap: 18px; margin-block: 30px; }
+  .custom-progress { --progress-color: #176b3c; --progress-track: #e8f0ea; --progress-thickness: 10px; }
+  .custom-ring { --progress-size: 120px; --progress-thickness: 8px; }
+  .divider-fixtures { margin-block: 24px; } .vertical-fixture { --divider-height: 24px; --divider-spacing: 8px; }
+  .custom-tooltip { --tooltip-background: #123456; --tooltip-color: #ffffff; --tooltip-max-width: 200px; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+</style>
+<div id="app"></div>
+<script type="module">
+import { createApp, h, nextTick, ref } from 'vue'
+import { Button, Dialog, Divider, Progress, Tooltip, applyTheme } from '/vue/index.ts'
+
+applyTheme({ mode: 'light' })
+const pause = ms => new Promise(resolve => setTimeout(resolve, ms))
+const frame = () => new Promise(resolve => requestAnimationFrame(resolve))
+const flush = async () => { await nextTick(); await nextTick(); await frame() }
+const assert = (condition, message) => { if (!condition) throw new Error(message) }
+function pointer(element, type, pointerType = 'mouse', relatedTarget = null, options = {}) {
+  const rect = element.getBoundingClientRect()
+  element.dispatchEvent(new PointerEvent(type, { bubbles: !['pointerenter', 'pointerleave'].includes(type), cancelable: true, pointerType, pointerId: 1, isPrimary: true, button: 0, clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2, relatedTarget, ...options }))
+}
+function key(element, value) { const event = new KeyboardEvent('keydown', { key: value, bubbles: true, cancelable: true }); element.dispatchEvent(event); return event }
+function tooltip(element) { const id = (element.getAttribute('aria-describedby') ?? '').split(' ').find(value => value.startsWith('tooltip-')); return id && document.getElementById(id) }
+function root(element) { return tooltip(element)?.closest(".my-floating-position") }
+function shown(element) { const panel = root(element); return panel?.getAttribute('aria-hidden') === 'false' && panel.classList.contains("my-ready") }
+async function waitShown(element) {
+  const start = performance.now()
+  while (!shown(element) && performance.now() - start < 800) await flush()
+  assert(shown(element), '提示未完成定位：' + element.id)
+}
+async function tap(element) {
+  pointer(element, 'pointerdown', 'touch'); await pause(30); pointer(element, 'pointerup', 'touch'); element.focus()
+  element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }))
+  await flush()
+}
+function startHold(element) { pointer(element, 'pointerdown', 'touch') }
+async function endHold(element) {
+  pointer(element, 'pointerup', 'touch'); element.focus()
+  const click = new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 })
+  element.dispatchEvent(click); await flush(); return click
+}
+
+createApp({ setup() {
+  const running = ref(false), result = ref('尚未运行')
+  const disabled = ref(false), content = ref('说明文字，包含可阅读的第二句话。'), delay = ref(200), hideDelay = ref(100), longPressDelay = ref(500)
+  const copyable = ref(false)
+  const controlled = ref(false), mounted = ref(true), replacement = ref(false), dialog = ref(false)
+  const amount = ref(36), maximum = ref(100), status = ref('normal'), ariaTitle = ref(false)
+  let clickCount = 0
+  const button = (id, label) => h(Button, { id, key: id, variant: 'outline', onClick: () => clickCount++ }, () => label)
+  const wrapper = element => element.closest(".my-tooltip-trigger")
+  async function run() {
+    if (running.value) return
+    running.value = true; result.value = '运行中'
+    disabled.value = false; content.value = '说明文字，包含可阅读的第二句话。'; delay.value = 200; hideDelay.value = 100; longPressDelay.value = 500
+    copyable.value = false
+    controlled.value = false; mounted.value = true; replacement.value = false; dialog.value = false
+    amount.value = 36; maximum.value = 100; status.value = 'normal'; ariaTitle.value = false
+    await flush()
+    const reports = [], savedTheme = localStorage.getItem('chenglan:theme')
+    const check = async (name, action) => { await action(); reports.push({ name, passed: true }) }
+    try {
+      await check('触发器原有描述与提示描述合并，不添加多余焦点入口', async () => {
+        const trigger = document.getElementById('hint')
+        assert(trigger.getAttribute('aria-describedby').split(' ').includes('existing-description'), '丢失原有 aria-describedby')
+        assert(tooltip(trigger)?.getAttribute('role') === 'tooltip', '没有提示语义')
+        assert(!wrapper(trigger).hasAttribute('tabindex'), '按钮外层又增加了一个 Tab 入口')
+      })
+      await check('键盘聚焦立即显示，Tab 保持原生行为，Escape 关闭且不移动焦点', async () => {
+        const trigger = document.getElementById('hint'); trigger.focus(); await waitShown(trigger)
+        assert(document.activeElement === trigger, '提示抢走了焦点')
+        assert(!key(trigger, 'Tab').defaultPrevented, '提示错误地锁住 Tab')
+        assert(key(trigger, 'Escape').defaultPrevented, 'Escape 未消费')
+        await flush(); assert(!shown(trigger) && document.activeElement === trigger, 'Escape 关闭或焦点错误')
+        trigger.blur()
+      })
+      await check('任意宽度鼠标悬停 200ms 显示，离开 100ms 后收起', async () => {
+        const trigger = document.getElementById('hint'), host = wrapper(trigger)
+        pointer(host, 'pointerenter'); await pause(80); assert(!shown(trigger), '悬停提前显示')
+        await pause(160)
+        await waitShown(trigger); pointer(host, 'pointerleave', 'mouse', document.body)
+        await pause(45); assert(shown(trigger), '没有保留默认隐藏等待')
+        await pause(90); await flush(); assert(!shown(trigger), '默认隐藏延迟后没有关闭')
+      })
+      await check('悬停与隐藏等待独立配置，重新进入取消隐藏，取消显示无残留', async () => {
+        const trigger = document.getElementById('hint'), host = wrapper(trigger)
+        delay.value = 60; hideDelay.value = 160; await flush(); pointer(host, 'pointerenter')
+        await pause(90); await waitShown(trigger)
+        pointer(host, 'pointerleave', 'mouse', document.body); await pause(70); assert(shown(trigger), '隐藏未使用自定义延迟')
+        pointer(host, 'pointerenter'); await pause(180); assert(shown(trigger), '重新进入没有取消隐藏')
+        pointer(host, 'pointerleave', 'mouse', document.body); await pause(190); await flush(); assert(!shown(trigger), '自定义隐藏失效')
+        delay.value = 180; await flush(); pointer(host, 'pointerenter'); pointer(host, 'pointerleave', 'mouse', document.body)
+        await pause(220); assert(!shown(trigger), '已取消的悬停仍然打开')
+        delay.value = 200; hideDelay.value = 100
+      })
+      await check('显示和隐藏延迟都允许为 0，失效和外部关闭不等待隐藏计时器', async () => {
+        const trigger = document.getElementById('hint'), host = wrapper(trigger)
+        delay.value = 0; hideDelay.value = 0; await flush(); pointer(host, 'pointerenter'); await waitShown(trigger)
+        pointer(host, 'pointerleave', 'mouse', document.body); await flush(); assert(!shown(trigger), '零延迟隐藏仍等待')
+        hideDelay.value = 500; await flush(); pointer(host, 'pointerenter'); await waitShown(trigger)
+        pointer(host, 'pointerleave', 'mouse', document.body); pointer(document.body, 'pointerdown'); await flush(); assert(!shown(trigger), '外部关闭错误地使用了隐藏延迟')
+        pointer(host, 'pointerenter'); await waitShown(trigger); pointer(host, 'pointerleave', 'mouse', document.body)
+        disabled.value = true; await flush(); assert(!shown(trigger), '禁用仍等待隐藏')
+        disabled.value = false; delay.value = 200; hideDelay.value = 100; await pause(520); assert(!shown(trigger), '过期隐藏计时器重新触发显示')
+      })
+      await check('默认内容不参与命中，移入内容不能阻止隐藏', async () => {
+        const trigger = document.getElementById('hint'), host = wrapper(trigger)
+        pointer(host, 'pointerenter'); await pause(230); await waitShown(trigger); await pause(220)
+        const text = tooltip(trigger), panel = text.parentElement, rect = text.getBoundingClientRect()
+        assert(getComputedStyle(panel).pointerEvents === 'none' && getComputedStyle(panel).userSelect === 'none', '默认模式仍允许交互或选字')
+        assert(!panel.contains(document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)), '默认提示拦截了下方元素')
+        pointer(host, 'pointerleave', 'mouse', panel); pointer(panel, 'pointerenter')
+        await pause(140); await flush(); assert(!shown(trigger), '默认内容的进入事件错误地保留提示')
+      })
+      await check('开启复制后可跨间隙移入说明，移出使用隐藏延迟', async () => {
+        const trigger = document.getElementById('hint'), host = wrapper(trigger)
+        copyable.value = true; await flush()
+        pointer(host, 'pointerenter'); await pause(230); await waitShown(trigger)
+        const panel = tooltip(trigger).parentElement
+        await pause(250)
+        const triggerRect = trigger.getBoundingClientRect(), tipRect = tooltip(trigger).getBoundingClientRect()
+        const gapX = triggerRect.left + triggerRect.width / 2
+        const gapY = root(trigger).dataset.side === 'top' ? (triggerRect.top + tipRect.bottom) / 2 : (triggerRect.bottom + tipRect.top) / 2
+        assert(panel.contains(document.elementFromPoint(gapX, gapY)), '按钮与提示之间存在无法命中的空隙')
+        pointer(host, 'pointerleave', 'mouse', panel); pointer(panel, 'pointerenter'); await flush()
+        assert(shown(trigger), '移动到说明时关闭')
+        pointer(panel, 'pointerleave', 'mouse', document.body); await pause(45); assert(shown(trigger), '离开说明提前关闭')
+        await pause(90); await flush(); assert(!shown(trigger), '离开说明没有关闭')
+        copyable.value = false; await flush()
+      })
+      await check('可复制文字按下、选中和失焦保持显示，保留原生复制及右键事件', async () => {
+        const trigger = document.getElementById('hint'), host = wrapper(trigger)
+        copyable.value = true; await flush(); trigger.focus(); await waitShown(trigger)
+        const text = tooltip(trigger), panel = text.parentElement
+        pointer(host, 'pointerleave', 'mouse', panel); pointer(panel, 'pointerenter'); pointer(text, 'pointerdown'); trigger.blur()
+        const range = document.createRange(); range.selectNodeContents(text)
+        const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range)
+        await flush(); assert(shown(trigger) && selection.toString() === text.textContent, '按下或选字失焦关闭了提示')
+        assert(getComputedStyle(panel).pointerEvents === 'auto' && getComputedStyle(panel).userSelect === 'text', '未开放选字命中')
+        const copy = new KeyboardEvent('keydown', { key: 'c', ctrlKey: true, bubbles: true, cancelable: true }); text.dispatchEvent(copy)
+        const context = new MouseEvent('contextmenu', { bubbles: true, cancelable: true }); text.dispatchEvent(context)
+        assert(!copy.defaultPrevented && !context.defaultPrevented && shown(trigger), '拦截了原生复制或右键')
+        pointer(text, 'pointerup'); pointer(panel, 'pointerleave', 'mouse', document.body)
+        await pause(140); await flush(); assert(!shown(trigger), '文字选择后鼠标离开仍不收起')
+        selection.removeAllRanges(); copyable.value = false; await flush()
+      })
+      await check('触屏长按展开后可选文字，动态关闭复制会恢复非交互行为', async () => {
+        const trigger = document.getElementById('hint')
+        copyable.value = true; longPressDelay.value = 60; await flush()
+        startHold(trigger); await pause(90); await waitShown(trigger); await endHold(trigger)
+        const text = tooltip(trigger), panel = text.parentElement
+        pointer(text, 'pointerdown', 'touch'); trigger.blur(); pointer(text, 'pointerup', 'touch'); await flush()
+        assert(shown(trigger), '触屏进入文字区域被当成外部按下')
+        copyable.value = false; await flush(); assert(getComputedStyle(panel).pointerEvents === 'none', '关闭复制未立即移除命中')
+        await pause(140); await flush(); assert(!shown(trigger), '关闭复制后内容仍保留提示')
+        longPressDelay.value = 500
+      })
+      await check('打开和外部关闭均仅淡入淡出，动画全程无缩放或位移', async () => {
+        const trigger = document.getElementById('hint'), host = wrapper(trigger), reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
+        delay.value = 0; await flush(); pointer(host, 'pointerenter'); await waitShown(trigger)
+        const panel = tooltip(trigger).parentElement, entering = [], leaving = []
+        const sample = target => { const style = getComputedStyle(panel); target.push(+style.opacity); assert(style.transform === 'none' && +style.scale === 1 && style.translate === '0px', '提示动画包含缩放或位移：' + [style.transform, style.scale, style.translate].join(' / ')) }
+        const collect = async target => { const start = performance.now(); do { sample(target); await frame() } while (performance.now() - start < 240) }
+        assert(root(trigger).dataset.motion === 'fade', '提示没有使用淡入淡出')
+        await collect(entering); pointer(document.body, 'pointerdown'); await flush(); assert(!shown(trigger), '外部按下没有开始关闭')
+        await collect(leaving)
+        if (!reduced) {
+          assert(entering.some(value => value > 0 && value < 1) && leaving.some(value => value > 0 && value < 1), '没有实际淡入或淡出中间帧')
+          assert(getComputedStyle(panel).display === 'none', '淡出后仍然显示')
+        }
+        pointer(host, 'pointerleave', 'mouse', document.body); delay.value = 200
+      })
+      await check('触屏短按只执行按钮操作，触屏进入不冒充悬停', async () => {
+        const trigger = document.getElementById('hint'), before = clickCount
+        pointer(wrapper(trigger), 'pointerenter', 'touch'); await pause(240); assert(!shown(trigger), '触屏错误响应悬停')
+        await tap(trigger); await tap(trigger); await pause(540)
+        assert(!shown(trigger) && clickCount === before + 2, '短按显示提示、触发迟到长按或丢失原点击')
+        trigger.blur()
+      })
+      await check('默认长按 500ms 在松手前显示，松手保留且不误点按钮', async () => {
+        const trigger = document.getElementById('hint'), before = clickCount
+        startHold(trigger); await pause(220); assert(!shown(trigger), '长按提前触发')
+        await pause(340); await waitShown(trigger)
+        assert(clickCount === before, '还没松手就执行了按钮点击')
+        const click = await endHold(trigger)
+        assert(shown(trigger) && click.defaultPrevented && clickCount === before, '松手关闭提示或兼容点击误触按钮')
+        await tap(trigger); assert(!shown(trigger) && clickCount === before + 1, '下一次正常点按仍被长按抑制')
+        startHold(trigger); await pause(550); await waitShown(trigger); await endHold(trigger)
+        pointer(document.body, 'pointerdown'); await flush(); assert(!shown(trigger), '外部按下未关闭')
+        trigger.blur()
+      })
+      await check('长按等待可配置；原生触屏长按通知去重且不阻止桌面右键', async () => {
+        const trigger = document.getElementById('hint')
+        longPressDelay.value = 60; await flush(); startHold(trigger); await pause(90); await waitShown(trigger)
+        const touchMenu = new MouseEvent('contextmenu', { bubbles: true, cancelable: true }); trigger.dispatchEvent(touchMenu)
+        assert(touchMenu.defaultPrevented, '没有阻止触屏原生菜单覆盖提示')
+        await endHold(trigger); assert(shown(trigger), '原生通知导致提示反转')
+        key(trigger, 'F10')
+        const keyboardMenu = new MouseEvent('contextmenu', { bubbles: true, cancelable: true }); trigger.dispatchEvent(keyboardMenu)
+        assert(!keyboardMenu.defaultPrevented, '触屏操作后错误屏蔽键盘菜单')
+        pointer(document.body, 'pointerdown'); pointer(trigger, 'pointerdown', 'mouse'); pointer(trigger, 'pointerup', 'mouse')
+        const mouseMenu = new MouseEvent('contextmenu', { bubbles: true, cancelable: true }); trigger.dispatchEvent(mouseMenu)
+        assert(!mouseMenu.defaultPrevented, '错误屏蔽桌面右键菜单')
+        longPressDelay.value = 0; await flush(); startHold(trigger); await waitShown(trigger); await endHold(trigger)
+        pointer(document.body, 'pointerdown'); trigger.blur(); longPressDelay.value = 500
+      })
+      await check('移动超限、移出目标、滚动、取消和多指均取消长按，下一次仍可触发', async () => {
+        const trigger = document.getElementById('hint')
+        longPressDelay.value = 100; await flush()
+        const rect = trigger.getBoundingClientRect()
+        for (const cancel of [
+          () => pointer(trigger, 'pointermove', 'touch', null, { clientX: rect.left + rect.width / 2 + 21 }),
+          () => pointer(trigger, 'pointermove', 'touch', null, { clientY: rect.bottom + 1 }),
+          () => window.dispatchEvent(new Event('scroll')),
+          () => pointer(trigger, 'pointercancel', 'touch'),
+          () => pointer(document.body, 'pointerdown', 'touch', null, { pointerId: 2, isPrimary: false }),
+        ]) {
+          startHold(trigger); cancel(); await pause(140); assert(!shown(trigger), '取消手势后仍触发长按')
+          pointer(trigger, 'pointerup', 'touch')
+        }
+        startHold(trigger); await pause(140); await waitShown(trigger)
+        pointer(trigger, 'pointermove', 'touch', null, { clientX: rect.left + rect.width / 2 + 21 }); await flush(); assert(!shown(trigger), '显示后的拖动没有收起')
+        pointer(trigger, 'pointerup', 'touch'); trigger.blur(); longPressDelay.value = 500
+      })
+      await check('长按等待中禁用或卸载不会留下迟到提示', async () => {
+        const trigger = document.getElementById('hint')
+        longPressDelay.value = 100; await flush(); startHold(trigger); disabled.value = true; await flush(); await pause(140)
+        assert(!shown(trigger), '禁用后长按仍然弹出'); pointer(trigger, 'pointerup', 'touch'); trigger.blur()
+        disabled.value = false; longPressDelay.value = 500; await flush()
+        trigger.focus(); await waitShown(trigger); key(trigger, 'Escape'); trigger.blur()
+        const replacementTrigger = document.getElementById('replacement-a')
+        startHold(replacementTrigger); mounted.value = false; await flush(); await pause(540)
+        assert(!document.querySelector('[data-replacement-tooltip]'), '卸载后残留长按提示')
+        pointer(document.body, 'pointerup', 'touch'); mounted.value = true; await flush()
+      })
+      await check('禁用与空内容清理显示和描述关系，恢复后可再次打开', async () => {
+        const trigger = document.getElementById('hint'); trigger.focus(); await waitShown(trigger)
+        disabled.value = true; await flush()
+        assert(!shown(trigger) && trigger.getAttribute('aria-describedby') === 'existing-description', '禁用未清理自身描述或破坏已有描述')
+        disabled.value = false; content.value = ''; await flush(); assert(!shown(trigger) && !tooltip(trigger), '空内容仍可打开')
+        content.value = '重新出现的说明'; await flush(); trigger.blur(); trigger.focus(); await waitShown(trigger); key(trigger, 'Escape'); trigger.blur()
+      })
+      await check('受控开关与外部关闭同步，不抢焦点', async () => {
+        const before = document.activeElement
+        controlled.value = true; await flush(); const trigger = document.getElementById('controlled-hint'); await waitShown(trigger)
+        assert(document.activeElement === before, '受控打开抢走焦点')
+        pointer(document.body, 'pointerdown'); await flush(); assert(!controlled.value && !shown(trigger), '受控关闭未回传')
+      })
+      await check('提示互斥，静态文字与禁用按钮可通过外层聚焦阅读', async () => {
+        const first = document.getElementById('hint'); first.focus(); await waitShown(first)
+        controlled.value = true; await flush(); await waitShown(document.getElementById('controlled-hint'))
+        assert(!shown(first), '同一页面留下多个提示')
+        controlled.value = false; first.blur(); await flush()
+        for (const id of ['plain-hint', 'disabled-hint']) {
+          const host = wrapper(document.getElementById(id)); assert(host.tabIndex === 0, '非聚焦内容没有提供入口')
+          if (id === 'disabled-hint') {
+            const rect = host.getBoundingClientRect(), hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)
+            assert(hit && host.contains(hit) && !hit.matches(':disabled'), '禁用控件截断了外层说明的点按')
+          }
+          host.focus(); await waitShown(host); key(host, 'Escape'); host.blur()
+        }
+      })
+      await check('替换触发元素后重新关联，卸载中取消等待与全局监听', async () => {
+        const old = document.getElementById('replacement-a'); assert(tooltip(old), '初始关联丢失')
+        replacement.value = true; await flush()
+        const trigger = document.getElementById('replacement-b'); assert(!old.hasAttribute('aria-describedby') && tooltip(trigger), '替换未解除旧关系')
+        pointer(wrapper(trigger), 'pointerenter'); mounted.value = false; await flush(); await pause(240)
+        assert(!old.hasAttribute('aria-describedby') && !document.querySelector('[data-replacement-tooltip]'), '卸载残留提示')
+      })
+      await check('四角定位与长说明保持在可视区域内', async () => {
+        for (const id of ['edge-tl', 'edge-tr', 'edge-bl', 'edge-br']) {
+          const trigger = document.getElementById(id); trigger.focus(); await waitShown(trigger); await pause(250)
+          const rect = tooltip(trigger).getBoundingClientRect(), tolerance = 1 / devicePixelRatio + .1
+          assert(rect.left >= 8 - tolerance && rect.top >= 8 - tolerance && rect.right <= innerWidth - 8 + tolerance && rect.bottom <= innerHeight - 8 + tolerance, '边界越界：' + id + JSON.stringify(rect.toJSON()))
+          key(trigger, 'Escape'); trigger.blur()
+        }
+      })
+      await check('局部提示颜色、宽度继承到浮层', async () => {
+        const trigger = document.getElementById('custom-hint'); trigger.focus(); await waitShown(trigger); await pause(250)
+        const element = tooltip(trigger), style = getComputedStyle(element)
+        assert(getComputedStyle(element.parentElement, '::before').backgroundColor === 'rgb(18, 52, 86)' && style.color === 'rgb(255, 255, 255)', '提示没有继承外观覆写')
+        assert(element.getBoundingClientRect().width <= 201, '最大宽度覆写未生效')
+        key(trigger, 'Escape'); trigger.blur()
+      })
+      await check('模态内提示保持可见，第一次 Escape 只关闭提示', async () => {
+        dialog.value = true; await flush(); await pause(280)
+        const trigger = document.getElementById('modal-hint'); trigger.focus(); await waitShown(trigger)
+        assert(!tooltip(trigger).closest('[inert]'), '提示被模态隔离')
+        key(trigger, 'Escape'); await flush(); assert(dialog.value && !shown(trigger), 'Escape 同时关闭了外层弹窗')
+        key(trigger, 'Escape'); await flush(); assert(!dialog.value, '提示关闭后未释放 Escape')
+      })
+      await check('键盘提示随可见锚点滚动，指针提示滚动时关闭', async () => {
+        const trigger = document.getElementById('hint'); trigger.focus(); await waitShown(trigger)
+        window.dispatchEvent(new Event('scroll')); await flush(); assert(shown(trigger), '键盘提示被聚焦引发的滚动关闭')
+        trigger.blur(); startHold(trigger); await pause(550); await waitShown(trigger); await endHold(trigger)
+        window.dispatchEvent(new Event('scroll')); await flush(); assert(!shown(trigger), '滚动后说明仍悬空'); trigger.blur()
+      })
+      await check('条形与环形同步数值，零值与满值正确', async () => {
+        for (const value of [0, 37.5, 100]) {
+          amount.value = value; await flush()
+          for (const id of ['line-progress', 'circle-progress']) assert(document.getElementById(id).getAttribute('aria-valuenow') === String(value), '进度不同步')
+          const circle = document.querySelector("#circle-progress .my-ring-fill")
+          assert(+circle.getAttribute('opacity') === (value === 0 ? 0 : 1), '零值仍有圆头残点')
+          assert(circle.getAttribute('stroke-dasharray').startsWith(value + ' '), '环形长度错误')
+        }
+      })
+      await check('越界数值裁剪，非法总量回退，自定义总量换算百分比', async () => {
+        const progress = document.getElementById('line-progress')
+        amount.value = -7; await flush(); assert(progress.getAttribute('aria-valuenow') === '0', '负数未裁剪')
+        amount.value = 150; await flush(); assert(progress.getAttribute('aria-valuenow') === '100', '超量未裁剪')
+        maximum.value = 12; amount.value = 6; await flush()
+        assert(progress.getAttribute('aria-valuemax') === '12' && getComputedStyle(progress).getPropertyValue('--progress-ratio').trim() === '0.5', '自定义总量换算错误')
+        for (const max of [0, -1, NaN, Infinity]) { maximum.value = max; await flush(); assert(progress.getAttribute('aria-valuemax') === '100', '非法总量未回退') }
+        maximum.value = 100
+      })
+      await check('不确定进度省略当前值，不显示假百分比', async () => {
+        for (const value of [undefined, NaN, Infinity]) {
+          amount.value = value; await flush()
+          for (const id of ['line-progress', 'circle-progress']) {
+            const progress = document.getElementById(id)
+            assert(!progress.hasAttribute('aria-valuenow') && progress.classList.contains("my-indeterminate"), '未知进度仍报告当前值')
+            assert(progress.textContent.includes('进行中') && !progress.textContent.includes('%'), '未知进度显示假百分比')
+          }
+        }
+        const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
+        assert((getComputedStyle(document.querySelector("#circle-progress .my-ring-value")).animationName === 'none') === reduced, '减少动态效果未正确处理')
+        amount.value = 36
+      })
+      await check('进度具备可访问名称，支持外部标题，状态与文字插槽正确', async () => {
+        const progress = document.getElementById('line-progress')
+        assert(progress.getAttribute('role') === 'progressbar' && progress.getAttribute('aria-label') === '文件进度', '缺少名称或角色')
+        ariaTitle.value = true; await flush(); assert(!progress.hasAttribute('aria-label') && progress.getAttribute('aria-labelledby') === 'progress-title', '外部标题没有优先')
+        for (const state of ['normal', 'success', 'warning', 'error']) { status.value = state; await flush(); assert(progress.classList.contains(state), '状态未切换') }
+        assert(document.getElementById('slot-progress').textContent.trim() === '6 / 12', '自定义文字插槽错误')
+        assert(!document.querySelector("#hidden-text-progress .my-progress-text"), '关闭文案后仍占空间')
+        status.value = 'normal'
+      })
+      await check('进度尺寸、轨道和颜色可局部覆写', async () => {
+        const custom = document.getElementById('custom-progress')
+        assert(getComputedStyle(custom).color === 'rgb(23, 107, 60)', '进度颜色覆写无效')
+        assert(Math.abs(document.querySelector("#custom-progress .my-progress-track").getBoundingClientRect().height - 10) < 1, '轨道厚度覆写无效')
+        assert(Math.abs(document.getElementById('custom-ring').getBoundingClientRect().width - 120) < 1, '环形尺寸覆写无效')
+      })
+      await check('横线、文字对齐、虚线与竖线的语义和几何正确', async () => {
+        const plain = document.getElementById('plain-divider'), labeled = document.getElementById('labeled-divider'), vertical = document.getElementById('vertical-divider')
+        assert(plain.getAttribute('role') === 'separator' && plain.getAttribute('aria-orientation') === 'horizontal', '横线语义错误')
+        assert(getComputedStyle(plain, '::before').borderTopStyle === 'solid' && parseFloat(getComputedStyle(plain, '::before').borderTopWidth) > 0, '横线不可见')
+        assert(getComputedStyle(labeled, '::before').flexBasis === '24px' && getComputedStyle(labeled, '::after').borderTopStyle === 'dashed', '文字对齐或虚线错误')
+        assert(vertical.getAttribute('aria-orientation') === 'vertical' && Math.abs(vertical.getBoundingClientRect().height - 24) < 1, '竖线方向或高度错误')
+        assert(getComputedStyle(vertical, '::before').borderTopWidth === '0px' && parseFloat(getComputedStyle(vertical, '::before').borderLeftWidth) > 0, '竖线多画或缺失边框')
+      })
+      await check('小数落点分割线采用相同的边框厚度', async () => {
+        const widths = [...document.querySelectorAll('.fractional-divider')].map(element => getComputedStyle(element, '::before').borderTopWidth)
+        assert(new Set(widths).size === 1, '分割线粗细不同：' + widths.join(', '))
+      })
+      await check('明暗主题使用已有层级与状态色，提示反色保持对比', async () => {
+        for (const mode of ['light', 'dark']) {
+          applyTheme({ mode }); await flush()
+          const theme = getComputedStyle(document.documentElement), progress = document.getElementById('line-progress')
+          for (const [state, token] of [['normal', '--primary'], ['success', '--success'], ['warning', '--warning'], ['error', '--danger']]) {
+            status.value = state; await flush()
+            const probe = document.getElementById('color-probe'); probe.style.color = theme.getPropertyValue(token)
+            await flush()
+            assert(getComputedStyle(progress).color === getComputedStyle(probe).color, '进度没有跟随主题状态色：' + mode + state)
+          }
+          const trigger = document.getElementById('hint'); trigger.focus(); await waitShown(trigger)
+          const style = getComputedStyle(tooltip(trigger))
+          assert(style.color !== getComputedStyle(tooltip(trigger).parentElement, '::before').backgroundColor, '提示文字和背景同色')
+          key(trigger, 'Escape'); trigger.blur()
+        }
+        status.value = 'normal'; applyTheme({ mode: 'light' })
+        assert(localStorage.getItem('chenglan:theme') === savedTheme, '验证修改了用户保存的主题')
+      })
+      await check('长页键盘聚焦引发平滑滚动后仍显示说明', async () => {
+        const trigger = document.getElementById('offscreen-hint')
+        assert(trigger.getBoundingClientRect().top > innerHeight, '测试触发器没有位于视口下方')
+        trigger.focus(); await waitShown(trigger); await pause(300)
+        assert(shown(trigger) && document.activeElement === trigger, '自动滚动导致提示关闭或丢失焦点')
+        key(trigger, 'Escape'); trigger.blur()
+      })
+      result.value = JSON.stringify({ passed: reports.length, viewport: [innerWidth, innerHeight], dpr: devicePixelRatio, reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches, reports }, null, 2)
+    } catch (error) { result.value = JSON.stringify({ passed: reports.length, error: String(error), reports }, null, 2) }
+    finally { running.value = false }
+  }
+  return () => h('main', [
+    h('h1', '提示、分割线与进度'),
+    h(Button, { id: 'run', disabled: running.value, onClick: run }, () => '运行组件回归'),
+    h('p', { id: 'existing-description' }, '保留已有的说明关系'),
+    h('div', { class: 'tools' }, [
+      h(Tooltip, { content: content.value, delay: delay.value, hideDelay: hideDelay.value, longPressDelay: longPressDelay.value, copyable: copyable.value, disabled: disabled.value }, () => h(Button, { id: 'hint', 'aria-describedby': 'existing-description', variant: 'outline', onClick: () => clickCount++ }, () => '文字提示')),
+      h(Tooltip, { content: '受控说明', modelValue: controlled.value, 'onUpdate:modelValue': value => controlled.value = value }, () => button('controlled-hint', '受控提示')),
+      h(Tooltip, { content: '普通文字也可聚焦' }, () => h('span', { id: 'plain-hint' }, '普通文字')),
+      h(Tooltip, { content: '禁用按钮的说明' }, () => h(Button, { id: 'disabled-hint', disabled: true }, () => '禁用按钮')),
+      h(Tooltip, { class: 'custom-tooltip', content: '局部外观与最大宽度由触发器继承到浮层。'.repeat(5) }, () => button('custom-hint', '自定义提示')),
+      mounted.value && h(Tooltip, { content: '替换与卸载说明' }, { default: () => button(replacement.value ? 'replacement-b' : 'replacement-a', '替换元素'), content: () => h('span', { 'data-replacement-tooltip': '' }, '插槽说明') }),
+    ]),
+    ...['tl', 'tr', 'bl', 'br'].map((corner, index) => h(Tooltip, { class: ['edge', 'edge-' + corner], placement: ['top-start', 'right-end', 'left-start', 'bottom-end'][index], content: '靠近四角也要完整地显示在可视区域内。'.repeat(7) }, () => button('edge-' + corner, corner.toUpperCase()))),
+    h('div', { class: 'progress-fixtures' }, [
+      h('span', { id: 'progress-title' }, '关联的外部进度标题'),
+      h(Progress, { id: 'line-progress', value: amount.value, max: maximum.value, status: status.value, label: '文件进度', 'aria-labelledby': ariaTitle.value ? 'progress-title' : undefined }),
+      h(Progress, { id: 'circle-progress', type: 'circle', value: amount.value, max: maximum.value, status: status.value, label: '环形进度' }),
+      h(Progress, { id: 'slot-progress', value: 6, max: 12 }, { default: ({ value, max }) => value + ' / ' + max }),
+      h(Progress, { id: 'hidden-text-progress', value: 20, showText: false }),
+      h(Progress, { id: 'custom-progress', class: 'custom-progress', value: 60 }),
+      h(Progress, { id: 'custom-ring', class: 'custom-ring', type: 'circle', value: 70 }),
+    ]),
+    h('div', { class: 'divider-fixtures' }, [h(Divider, { id: 'plain-divider' }), h(Divider, { id: 'labeled-divider', align: 'start', dashed: true }, () => '分组标题'), h(Divider, { id: 'vertical-divider', vertical: true, class: 'vertical-fixture' }), ...[0, .25, .5, .75].map(offset => h(Divider, { class: 'fractional-divider', style: { position: 'relative', top: offset + 'px' } }))]),
+    h('span', { id: 'color-probe', 'aria-hidden': true }),
+    h(Dialog, { modelValue: dialog.value, 'onUpdate:modelValue': value => dialog.value = value, title: '嵌套提示验证', center: true }, { default: () => h(Tooltip, { content: '弹窗里面的说明' }, () => button('modal-hint', '弹窗内按钮')) }),
+    h('div', { style: { height: '1200px' }, 'aria-hidden': true }),
+    h(Tooltip, { content: '进入可视区域后再显示，随后保持键盘焦点' }, () => button('offscreen-hint', '长页末尾的提示')),
+    h('pre', { role: 'status', 'aria-live': 'polite' }, result.value),
+  ])
+} }).mount('#app')
+</script>
+</html>

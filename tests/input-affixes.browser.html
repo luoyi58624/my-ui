@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>输入框图标与操作区域回归</title>
+<style>main{max-width:580px;margin:24px auto;padding:24px}.fixtures{display:grid;gap:24px;margin:24px 0}pre{font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere}</style>
+<div id="app"></div>
+<script type="module">
+import { createApp, h, nextTick, ref } from 'vue'
+import { Input, Icon, Combobox, Button, applyTheme } from '/vue/index.ts'
+applyTheme({ mode: 'light' })
+const el = selector => document.querySelector(selector)
+const assert = (value, message) => { if (!value) throw Error(message) }
+const near = (a, b, message) => assert(Math.abs(a - b) < 1, message + ': ' + a + '/' + b)
+const field = id => document.getElementById(id).closest(".my-input-box")
+const rect = element => element.getBoundingClientRect()
+const flush = async () => { await nextTick(); await nextTick(); for (let i = 0; i < 3; i++) await new Promise(resolve => requestAnimationFrame(resolve)) }
+createApp({ setup() {
+  const text = ref('小蓝同学'), password = ref('123456'), city = ref('hangzhou'), compact = ref(false), disabled = ref(false), readonly = ref(false)
+  const result = ref('尚未运行'), running = ref(false)
+  let clicks = 0, updates = 0, customClicks = 0, propagated = 0
+  async function run() {
+    if (running.value) return
+    running.value = true; result.value = '运行中'
+    text.value = '小蓝同学'; password.value = '123456'; city.value = 'hangzhou'; compact.value = false; disabled.value = false; readonly.value = false
+    await flush()
+    clicks = 0; updates = 0; customClicks = 0
+    const reports = [], check = async (name, action) => { await action(); reports.push({ name, passed: true }) }
+    try {
+      await check('前缀与无前缀文字共用起始边距，右图标采用对称边距', async () => {
+        const plain = rect(el('#plain')), left = rect(field('affixed').querySelector(".my-input-prefix svg")), right = rect(field('affixed').querySelector(".my-input-action svg")), box = rect(field('affixed')), border = parseFloat(getComputedStyle(field('affixed')).borderLeftWidth)
+        near(left.left, plain.left, '左图标与普通文字没有对齐')
+        near(box.right - right.right, plain.left - rect(field('plain')).left, '右侧重复叠加内边距')
+        const input = rect(el('#affixed'))
+        near(left.width, 16, '图标尺寸'); near(left.y + left.height / 2, input.y + input.height / 2, '图标与输入行没有垂直居中')
+        assert(right.right < box.right - border, '图标溢出边框')
+      })
+      await check('清空位于右侧操作组左边，眼睛靠右，热区填满内部高度', async () => {
+        const box = rect(field('password')), buttons = [...field('password').querySelectorAll('button')], border = parseFloat(getComputedStyle(field('password')).borderTopWidth)
+        assert(buttons.length === 2 && buttons[0].classList.contains('clear-input') && buttons[1].classList.contains('password-toggle'), '密码操作顺序错误')
+        near(rect(buttons[0]).right, rect(buttons[1]).left, '操作区域之间有空洞')
+        for (const button of buttons) {
+          const b = rect(button)
+          near(b.top, box.top + border, '热区顶部留空'); near(b.bottom, box.bottom - border, '热区底部留空')
+          for (const [x, y] of [[b.left + 1, b.top + 1], [b.right - 1, b.bottom - 1]]) assert(button.contains(document.elementFromPoint(x, y)), '热区边缘未命中按钮')
+        }
+        near(rect(buttons.at(-1)).right, box.right - border, '最右侧留白未纳入热区')
+      })
+      await check('自定义高度与 6px 边距仍维持圆形反馈及对称对齐', async () => {
+        compact.value = true; await flush()
+        const box = rect(field('password')), button = field('password').querySelector('.password-toggle'), visual = button.querySelector(".my-input-action-visual"), icon = button.querySelector('svg'), border = parseFloat(getComputedStyle(field('password')).borderRightWidth)
+        near(box.height, 56, '自定义高度失效'); near(rect(button).height, box.height - border * 2, '热区没有随高度扩展')
+        near(rect(visual).width, 24, '反馈宽度'); near(rect(visual).height, 24, '反馈变成椭圆'); near(box.right - border - rect(icon).right, 6, '自定义内边距叠加')
+        compact.value = false; await flush()
+      })
+      await check('显隐和清空各执行一次，清空后眼睛保持原位', async () => {
+        const eye = field('password').querySelector('.password-toggle'), eyeLeft = rect(eye).left
+        eye.click(); await flush(); assert(el('#password').type === 'text', '眼睛未切换密码')
+        field('password').querySelector('.clear-input').click(); await flush()
+        assert(password.value === '' && updates === 1 && clicks === 0 && document.activeElement === el('#password'), '清空触发重复更新或误激活输入')
+        assert(field('password').querySelectorAll('button').length === 1, '保留了空按钮')
+        near(rect(eye).left, eyeLeft, '清空后眼睛发生跳位')
+        near(rect(eye).right, rect(field('password')).right - parseFloat(getComputedStyle(field('password')).borderRightWidth), '眼睛没有接管尾部空间')
+      })
+      await check('普通图标与留白按输入区域处理，原生点击不递归', async () => {
+        propagated = 0
+        field('affixed').querySelector(".my-input-prefix").click(); await flush()
+        assert(document.activeElement === el('#affixed') && clicks === 1 && propagated === 1, '前缀没有交给输入区域或重复冒泡')
+        field('affixed').click(); await flush(); assert(clicks === 2 && propagated === 2, '留白激活重复或失效')
+        el('#affixed').click(); await flush(); assert(clicks === 3 && propagated === 3, '原生点击递归')
+      })
+      await check('自定义插槽按钮保留独立行为与焦点', async () => {
+        el('#custom-action').focus(); el('#custom-action').click(); await flush()
+        assert(customClicks === 1 && document.activeElement === el('#custom-action') && clicks === 3, '输入框抢走自定义操作')
+      })
+      await check('禁用禁止激活与显隐，只读保留聚焦且移除清空', async () => {
+        disabled.value = true; await flush(); const before = password.value
+        field('password').click(); field('password').querySelector('.password-toggle').click(); await flush()
+        assert(el('#password').disabled && el('#password').type === 'password' && password.value === before, '禁用仍可操作')
+        disabled.value = false; readonly.value = true; await flush()
+        field('password').click(); await flush()
+        assert(document.activeElement === el('#password') && !field('password').querySelector('.clear-input'), '只读不能聚焦或仍能清空')
+        readonly.value = false; await flush()
+      })
+      await check('展开箭头仅作装饰，整行激活在已聚焦时也能重开菜单', async () => {
+        const indicator = field('city').querySelector(".my-combobox-indicator"), area = indicator.closest(".my-input-suffix")
+        const interactive = indicator.closest('button, [tabindex], [role=button]')
+        assert((!interactive || !field('city').contains(interactive)) && indicator.getAttribute('aria-hidden') === 'true', '箭头仍是独立控件')
+        assert(field('city').querySelectorAll('button').length === 1 && field('city').lastElementChild.firstElementChild.classList.contains('clear-input'), '清空未位于操作组左侧')
+        for (let i = 0; i < 2; i++) {
+          area.click(); await flush(); assert(el('#city').getAttribute('aria-expanded') === 'true' && document.activeElement === el('#city'), '装饰区域未激活输入框')
+          el('#city').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })); await flush()
+        }
+      })
+      result.value = JSON.stringify({ passed: reports.length, viewport: [innerWidth, innerHeight], reports }, null, 2)
+    } catch (error) { result.value = JSON.stringify({ passed: reports.length, error: String(error), reports }, null, 2) }
+    finally { running.value = false }
+  }
+  return () => h('main', [h('h1', '输入框图标与操作区域'), h(Button, { id: 'run', disabled: running.value, onClick: run }, () => '运行定向回归'), h('div', { class: 'fixtures', tabindex: -1, onClick: () => propagated++ }, [
+    h(Input, { id: 'plain', label: '文字对照', modelValue: text.value }),
+    h(Input, { id: 'affixed', label: '前缀与清空', icon: 'search', clearable: true, modelValue: text.value, onClick: () => clicks++ }),
+    h(Input, { id: 'password', label: '密码', type: 'password', passwordToggle: true, clearable: true, modelValue: password.value, disabled: disabled.value, readonly: readonly.value, style: compact.value ? '--input-height:56px;--input-padding:6px' : undefined, 'onUpdate:modelValue': value => { password.value = value; updates++ }, onClick: () => clicks++ }),
+    h(Input, { id: 'custom', label: '自定义操作', modelValue: text.value, onClick: () => clicks++ }, { suffix: () => h('button', { id: 'custom-action', type: 'button', onClick: () => customClicks++ }, '操作') }),
+    h(Combobox, { id: 'city', label: '目的地', clearable: true, modelValue: city.value, 'onUpdate:modelValue': value => city.value = value, options: [{ value: 'hangzhou', label: '杭州' }, { value: 'shanghai', label: '上海' }] })
+  ]), h('pre', { id: 'result', 'data-complete': !running.value && result.value !== '尚未运行' ? 'true' : undefined }, result.value)])
+} }).mount('#app')
+</script>
+</html>
