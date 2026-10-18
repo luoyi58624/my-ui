@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Picker 滚轮选择定向回归</title>
+<link rel="stylesheet" href="/lib/my-ui.css"><script src="/lib/my-ui.js"></script>
+<style>main{max-width:760px;margin:auto;padding:24px}#fixture{margin:24px 0;max-width:600px}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.6 monospace}</style>
+<main><h1>Picker 滚轮选择</h1><button id="run" disabled>运行滚轮回归</button><div id="fixture"></div><pre id="result">尚未运行</pre></main>
+<script type="module">
+import { createApp, h, ref, nextTick } from 'vue'
+import { Picker, Button, Sheet } from '/vue/index.ts'
+
+const fixture = document.querySelector('#fixture'), result = document.querySelector('#result'), runButton = document.querySelector('#run')
+const items = Array.from({ length: 12 }, (_, value) => ({ value, label: '选项 ' + value }))
+const tree = [
+  { value: 'a', label: 'A', children: [{ value: 'shared', label: '共用', children: [{ value: 0, label: '零' }] }] },
+  { value: 'b', label: 'B', children: [{ value: 'bad', label: '禁用', disabled: true }, { value: 'shared', label: '共用', children: [{ value: 9, label: '九' }] }] },
+  { value: 'leaf', label: '单项' },
+]
+let owned = [], app
+const pause = ms => new Promise(resolve => setTimeout(resolve, ms))
+const tick = async () => { await nextTick(); await nextTick(); await new Promise(resolve => requestAnimationFrame(resolve)) }
+const until = async predicate => { for (let i = 0; i < 120; i++) { if (predicate()) return; await pause(15) } throw Error('滚轮未完成吸附') }
+const assert = (value, message) => { if (!value) throw Error(message) }
+const near = (a, b, message) => assert(Math.abs(a - b) < 1, message + ': ' + a + '/' + b)
+const add = (props = {}, attributes = {}) => { const c = MyUI.create('Picker', { label: '选择项目', options: items, value: 2, ...props }, { attributes }); owned.push(c); fixture.append(c.element); return c }
+const wheel = (c, column = 0) => c.element.querySelectorAll('[role="listbox"]')[column]
+const rows = (c, column = 0) => [...wheel(c, column).querySelectorAll('[role="option"]')]
+const selected = (c, column = 0) => wheel(c, column).querySelector('[aria-selected="true"]')
+const center = node => { const rect = node.getBoundingClientRect(); return rect.top + rect.height / 2 }
+const centered = (c, column = 0) => near(center(selected(c, column)), center(wheel(c, column)), '选中项未居中')
+const idle = c => until(() => !c.element.querySelector('.my-is-moving,.my-is-dragging'))
+const key = (node, name) => { const event = new KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true }); node.dispatchEvent(event); return event }
+const pointer = (node, type, y, pointerType = 'touch') => node.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 41, isPrimary: true, button: 0, clientX: 120, clientY: y, pointerType }))
+const press = (c, column = 0) => { const node = wheel(c, column), y = center(node); pointer(node, 'pointerdown', y); return { y, height: rows(c, column)[0].getBoundingClientRect().height } }
+const move = (point, distance) => pointer(document, 'pointermove', point.y - point.height * distance)
+const release = (point, distance, cancelled = false) => pointer(document, cancelled ? 'pointercancel' : 'pointerup', point.y - point.height * distance)
+const scroll = (node, deltaY, props = {}) => { const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY, ...props }); node.dispatchEvent(event); return event }
+const cleanup = () => { app?.unmount(); app = undefined; owned.forEach(c => c.destroy()); owned = []; fixture.replaceChildren() }
+
+runButton.onclick = async () => {
+  runButton.disabled = true; result.textContent = '运行中'
+  const reports = [], check = async (name, action) => {
+    const filter = new URLSearchParams(location.search).get('case')
+    if (filter && !name.includes(filter)) return
+    cleanup()
+    try { await action(); reports.push({ name, pass: true }) }
+    catch (error) { reports.push({ name, pass: false, error: String(error) }) }
+    finally { cleanup() }
+  }
+  await check('单列保留数值零，初始化不触发更新，原生声明式入口可用', async () => {
+    let changes = 0; const c = add({ value: 0, onChange: () => changes++ }); await tick(); centered(c)
+    assert(selected(c).textContent === '选项 0' && changes === 0, '数值零或初始化事件错误')
+    let corrected; const invalid = add({ value: 99, onChange: value => corrected = value }); assert(corrected === undefined, '初始化偷偷改写失效值'); rows(invalid)[0].click(); assert(corrected === 0, '点击回退项没有写回合法值')
+    const host = document.createElement('div'); host.dataset.my = 'Picker'; host.dataset.options = JSON.stringify({ value: 'a', options: [{ value: 'a', label: '声明式' }] }); fixture.append(host)
+    owned.push(...MyUI.init(fixture)); assert(host.querySelector('[role="option"][aria-selected="true"]').textContent === '声明式', '声明式组件缺失')
+  })
+  await check('Listbox 通过活动后代标记选中项，每列只占用一个 Tab 入口', async () => {
+    const c = add(); c.exposed.focus(); assert(document.activeElement === wheel(c), 'focus 没有聚焦滚轮')
+    assert(wheel(c).getAttribute('aria-activedescendant') === selected(c).id, '活动后代错误')
+    assert(wheel(c).getAttribute('aria-label').includes('选择项目') && rows(c).every(row => !row.hasAttribute('tabindex')), '辅助名称或 Tab 入口错误')
+    assert(c.element.hasAttribute('data-swipe-ignore'), '未隔离外层面板的滑动关闭')
+  })
+  await check('上下、Home、End 与 Page 键跳过禁用项', async () => {
+    let value; const c = add({ value: 0, options: items.map(item => ({ ...item, disabled: item.value === 1 })), onChange: next => value = next })
+    key(wheel(c), 'ArrowDown'); assert(value === 2, '没有跳过禁用项'); key(wheel(c), 'End'); assert(value === 11, 'End 错误'); key(wheel(c), 'PageUp'); assert(value === 6, 'PageUp 错误'); key(wheel(c), 'Home'); assert(value === 0, 'Home 错误'); centered(c)
+  })
+  await check('文字前缀搜索支持连续输入', async () => {
+    let value; const c = add({ value: 'a', options: [{ value: 'a', label: 'Apple' }, { value: 'b', label: 'Banana' }, { value: 'blue', label: 'Blueberry' }], onChange: next => value = next })
+    key(wheel(c), 'b'); key(wheel(c), 'l'); assert(value === 'blue', '前缀搜索未选择 Blueberry')
+  })
+  await check('独立多列保持数组类型、空列位置和各自选中值', async () => {
+    let value; const original = [0, 2, null], c = add({ value: original, columns: [items, items, []], columnLabels: ['左列', '', '空列'], onChange: next => value = next })
+    key(wheel(c), 'ArrowDown'); assert(value.join(',') === '1,2,' && original.join(',') === '0,2,', '多列值错位或修改了原数组')
+    assert(wheel(c, 2).tabIndex === -1 && wheel(c, 2).getAttribute('aria-disabled') === 'true', '空列仍可操作'); centered(c, 1); near(center(wheel(c)), center(wheel(c, 1)), '缺少部分列标题时居中线不一致'); assert(wheel(c, 1).getAttribute('aria-label'), '缺少标题时丢失了辅助名称')
+  })
+  await check('左右键切换列并跳过空列，Tab 保持浏览器默认行为', async () => {
+    const c = add({ value: [0, null, 2], columns: [items, [], items], columnLabels: ['第一列', '空列', '第三列'] }); wheel(c).focus(); key(wheel(c), 'ArrowRight')
+    assert(document.activeElement === wheel(c, 2), '右键未跳过空列'); key(wheel(c, 2), 'ArrowLeft'); assert(document.activeElement === wheel(c), '左键未返回'); assert(!key(wheel(c), 'Tab').defaultPrevented, 'Picker 自行拦截了 Tab')
+  })
+  await check('级联父列更新时保留有效子值，只修正失效的后续路径', async () => {
+    const updates = [], c = add({ options: tree, value: ['a', 'shared', 0], onChange: next => updates.push(next) }); key(wheel(c), 'ArrowDown')
+    assert(updates.length === 1 && updates[0].join(',') === 'b,shared,9', '级联产生中间无效值或丢失有效子值'); centered(c, 2)
+  })
+  await check('级联缩短时移除旧列，并把被移除列的焦点放回可见列', async () => {
+    const c = add({ options: tree, value: ['a', 'shared', 0] }); wheel(c, 2).focus(); c.update({ value: ['leaf'] }); assert(c.element.querySelectorAll('[role="listbox"]').length === 1 && document.activeElement === wheel(c), '旧列或焦点残留')
+  })
+  await check('拖动连续跟手，跨过中点才更新选值，DOM 节点保持稳定', async () => {
+    let value = 2, changes = 0; const c = add({ onChange: next => { value = next; changes++ } }), original = rows(c), point = press(c)
+    move(point, .25); near(center(original[2]), center(wheel(c)) - point.height * .25, '小范围拖动发生取整'); assert(changes === 0, '未跨中点就更新值')
+    move(point, .65); assert(value === 3 && changes === 1, '跨中点未更新'); assert(rows(c).every((row, i) => row === original[i]), '拖动重建了选项')
+    await pause(110); release(point, .65); await idle(c); centered(c)
+  })
+  await check('松手保留惯性，动画从当前画面继续并最终精确居中', async () => {
+    let value = 0; const c = add({ value: 0, onChange: next => value = next }), point = press(c); await pause(25); move(point, 1)
+    const before = center(rows(c)[1]); release(point, 1); near(center(rows(c)[1]), before, '松手瞬间跳帧'); await idle(c)
+    assert(value > 1 || matchMedia('(prefers-reduced-motion:reduce)').matches, '快速松手没有惯性'); centered(c)
+  })
+  await check('触摸取消以当前位置吸附，迟到移动不会继续改变值', async () => {
+    let value; const c = add({ onChange: next => value = next }), point = press(c); move(point, 1.3); release(point, 1.3, true); await idle(c); assert(value === 3, '取消时仍带惯性'); centered(c); move(point, 5); assert(value === 3, '取消后仍响应移动')
+  })
+  await check('首尾越界有阻力，松开回到合法边界', async () => {
+    let value = 0; const c = add({ value: 0, onChange: next => value = next }), point = press(c); move(point, -20)
+    const offset = center(rows(c)[0]) - center(wheel(c)); assert(offset > 0 && offset < point.height * 2 && value === 0, '没有边界阻力或越界选值'); release(point, -20, true); await idle(c); centered(c)
+  })
+  await check('惯性中再次按下不会跳动，反向拖动从当前位置继续', async () => {
+    const c = add({ value: 0 }); scroll(wheel(c), 220); await tick(); await tick(); const before = center(rows(c)[0]), point = press(c)
+    near(center(rows(c)[0]), before, '按下打断动画时跳动'); move(point, -.2); near(center(rows(c)[0]), before + point.height * .2, '反向没有连续跟手'); release(point, -.2, true); await idle(c); centered(c)
+  })
+  await check('小幅滚轮输入累计选值，Ctrl 滚轮留给浏览器', async () => {
+    let value = 0; const c = add({ value: 0, onChange: next => value = next }); for (let i = 0; i < 10; i++) assert(scroll(wheel(c), 4).defaultPrevented, '滚轮未被接管')
+    await idle(c); assert(value === 1, '小幅滚轮累计取值错误：' + value + ' / ' + selected(c)?.textContent); assert(!scroll(wheel(c), 100, { ctrlKey: true }).defaultPrevented, '拦截了浏览器缩放')
+  })
+  await check('点击可选项可直接选中，点击禁用项不改变值', async () => {
+    let value = 0; const c = add({ value: 0, options: items.map(item => ({ ...item, disabled: item.value === 1 })), onChange: next => value = next })
+    rows(c)[1].click(); assert(value === 0, '禁用项仍可点击'); rows(c)[2].click(); assert(value === 2, '点击可选项失效'); centered(c)
+  })
+  await check('calc 与 rem 修改行高后，拖动距离和居中几何仍一致', async () => {
+    const c = add({}, { style: '--picker-item-height:calc(1rem + 40px);--picker-height:260px' }); const point = press(c); move(point, 1.25); near(center(rows(c)[2]), center(wheel(c)) - point.height * 1.25, '自定义行高拖动错误'); release(point, 1.25, true); await idle(c); centered(c)
+  })
+  await check('拖动时外部设置新值会终止旧手势，保留新的受控值', async () => {
+    const c = add(), point = press(c); move(point, .7); c.update({ value: 8 }); centered(c); move(point, 3); release(point, 3); await pause(100); assert(selected(c).textContent === '选项 8', '旧手势覆盖了新值')
+  })
+  await check('滚动中禁用或替换选项会终止动画，不再产生迟到更新', async () => {
+    let changes = 0; const c = add({ onChange: () => changes++ }); scroll(wheel(c), 300); await tick(); c.update({ disabled: true }); const count = changes; await pause(160); assert(changes === count && wheel(c).tabIndex === -1, '禁用后仍有更新'); key(wheel(c), 'End'); assert(changes === count, '禁用后键盘仍可操作')
+    c.update({ disabled: false, options: [{ value: 'new', label: '新内容' }], value: 'new' }); centered(c); assert(rows(c).length === 1 && selected(c).textContent === '新内容', '替换选项未生效')
+  })
+  await check('全禁用列与空列显示空态，focus 不进入不可操作列', async () => {
+    const c = add({ options: items.map(item => ({ ...item, disabled: true })) }), before = document.activeElement; c.exposed.focus(); assert(document.activeElement === before && !selected(c) && wheel(c).tabIndex === -1, '全禁用列仍可聚焦'); assert(!c.element.querySelector('.my-picker-empty').hidden, '缺少空态')
+  })
+  await check('不同 Picker 的文档监听互不干扰', async () => {
+    let other = 0; const first = add(), second = add({ value: 0, onChange: () => other++ }), point = press(first); move(point, 1); release(point, 1, true); await idle(first); assert(other === 0 && selected(second).textContent === '选项 0', '其他实例响应了当前指针')
+  })
+  await check('模态隔离后停止惯性并恢复居中，没有遮罩后的残留动画', async () => {
+    let changes = 0; const c = add({ onChange: () => changes++ }); scroll(wheel(c), 300); await tick(); c.element.inert = true; await tick(); const count = changes; await pause(90); assert(changes === count, 'inert 后仍有更新'); centered(c); c.element.inert = false
+  })
+  await check('减少动态效果时松开直接吸附，拖动过程仍然跟手', async () => {
+    const original = window.matchMedia; window.matchMedia = query => query.includes('prefers-reduced-motion') ? { matches: true } : original.call(window, query)
+    try { const c = add(), point = press(c); move(point, .65); release(point, .65); assert(!c.element.querySelector('.my-is-moving'), '仍有松手动画'); centered(c) } finally { window.matchMedia = original }
+  })
+  await check('浅色与暗色沿用 CSS 变量，不向根节点写入主题数据', async () => {
+    const mode = document.documentElement.dataset.theme, primary = document.documentElement.style.getPropertyValue('--primary'), c = add()
+    try { document.documentElement.dataset.theme = 'light'; const light = getComputedStyle(selected(c)).color; document.documentElement.dataset.theme = 'dark'; assert(getComputedStyle(selected(c)).color !== light, '暗色未生效'); assert(document.documentElement.style.getPropertyValue('--primary') === primary, '组件覆盖了主题色') } finally { if (mode) document.documentElement.dataset.theme = mode; else delete document.documentElement.dataset.theme }
+  })
+  await check('销毁时取消动画、捕获与监听，迟到指针不会再回调', async () => {
+    let changes = 0; const c = add({ onChange: () => changes++ }); scroll(wheel(c), 300); await tick(); c.destroy(); const count = changes; pointer(document, 'pointermove', 0); pointer(document, 'pointerup', 0); await pause(180); assert(changes === count && !fixture.contains(c.element), '销毁后有回调或残留 DOM')
+  })
+  await check('Vue 适配同步级联值、外部更新与 focus 方法', async () => {
+    const value = ref(['a', 'shared', 0]), picker = ref(); app = createApp({ render: () => h(Picker, { ref: picker, modelValue: value.value, options: tree, 'onUpdate:modelValue': next => value.value = next }) }); app.mount(fixture); await tick()
+    picker.value.focus(); const c = { element: fixture.querySelector('.my-picker') }; key(wheel(c), 'ArrowDown'); await tick(); assert(value.value.join(',') === 'b,shared,9', 'Vue 级联未同步'); value.value = ['leaf']; await tick(); centered(c); assert(c.element.querySelectorAll('[role="listbox"]').length === 1, 'Vue 外部更新未缩短列')
+  })
+  await check('Sheet 内临时值仅在确认后写回，取消保留原值且焦点仍在面板内', async () => {
+    const opened = ref(false), saved = ref(2), draft = ref(2)
+    app = createApp({ render: () => h('div', [h(Button, { onClick: () => { draft.value = saved.value; opened.value = true } }, () => '打开选择'), h(Sheet, { modelValue: opened.value, title: '面板选择', confirmText: '确定', 'onUpdate:modelValue': next => opened.value = next, onConfirm: () => saved.value = draft.value }, () => h(Picker, { modelValue: draft.value, options: items, label: '面板滚轮', 'onUpdate:modelValue': next => draft.value = next }))]) }); app.mount(fixture); await tick()
+    const open = () => [...fixture.querySelectorAll('button')].find(button => button.textContent === '打开选择').click()
+    const dialog = () => [...document.querySelectorAll('[role="dialog"]')].find(node => !node.closest('[inert]') && node.getClientRects().length)
+    open(); await pause(300); let panel = dialog(); const list = panel.querySelector('[role="listbox"]'); list.focus(); key(list, 'End'); await tick(); assert(draft.value === 11 && saved.value === 2 && panel.contains(document.activeElement), '草稿提前保存或焦点离开面板'); [...panel.querySelectorAll('button')].find(button => button.textContent.trim() === '取消').click(); await pause(300); assert(saved.value === 2, '取消写回了草稿')
+    open(); await pause(300); panel = dialog(); key(panel.querySelector('[role="listbox"]'), 'Home'); await tick(); [...panel.querySelectorAll('button')].find(button => button.textContent.trim() === '确定').click(); await pause(300); assert(saved.value === 0, '确认没有保存临时值')
+  })
+  await check('Vue 卸载中打断惯性后没有晚到更新', async () => {
+    let changes = 0; app = createApp({ render: () => h(Picker, { modelValue: 0, options: items, 'onUpdate:modelValue': () => changes++ }) }); app.mount(fixture); await tick(); const c = { element: fixture.querySelector('.my-picker') }; scroll(wheel(c), 350); await tick(); app.unmount(); app = undefined; const count = changes; await pause(180); assert(changes === count && !fixture.querySelector('.my-picker'), '卸载后有晚到更新')
+  })
+  result.textContent = JSON.stringify({ pass: reports.every(report => report.pass), total: reports.length, reports }, null, 2)
+  runButton.disabled = false
+}
+runButton.disabled = false
+</script></html>

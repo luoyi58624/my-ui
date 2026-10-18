@@ -1426,6 +1426,90 @@ input[data-my-slider]:disabled {
   }
 }
 
+/* ── Picker ────────────────────────────────────────────────── */
+
+/* 修改行高和窗口高度即可调整密度，文字、选中区与动画共用同一套几何。 */
+.my-picker[data-my-picker] {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+  color: var(--text);
+}
+.my-picker-column[data-my-picker] { flex: 1; min-width: 0; }
+.my-picker-column-title[data-my-picker] {
+  min-height: 18px;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+}
+.my-picker-wheel[data-my-picker] {
+  position: relative;
+  height: var(--picker-height, 220px);
+  min-height: var(--picker-item-height, 44px);
+  overflow: hidden;
+  border-radius: var(--picker-radius, 10px);
+  outline: none;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.my-picker-wheel[data-my-picker]:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.my-picker-wheel.my-is-dragging[data-my-picker] { cursor: grabbing; }
+.my-picker-wheel[aria-disabled="true"][data-my-picker] { cursor: default; }
+.my-picker[aria-disabled="true"][data-my-picker] { opacity: 0.5; }
+.my-picker-selection[data-my-picker] {
+  position: absolute;
+  top: 50%;
+  right: 2px;
+  left: 2px;
+  height: var(--picker-item-height, 44px);
+  translate: 0 -50%;
+  border-radius: calc(var(--picker-radius, 10px) - 2px);
+  background: var(--fill);
+  pointer-events: none;
+}
+.my-picker-viewport[data-my-picker] {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent);
+}
+.my-picker-list[data-my-picker] {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  margin-top: calc(var(--picker-item-height, 44px) / -2);
+  transform: translate3d(0, calc(var(--picker-item-height, 44px) * var(--picker-position, 0) * -1), 0);
+}
+.my-picker-option[data-my-picker] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--picker-item-height, 44px);
+  padding: 0 10px;
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1.4;
+}
+.my-picker-option > span[data-my-picker] { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.my-picker-option.my-selected[data-my-picker] { color: var(--primary); font-weight: var(--font-weight-subtitle, 600); }
+.my-picker-option.my-is-disabled[data-my-picker] { opacity: 0.35; }
+.my-picker-empty[data-my-picker] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
 /* ── ProgressTrack ───────────────────────────────────────────── */
 
 .my-progress-track[data-my-progress-track] {

@@ -11,7 +11,7 @@ vue/
   index.ts            Vue 组件入口
   adapter.ts          props、v-model、事件、插槽和生命周期适配
   popup.ts            Vue 内容渲染适配
-  components/         43 个组件的类型与薄封装，无组件样式
+  components/         44 个组件的类型与薄封装，无组件样式
 src/                  Vue 示例页面与演示业务
   theme/              示例专用的配色预设、主题编辑与类型
 native.html           不加载 Vue、可直接打开的 HTML 示例
@@ -83,7 +83,7 @@ const actions = [
 
 保留原来的 Vue 组件名、v-model、事件、具名插槽与作用域插槽。适配层使用实际原生元素作为根节点，组件之间通过 DOM 上下文共享布局与分组状态。
 
-公共组件：Icon、Avatar、Image、Badge、Button、Tag、TagGroup、Input、Textarea、Form、FormField、Radio、RadioGroup、Checkbox、CheckboxGroup、Choices、Switch、Select、Combobox、Segmented、Slider、Progress、Tabs、Navigation、Stepper、CellGroup、ListRow、Collapse、CollapseItem、Card、Tooltip、Divider、Loading、Skeleton、Empty、Floating、Menu、Popover、Dialog、Sheet、Drawer、Popup、Toast。
+公共组件：Icon、Avatar、Image、Badge、Button、Tag、TagGroup、Input、Textarea、Form、FormField、Radio、RadioGroup、Checkbox、CheckboxGroup、Choices、Switch、Select、Combobox、Segmented、Slider、Picker、Progress、Tabs、Navigation、Stepper、CellGroup、ListRow、Collapse、CollapseItem、Card、Tooltip、Divider、Loading、Skeleton、Empty、Floating、Menu、Popover、Dialog、Sheet、Drawer、Popup、Toast。
 
 ## Image 图片
 
@@ -106,6 +106,22 @@ const actions = [
 `marks` 为 `true` 时按 `step` 绘制刻度，也可传入 `{ value, label? }` 数组；`step: null` 将可选值限定在这些刻度上。
 
 拖动时圆块、光圈、提示位置和进度连续跟随指针，绑定值实时按相邻刻度的中点切换：低于 50% 选上一档，达到 50% 选下一档，松开后圆块吸附到当前档位。范围滑块采用相同规则，端点交叉后自动切换上下限，返回新的有序 `[最小值, 最大值]`；键盘仍按步长或指定刻度移动，交叉时焦点跟随当前端点切换。
+
+## Picker 滚轮选择
+
+```vue
+<Picker v-model="drink" :options="drinks" label="选择饮品" />
+<Picker v-model="time" :columns="[hours, minutes]" :column-labels="['小时', '分钟']" />
+<Picker v-model="area" :options="regions" :column-labels="['省份', '城市', '区县']" />
+```
+
+选项为 `{ value: string | number, label: string, disabled?: boolean, children?: PickerOption[] }`。`options` 提供单列或 `children` 级联，`columns` 提供独立多列并优先于 `options`。单列绑定单值，多列与级联绑定数组；父列改变后保留仍有效的子列值，否则选择首个可用项。空列用 `null` 占位，外部传入的失效值只做显示回退，不在初始化时触发更新。
+
+拖动实时跟手，中间项改变时更新绑定值，松手后惯性滚动并吸附，越界时回弹。鼠标滚轮、上下方向键、Home/End、PageUp/PageDown 与文字前缀搜索均可选值，左右方向键切换列，Tab 正常进出。禁用项自动跳过；每列采用有名称的 Listbox 与 `aria-activedescendant`，键盘行为参考 [WAI Listbox](https://www.w3.org/WAI/ARIA/apg/patterns/listbox/)。系统减少动态效果时保留跟手，松手直接吸附。
+
+原生用法为 `MyUI.mount('#picker', 'Picker', { value, options, onChange(value) {} })`，或使用 `data-my="Picker"`。Vue 可通过 ref 的 `focus()` 聚焦首个可用列。CSS 变量为 `--picker-item-height`（默认 44px）、`--picker-height`（默认 220px）和 `--picker-radius`；颜色沿用现有主题变量。
+
+Picker 可直接嵌入页面，也可放入 Sheet。面板中使用一份临时值，确认后写回，取消时丢弃；示例见 `src/demo/PickerShowcase.vue`。
 
 ## API 弹层
 
@@ -160,7 +176,7 @@ npm run build
 
 两个示例入口都禁用移动端页面缩放，并保留单指滚动。自己的页面需要相同策略时，在 `html` 添加 `my-no-zoom`，并沿用示例的 viewport 配置；仅引入组件不会自动限制宿主页面缩放。按钮统一禁用文本选中，输入与正文复制不受影响。
 
-`tests/image.browser.html` 检查图片加载、缓存、懒加载、切换地址、失败重试、属性、插槽与销毁；`tests/native-core.browser.html` 覆盖原生与 Vue 的值同步、布局尺寸、SVG 显隐、明暗主题、插槽、焦点及弹层生命周期；`tests/input-affixes.browser.html` 检查输入框图标对齐、完整点击区域和显隐操作。其余浏览器回归保留原交互场景。纯函数测试继续使用 Node 内置测试器，按改动范围选择测试文件运行。
+`tests/picker.browser.html` 检查滚轮跟手、惯性、级联、键盘、禁用态、面板草稿和卸载；`tests/picker-value.test.mjs` 检查多列选值与吸附规则。`tests/image.browser.html` 检查图片加载、缓存、懒加载、切换地址、失败重试、属性、插槽与销毁；`tests/native-core.browser.html` 覆盖原生与 Vue 的值同步、布局尺寸、SVG 显隐、明暗主题、插槽、焦点及弹层生命周期；`tests/input-affixes.browser.html` 检查输入框图标对齐、完整点击区域和显隐操作。其余浏览器回归保留原交互场景。纯函数测试继续使用 Node 内置测试器，按改动范围选择测试文件运行。
 
 ## 目录维护
 
