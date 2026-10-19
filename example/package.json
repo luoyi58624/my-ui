@@ -16,6 +16,8 @@
   },
   "dependencies": {
     "@my-ui/vue": "workspace:*",
+    "@tauri-apps/plugin-store": "2.5.0",
+    "pinia": "4.1.0",
     "vue": "3.5.43"
   },
   "devDependencies": {

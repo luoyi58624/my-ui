@@ -8,6 +8,7 @@ pub fn run() {
             native_page::open_native_page,
             native_page::close_native_page
         ])
+        .plugin(tauri_plugin_store::Builder::default().build())
         // Android 读取系统字体字重；桌面端为空插件，不影响现有桌面壳。
         .plugin(tauri_plugin_system_font_weight::init())
         .run(tauri::generate_context!())

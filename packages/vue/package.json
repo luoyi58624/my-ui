@@ -3,7 +3,19 @@
   "private": true,
   "type": "module",
   "description": "my-ui 的 Vue 3 薄封装，共用原生核心与样式",
-  "exports": { ".": "./index.ts" },
+  "exports": {
+    ".": "./index.ts",
+    "./state": "./state/index.ts",
+    "./state/tauri": "./state/tauri.ts"
+  },
   "dependencies": { "@my-ui/core": "workspace:*" },
-  "peerDependencies": { "vue": "^3.5.0" }
+  "peerDependencies": {
+    "vue": "^3.5.0",
+    "pinia": "^3.0.4 || ^4.0.0",
+    "@tauri-apps/plugin-store": "^2.5.0"
+  },
+  "peerDependenciesMeta": {
+    "pinia": { "optional": true },
+    "@tauri-apps/plugin-store": { "optional": true }
+  }
 }

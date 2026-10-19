@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>my-ui 跨页面状态回归</title>
+<style>
+  body{margin:0;background:#f2f4f8;color:#18202c;font:14px/1.7 system-ui}
+  main{max-width:900px;margin:auto;padding:24px}h1{font-size:24px}
+  .pages{display:flex;gap:16px;flex-wrap:wrap}.page,iframe{width:360px;box-sizing:border-box;border:1px solid #d9dee8;border-radius:16px;background:white}
+  .page{padding:20px}iframe{min-height:260px}.page button{margin-top:16px}
+  pre{white-space:pre-wrap}body.peer main{padding:0}body.peer h1,body.peer #run,body.peer #result{display:none}body.peer .page{border:0}
+</style>
+<main><h1>跨页面持久化与状态同步</h1><button id="run">运行定向检查</button><div class="pages"><div id="fixture"></div><div id="peer"></div></div><pre id="result" data-status="idle">尚未运行</pre></main>
+<script type="module">
+import {createApp,h,nextTick} from 'vue'
+import {createPinia,defineStore,disposePinia} from 'pinia'
+import {Button,Input} from '/packages/vue/index.ts'
+import {createSharedStatePlugin,createWebStateStorage,sharedStateKey} from '/packages/vue/state/index.ts'
+
+const params=new URLSearchParams(location.search),peer=params.has('peer'),result=document.querySelector('#result');
+const fixture=document.querySelector('#fixture');
+if(peer)document.body.classList.add('peer');
+const pause=ms=>new Promise(done=>setTimeout(done,ms));
+const assert=(value,message)=>{if(!value)throw new Error(message)};
+async function until(predicate){for(let i=0;i<120;i++){if(predicate())return;await pause(10)}throw Error('页面更新超时')}
+
+async function page(id){
+  let paused=false;
+  const storage=createWebStateStorage();
+  const pinia=createPinia().use(createSharedStatePlugin({storage:{...storage,subscribe:listener=>storage.subscribe(key=>{if(!paused)listener(key)})}}));
+  const useStore=defineStore(id,{state:()=>({note:'共同的备注',count:0}),shared:true});
+  let store;
+  const app=createApp({setup(){store=useStore();return()=>h('section',{class:'page'},[
+    h('h2',peer?'页面 B':'页面 A'),
+    h(Input,{modelValue:store.note,label:'共享备注','onUpdate:modelValue':value=>store.note=value}),
+    h('p',{'data-count':''},'共享计数 '+store.count),
+    h(Button,{onClick:()=>store.count++},()=> '增加计数'),
+  ])}}).use(pinia);
+  app.mount(fixture);await store.$shared.ready;
+  return {store,storage,flush:()=>store.$shared.flush(),refresh:()=>store.$shared.refresh(),pause:value=>paused=value,dispose:()=>{app.unmount();disposePinia(pinia)}};
+}
+if(peer){window.sharedPageReady=page(params.get('id')).then(api=>window.sharedPage=api)}
+else document.querySelector('#run').onclick=async()=>{
+  const results=[],id='browser-test-'+crypto.randomUUID();let a,b,frame;
+  document.querySelector('#run').disabled=true;result.textContent='运行中';result.dataset.status='running';
+  async function run(name,fn){try{await fn();results.push({name,pass:true})}catch(error){results.push({name,pass:false,error:error.stack})}}
+  try{
+    a=await page(id);
+    frame=document.createElement('iframe');frame.title='独立页面 B';
+    frame.src=location.pathname+'?peer=1&id='+encodeURIComponent(id);
+    const loaded=new Promise((resolve,reject)=>{frame.onload=resolve;frame.onerror=reject});document.querySelector('#peer').append(frame);await loaded;
+    b=await frame.contentWindow.sharedPageReady;
+    await run('两个独立文档正常恢复，默认值不写入缓存',async()=>{
+      assert(a.store.count===0&&b.store.count===0,'初始状态不一致');
+      assert(localStorage.getItem(sharedStateKey(id,'note'))===null,'默认值覆盖缓存');
+    });
+    await run('页面 A 的实际输入更新页面 B 的输入框',async()=>{
+      const input=fixture.querySelector('input');input.value='从 A 输入';input.dispatchEvent(new Event('input',{bubbles:true}));
+      await a.flush();await until(()=>b.store.note==='从 A 输入');await nextTick();
+      assert(frame.contentDocument.querySelector('input').value==='从 A 输入','B 的 DOM 未更新');
+    });
+    await run('页面 B 的实际按钮更新页面 A 的文字',async()=>{
+      frame.contentDocument.querySelector('#fixture button').click();await b.flush();await until(()=>a.store.count===1);await nextTick();
+      assert(fixture.querySelector('[data-count]').textContent==='共享计数 1','A 的 DOM 未更新');
+    });
+    await run('通过存储适配器更新，同页和另一个页面都会响应',async()=>{
+      await a.storage.setItem(sharedStateKey(id,'note'),JSON.stringify('缓存直接修改'));
+      await until(()=>a.store.note==='缓存直接修改'&&b.store.note==='缓存直接修改');
+    });
+    await run('原生 storage 事件只通知其他页面，本页刷新可以补齐',async()=>{
+      localStorage.setItem(sharedStateKey(id,'count'),'20');
+      assert(a.store.count===1,'原生 storage 事件错误地通知了本页');
+      await until(()=>b.store.count===20);await a.refresh();assert(a.store.count===20,'本页刷新失败');
+    });
+    await run('同时修改不同字段，两边结果合并保留',async()=>{
+      a.store.note='独立字段';b.store.count=30;
+      await Promise.all([a.flush(),b.flush()]);await until(()=>a.store.count===30&&b.store.note==='独立字段');
+    });
+    await run('后台遗漏通知后，focus 自动补齐共享状态',async()=>{
+      a.pause(true);b.store.count=40;await b.flush();await pause(30);
+      assert(a.store.count===30,'暂停通知的条件未生效');
+      window.dispatchEvent(new Event('focus'));await until(()=>a.store.count===40);a.pause(false);
+    });
+    await run('重载独立页面继续读取已保存数据',async()=>{
+      const loadedAgain=new Promise(resolve=>frame.onload=resolve);frame.contentWindow.location.reload();await loadedAgain;
+      b=await frame.contentWindow.sharedPageReady;
+      assert(b.store.count===40&&b.store.note==='独立字段','刷新丢失持久化状态');
+    });
+    await run('删除缓存恢复初始字段值，已有页面全部更新',async()=>{
+      await b.storage.removeItem(sharedStateKey(id,'note'));
+      await until(()=>a.store.note==='共同的备注'&&b.store.note==='共同的备注');
+    });
+    await run('页面销毁释放订阅，后续存储变化不再修改旧实例',async()=>{
+      a.dispose();b.store.count=50;await b.flush();await pause(50);
+      assert(a.store.count===40,'销毁后仍收到更新');a=undefined;
+    });
+  }catch(error){results.push({name:'浏览器场景准备',pass:false,error:error.stack})}
+  finally{
+    a?.dispose();b?.dispose();frame?.remove();
+    for(const field of ['note','count'])localStorage.removeItem(sharedStateKey(id,field));
+    document.querySelector('#run').disabled=false;
+    result.dataset.status=results.every(item=>item.pass)?'passed':'failed';
+    result.textContent=JSON.stringify({passed:results.filter(item=>item.pass).length,total:results.length,results},null,2);
+  }
+};
+</script>
+</html>

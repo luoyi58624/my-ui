@@ -8,7 +8,7 @@ packages/
     my-ui.css           所有组件样式，按组件分节
     my-ui.js            所有 DOM 交互、定位与动画
     my-ui.d.ts          原生 API 类型
-  vue/                  @my-ui/vue：Vue 3 薄封装
+  vue/                  @my-ui/vue：Vue 3 薄封装与可选 Pinia 共享状态
     index.ts            51 个组件的公共入口
     adapter.ts          props、v-model、事件、插槽和生命周期适配
     components/         组件封装及类型，无组件样式
@@ -259,6 +259,52 @@ Vue 从 `./my-ui/vue` 导入 `popup`，`content` 返回 `h()` 构建的 Vue 内�
 
 展示页的 14 组主色、3 组层级风格、系统外观监听与主题编辑逻辑位于 `example/src/theme/index.js`，由 `example/src/demo/ThemeSettings.vue` 使用；它们不属于 `MyUI` 或 Vue 组件入口。用户只复制 `packages/core/` 和 `packages/vue/` 时，不会带入这套示例配置。
 
+## Vue 全局共享状态
+
+状态封装在 `packages/vue/state/`，独立入口为 `@my-ui/vue/state`，普通组件入口不依赖 Pinia。需要此功能时安装 `pinia`，在应用挂载前安装插件，再给需要同步的 store 添加 `shared: true`。页面仍然正常使用 `v-model`、actions、`$patch()` 和 `$reset()`。
+
+```ts
+import { createPinia, defineStore } from 'pinia'
+import { createSharedStatePlugin } from '@my-ui/vue/state'
+
+const pinia = createPinia().use(createSharedStatePlugin())
+app.use(pinia)
+
+export const usePreferences = defineStore('preferences', {
+  state: () => ({ name: '小蓝', notifications: true }),
+  shared: true,
+})
+```
+
+普通网页默认保存到 `localStorage`，通过存储事件同步共享同一存储区的同源页面；同一页面内的多个 Pinia 实例也能收到通知。新页面先恢复缓存，页面重新获得焦点或返回前台时补齐遗漏的更新。默认值不会在新页面初始化时覆盖已有缓存；恢复期间发生的本地编辑优先保留。
+
+只有部分字段需要共用时，使用 `shared: { pick: ['name'] }`；还可设置 `key` 自定义存储名称。字段需要是普通 JSON 数据，日期请转成字符串，函数、DOM、Map、循环引用等不进入缓存。未开启 `shared` 的 store 没有订阅或存储开销。
+
+Tauri 应用安装官方 `@tauri-apps/plugin-store` 与同版本 Rust 插件，注册原生插件并给相关窗口添加 `store:default` 权限，再切换适配器：
+
+```ts
+import { createTauriStateStorage } from '@my-ui/vue/state/tauri'
+
+const storage = createTauriStateStorage('settings.json')
+const pinia = createPinia().use(createSharedStatePlugin({ storage }))
+app.use(pinia)
+```
+
+多个 Activity 的 WebView 通过应用原生资源表复用同一个 Store，业务代码继续写 TS。状态变更立即进入原生存储并通知其他页面，文件写入默认合并 100ms；需要确认落盘或打开新 Activity 前可 `await store.$shared?.flush()`。`store.$shared?.ready` 等待首次恢复，`refresh()` 重新读取缓存，`error` 提供可响应的错误信息；失败会保留内存编辑，`flush()` 可以重试。配置 `onError(error, storeId)` 可统一展示或记录异常。
+
+非 Pinia 代码也能通过同一适配器修改缓存并通知页面：
+
+```ts
+import { sharedStateKey } from '@my-ui/vue/state'
+
+await storage.setItem(sharedStateKey('preferences', 'name'), JSON.stringify('新的昵称'))
+await storage.flush?.()
+```
+
+通过适配器删除字段会恢复其初始值。直接调用浏览器原始 `localStorage.setItem()` 只通知其他页面，本页需要 `refresh()`；直接编辑 Tauri 的磁盘 JSON 文件需要额外文件监听并重新加载。存储键可用插件配置的 `prefix` 隔离，调用 `sharedStateKey()` 时传入相同前缀。
+
+同步以顶层字段为单位，修改不同字段互不覆盖；嵌套对象或数组整体替换。同一字段同时写入时以存储中最后成功写入的值为准，不提供跨页面事务或原子递增。Pinia 与存储之间的同步是异步的，页面销毁会释放订阅与前台监听。
+
 ## 本地展示与验证
 
 ```powershell
@@ -312,11 +358,11 @@ bun run build:android    # 构建自包含 arm64 优化 APK
 
 **移动端适配**（只写在示例层，组件库保持中立）：`example/src/mobile.ts` 按 UA 加 `my-mobile-native` 类并拦截长按选中与系统 callout（输入框、可复制文本除外）；`mobile.css` 处理 edge-to-edge 下的状态栏与手势条安全区；viewport 使用 `viewport-fit=cover`。字重统一走主题系统的 `settings.fontWeight`，不另设一套变量。
 
-**原生页面跳转**：在 Android App 的「状态反馈 → 原生页面跳转」中修改备注或计数，再点「打开原生页面」。新页由独立的 `NativePageActivity` 承载；系统返回手势或页内返回按钮关闭新页，恢复首页原有的内容和滚动位置。当前示例使用 Tauri 内置多窗口能力，需要 Android 12L（API 32）或更高版本，具体系统转场跟随设备与 ROM。
+**原生页面跳转与共享状态**：在 Android App 的「状态反馈 → 跨页共享状态」中修改备注或计数，再点「打开原生页面」。新页由独立的 `NativePageActivity` 承载，两页通过 Pinia 共享插件同步备注与计数，「从本地更新」演示绕过 Pinia 修改存储后通知页面。系统返回手势或页内返回按钮关闭新页，恢复首页原有滚动位置；重新打开或重启应用会恢复已保存的共享数据。网页中同一示例会打开另一个标签页。当前原生跳转使用 Tauri 内置多窗口能力，需要 Android 12L（API 32）或更高版本，具体系统转场跟随设备与 ROM。
 
 这部分放在示例工程内，无需新增插件包：`example/src-tauri/src/native_page.rs` 通过 Tauri 的 `WebviewWindowBuilder` 创建 Activity，固定加载 `native-page.html`；`example/src/native-page.ts` 提供打开和返回的薄入口，`NativePage.vue` 复用原有组件、主题和系统字重。子页按 `native-page-*` 精确授权，首页不能被子页的关闭命令误关。未启用网页路由，也没有用 CSS 模拟页面进退动画。
 
-返回命令通过当前子页的 JNI 句柄调用 `Activity.finish()`，不依赖 Android 上不会结束 Activity 的窗口 `close()`；系统返回继续使用原生返回栈，销毁时显式释放子页 WebView。首页保留只是因为它没有销毁：两个 WebView 的 TS 模块、Vue 状态和全局变量仍各有一份。跨页共享业务数据需要消息同步或原生状态桥接，不会因为导入同一个 TS 文件自动共用内存。
+返回命令通过当前子页的 JNI 句柄调用 `Activity.finish()`，不依赖 Android 上不会结束 Activity 的窗口 `close()`；系统返回继续使用原生返回栈，销毁时显式释放子页 WebView。两个 WebView 的 TS 模块、Vue 状态和全局变量仍各有一份，跨页数据通过共享存储同步；本次打开时间和滚动位置各自保留。
 
 ## 浏览器回归
 
@@ -329,6 +375,8 @@ bun run build:android    # 构建自包含 arm64 优化 APK
 `tests/picker.browser.html` 检查滚轮跟手、惯性、级联、键盘、禁用态、面板草稿和卸载；`tests/picker-value.test.mjs` 检查多列选值与吸附规则。`tests/image.browser.html` 检查图片加载、缓存、懒加载、切换地址、失败重试、属性、插槽与销毁；`tests/native-core.browser.html` 覆盖原生与 Vue 的值同步、布局尺寸、SVG 显隐、明暗主题、插槽、焦点及弹层生命周期；`tests/input-affixes.browser.html` 检查输入框图标对齐、完整点击区域和显隐操作。其余浏览器回归保留原交互场景。纯函数测试使用 Bun 运行，按改动范围选择测试文件运行。
 
 `tests/upload-structure.browser.html` 定向检查上传状态与取消、移除、重试、对象地址释放、原生与 Vue 同步、顶栏居中、通知焦点和过渡、步骤键盘与语义。`tests/upload-structure.test.mjs` 检查文件校验与步骤状态；级联菜单标题图标的连续显示由 `tests/menu-cascade.browser.html` 的触屏标题用例覆盖。
+
+`bun test ./tests/shared-state.test.ts ./tests/shared-state-tauri.test.ts` 使用真实 Pinia 与官方 Tauri JS 绑定检查恢复、双向同步、异步竞态、不同字段并发、失败重试和销毁；`tests/shared-state.browser.html` 使用两个独立文档检查实际输入与按钮、浏览器存储事件、刷新恢复和后台补同步。测试只清理自己随机生成的存储键。
 
 ## 目录维护
 

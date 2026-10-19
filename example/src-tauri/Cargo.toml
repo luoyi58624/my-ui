@@ -14,5 +14,6 @@ tauri-build = { version = "2.7.3", features = [] }
 
 [dependencies]
 tauri = { version = "2.12.4", features = [] }
+tauri-plugin-store = "2.5.0"
 # 本地 Tauri 移动插件：读取 Android 系统字体字重，详见 plugins/ 下该 crate。
 tauri-plugin-system-font-weight = { path = "./plugins/tauri-plugin-system-font-weight" }
