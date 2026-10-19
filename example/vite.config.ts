@@ -17,7 +17,13 @@ export default defineConfig(({ mode }) => ({
     // Rust 编译与生成文件交给 Tauri 监听，避免反复刷新示例。
     watch: { ignored: ['**/src-tauri/**'] },
   },
-  build: { outDir: projectRoot + 'dist', emptyOutDir: true },
+  build: {
+    outDir: projectRoot + 'dist',
+    emptyOutDir: true,
+    rolldownOptions: {
+      input: { main: exampleRoot + 'index.html', nativePage: exampleRoot + 'native-page.html' },
+    },
+  },
   plugins: [
     vue(),
     {

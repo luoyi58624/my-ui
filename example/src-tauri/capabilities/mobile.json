@@ -1,9 +1,9 @@
 {
   "$schema": "../gen/schemas/mobile-schema.json",
   "identifier": "mobile",
-  "description": "Android 主窗口可读取系统字体字重，核心能力由 default.json 提供。",
+  "description": "Android 首页与原生子页均可读取系统字体字重。",
   "platforms": ["android"],
-  "windows": ["main"],
+  "windows": ["main", "native-page-*"],
   "permissions": [
     "system-font-weight:default"
   ]

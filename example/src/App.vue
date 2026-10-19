@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, h, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import ThemeSettings from './demo/ThemeSettings.vue'
+import NativeNavigationShowcase from './demo/NativeNavigationShowcase.vue'
 import EssentialsShowcase from './demo/EssentialsShowcase.vue'
 import PopupShowcase from './demo/PopupShowcase.vue'
 import MenuShowcase from './demo/MenuShowcase.vue'
@@ -274,6 +275,7 @@ onBeforeUnmount(() => {
 
       <section id="feedback" class="section-gap">
         <div class="section-title"><div><div class="number">04 / 状态反馈</div><h2>提示与弹层</h2></div><div class="subtitle">提示、确认对话框和移动端操作面板。</div></div>
+        <NativeNavigationShowcase @notify="notify" />
         <div class="feedback-grid">
           <Card class="feedback-panel" title="轻提示" description="恰如其分的成功反馈" sample="TOAST"><div class="toast-sample"><Icon name="check" /><div><strong>保存成功</strong><small>你的更改已经同步</small></div></div><Button variant="link" @click="notify('你的更改已经同步')">体验轻提示 <Icon name="arrow-right" /></Button></Card>
           <Card class="feedback-panel" title="确认弹窗" description="重要操作，清晰表达" sample="DIALOG"><div class="empty-illustration"><div class="empty-image"><Icon name="shield" /></div><span>每个决定，都值得确认</span></div><Button variant="link" @click="openDialog">打开确认弹窗 <Icon name="arrow-right" /></Button></Card>

@@ -308,9 +308,15 @@ bun run build:android    # 构建自包含 arm64 优化 APK
 
 **系统字重插件**：`example/src-tauri/plugins/tauri-plugin-system-font-weight/` 移植自 `android_system_font_weight`，采集和探针算法保持一致。Rust 只注册桥接，Kotlin 在后台线程采集、解析，前端启动只调用一次 `getWght`，`getRawData` 留作诊断。OPPO 系采用通过校验的探针，其他厂商的支持边界与原插件相同，不把 `fontWeightAdjustment` 或厂商滑杆编码当作绝对字重。
 
-`example/src/font-weight.ts` 管理缓存及系统跟随：启动与返回前台时自动同步，只有实际修改滑块数值才进入手动模式，点「恢复字重」重新采集。异步结果不会覆盖较新的手动设置；读取失败保留当前值，不伪装成成功读取到 400。主题设置统一应用 `settings.fontWeight`，正文、操作文字、次标题和标题保留原有层级。Tauri 权限使用 `[default]` 集合并仅向 Android 主窗口授权；编译缓存、Tauri API 副本与自动生成的权限文件均不提交。
+`example/src/font-weight.ts` 管理缓存及系统跟随：启动与返回前台时自动同步，只有实际修改滑块数值才进入手动模式，点「恢复字重」重新采集。异步结果不会覆盖较新的手动设置；读取失败保留当前值，不伪装成成功读取到 400。主题设置统一应用 `settings.fontWeight`，正文、操作文字、次标题和标题保留原有层级。Tauri 权限使用 `[default]` 集合，仅向 Android 首页与原生示例子页授权；编译缓存、Tauri API 副本与自动生成的权限文件均不提交。
 
 **移动端适配**（只写在示例层，组件库保持中立）：`example/src/mobile.ts` 按 UA 加 `my-mobile-native` 类并拦截长按选中与系统 callout（输入框、可复制文本除外）；`mobile.css` 处理 edge-to-edge 下的状态栏与手势条安全区；viewport 使用 `viewport-fit=cover`。字重统一走主题系统的 `settings.fontWeight`，不另设一套变量。
+
+**原生页面跳转**：在 Android App 的「状态反馈 → 原生页面跳转」中修改备注或计数，再点「打开原生页面」。新页由独立的 `NativePageActivity` 承载；系统返回手势或页内返回按钮关闭新页，恢复首页原有的内容和滚动位置。当前示例使用 Tauri 内置多窗口能力，需要 Android 12L（API 32）或更高版本，具体系统转场跟随设备与 ROM。
+
+这部分放在示例工程内，无需新增插件包：`example/src-tauri/src/native_page.rs` 通过 Tauri 的 `WebviewWindowBuilder` 创建 Activity，固定加载 `native-page.html`；`example/src/native-page.ts` 提供打开和返回的薄入口，`NativePage.vue` 复用原有组件、主题和系统字重。子页按 `native-page-*` 精确授权，首页不能被子页的关闭命令误关。未启用网页路由，也没有用 CSS 模拟页面进退动画。
+
+返回命令通过当前子页的 JNI 句柄调用 `Activity.finish()`，不依赖 Android 上不会结束 Activity 的窗口 `close()`；系统返回继续使用原生返回栈，销毁时显式释放子页 WebView。首页保留只是因为它没有销毁：两个 WebView 的 TS 模块、Vue 状态和全局变量仍各有一份。跨页共享业务数据需要消息同步或原生状态桥接，不会因为导入同一个 TS 文件自动共用内存。
 
 ## 浏览器回归
 

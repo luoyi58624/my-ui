@@ -1,9 +1,10 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "示例主窗口只使用 Tauri 默认核心能力。",
+  "description": "示例首页与原生子页使用 Tauri 默认核心能力。",
   "windows": [
-    "main"
+    "main",
+    "native-page-*"
   ],
   "permissions": [
     "core:default"
