@@ -14,7 +14,7 @@ const props = withDefaults(defineProps<{
   min?: number
   /** 最大允许值。 */
   max?: number
-  /** 取值步长，null 限定为 marks；拖动连续跟手，数值按中点切档，松开吸附。 */
+  /** 取值步长，null 限定为 marks；触屏拖动预览、抬起提交，数值按中点吸附。 */
   step?: number | null
   /** true 按 step 绘制刻度，数组指定刻度位置和可选文字。 */
   marks?: boolean | readonly SliderMark[]
@@ -34,7 +34,7 @@ const props = withDefaults(defineProps<{
   endLabel?: string
 }>(), { min: 0, max: 100, step: 1, marks: false, valueLabelDisplay: 'auto', unit: '%', startLabel: '柔和', endLabel: '鲜明' })
 const emit = defineEmits<{
-  /** 同步拖动或键盘调整后的数值。 */
+  /** 同步数值；触屏仅在有效抬起时提交，鼠标与键盘实时提交。 */
   'update:modelValue': [value: T]
 }>()
 const bridge = useNative('Slider', props, emit)

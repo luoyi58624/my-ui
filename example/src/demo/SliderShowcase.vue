@@ -11,7 +11,7 @@ function reset() { stepped.value = 50; temperature.value = 20; interval.value = 
   <Card id="slider-options" class="slider-showcase" title="刻度与范围" description="选择一个数值，或圈定一段合适的范围" sample="SLIDER">
     <div class="slider-examples">
       <section><h4>按步长生成刻度</h4><Slider v-model="stepped" label="显示强度" :step="10" marks /><p>每 10 调整一档，悬停或拖动时显示当前值。</p></section>
-      <section><h4>只选择指定刻度</h4><Slider v-model="temperature" label="适宜温度" :step="null" :marks="marks" unit="°C" :get-aria-value-text="value => `${value} 摄氏度`" /><p>拖动连续跟手，数值按相邻刻度的中点切换，松开后吸附；方向键按刻度移动。</p></section>
+      <section><h4>只选择指定刻度</h4><Slider v-model="temperature" label="适宜温度" :step="null" :marks="marks" unit="°C" :get-aria-value-text="value => `${value} 摄氏度`" /><p>拖动连续跟手，按相邻刻度中点预览；触屏抬起后提交，纵向滚动不改值。方向键按刻度移动。</p></section>
       <section><h4>双滑块范围选择</h4><Slider v-model="interval" label="筛选范围" :step="5" marks start-label="0%" end-label="100%" /><p>拖动最近的端点，交叉后自动切换上下限；Tab 可切换两个滑块，范围值始终有序。</p></section>
       <section><h4>常显数值提示</h4><Slider v-model="volume" label="预设音量" value-label-display="on" /><p>数值提示与普通 Tooltip 共用外观，保持清楚、轻巧。</p></section>
     </div>

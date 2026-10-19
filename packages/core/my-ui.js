@@ -5130,9 +5130,10 @@
           c.scale.min,
           c.scale.max,
         );
+        const current = c.drag?.deferred ? c.drag.values : c.values;
         const nextIndex =
-          c.values.length > 1 &&
-          (index === 0 ? raw > c.values[1] : raw < c.values[0])
+          current.length > 1 &&
+          (index === 0 ? raw > current[1] : raw < current[0])
             ? 1 - index
             : index;
         const moveFocus =
@@ -5146,10 +5147,15 @@
         if (c.active === index) c.active = nextIndex;
         if (c.hovered === index) c.hovered = nextIndex;
         if (c.focused === index) c.focused = nextIndex;
-        const next = [...c.values];
+        const next = [...current];
         next[index] = c.scale.normalize(raw);
         next.sort((a, b) => a - b);
-        if (next.every((value, index) => value === c.values[index])) c.paint();
+        if (c.drag?.deferred) {
+          // 触屏只更新预览，抬起前不写入绑定值或触发业务回调。
+          c.drag.values = next;
+          c.dismissed = undefined;
+          c.paint();
+        } else if (next.every((value, index) => value === c.values[index])) c.paint();
         else {
           c.dismissed = undefined;
           c.set(Array.isArray(c.p.value) ? next : next[0]);
@@ -5167,6 +5173,21 @@
       const cancel = () => {
         c.drag = undefined;
         c.active = undefined;
+      };
+      const prepareTouch = (event) => {
+        const drag = c.drag;
+        if (!drag?.deferred || drag.moved) return true;
+        const dx = Math.abs(event.clientX - drag.x),
+          dy = Math.abs(event.clientY - drag.y);
+        if (Math.max(dx, dy) < 8) return true;
+        if (dy > dx) {
+          cancel();
+          c.paint();
+          return false;
+        }
+        drag.moved = true;
+        c.inputs[drag.index].focus({ preventScroll: true });
+        return true;
       };
       c.on(c.control, "pointerenter", enter);
       c.on(c.control, "pointermove", (event) => {
@@ -5197,12 +5218,22 @@
               ? event.clientX - center
               : 0,
           pointerType: event.pointerType,
+          deferred: event.pointerType === "touch",
+          x: event.clientX,
+          y: event.clientY,
+          source: [...c.values],
+          values: [...c.values],
+          moved: false,
         };
         c.active = index;
         c.focused = undefined;
         c.dismissed = undefined;
         // 单滑块与范围共用同一条指针路径，避免浏览器拖动与刻度取整互相覆盖。
         event.preventDefault();
+        if (c.drag.deferred) {
+          c.paint();
+          return;
+        }
         c.inputs[index].focus({ preventScroll: true });
         change(point(event.clientX - c.drag.offset), index);
       });
@@ -5210,7 +5241,10 @@
         document,
         "pointermove",
         (event) => {
-          if (c.drag?.id === event.pointerId)
+          if (
+            c.drag?.id === event.pointerId && prepareTouch(event) &&
+            (!c.drag.deferred || c.drag.moved)
+          )
             change(point(event.clientX - c.drag.offset), c.drag.index);
         },
         { capture: true, passive: true },
@@ -5221,7 +5255,24 @@
         (event) => {
           const drag = c.drag;
           if (event.pointerId !== drag?.id) return;
+          if (!prepareTouch(event)) return;
+          if (drag.deferred && !drag.moved) {
+            const rect = c.control.getBoundingClientRect();
+            if (event.clientX < rect.left || event.clientX > rect.right ||
+                event.clientY < rect.top || event.clientY > rect.bottom) {
+              cancel();
+              c.paint();
+              return;
+            }
+          }
           change(point(event.clientX - drag.offset), drag.index);
+          if (drag.deferred) {
+            const next = drag.values;
+            c.inputs[drag.index].focus({ preventScroll: true });
+            cancel();
+            if (!next.every((value, index) => value === c.values[index]))
+              c.set(Array.isArray(c.p.value) ? [...next] : next[0]);
+          }
           if (!["mouse", "pen"].includes(drag.pointerType))
             c.hovered = undefined;
           cancel();
@@ -5239,6 +5290,12 @@
         },
         true,
       );
+      c.on(document, "pointerdown", (event) => {
+        if (c.drag?.deferred && event.pointerType === "touch" && event.pointerId !== c.drag.id) {
+          cancel();
+          c.paint();
+        }
+      }, true);
       c.on(window, "blur", () => {
         cancel();
         c.paint();
@@ -5273,7 +5330,10 @@
             },
           });
           c.tooltips.push(tooltip);
-          on(input, "input", () => change(Number(input.value), index));
+          on(input, "input", () => {
+            if (c.drag?.deferred) c.paint();
+            else change(Number(input.value), index);
+          });
           on(input, "focus", () => {
             if (!c.drag && input.matches(":focus-visible")) {
               c.focused = index;
@@ -5383,6 +5443,12 @@
       )
         .map((value) => c.scale.normalize(value))
         .sort((a, b) => a - b);
+      if (c.drag?.deferred && (c.element.closest("[inert]") ||
+          !c.drag.source.every((value, index) => value === c.values[index]))) {
+        // 弹层关闭或外部状态变更优先，迟到抬起不能提交旧预览。
+        c.drag = undefined;
+        c.active = undefined;
+      }
       if (c.inputs.length !== c.values.length) c.buildInputs();
       c.ratio = (value) =>
         c.scale.max === c.scale.min
@@ -5390,7 +5456,8 @@
           : (value - c.scale.min) / (c.scale.max - c.scale.min);
       const format = (value, index) =>
         c.p.valueLabelFormat?.(value, index) ?? `${value}${c.p.unit}`;
-      const visualValues = c.values.map((value, index) =>
+      const displayValues = c.drag?.deferred ? c.drag.values : c.values;
+      const visualValues = displayValues.map((value, index) =>
         c.drag?.index === index ? c.drag.value : value,
       );
       const end = c.ratio(visualValues.at(-1));
@@ -5414,7 +5481,7 @@
         instant: true,
       });
       const disabled = c.p.disabled || c.scale.disabled;
-      c.values.forEach((value, index) => {
+      displayValues.forEach((value, index) => {
         const input = c.inputs[index];
         attrs(input, {
           min: c.scale.min,
@@ -5492,8 +5559,8 @@
         if (label)
           state(label, {
             selected:
-              mark.value >= (c.values.length > 1 ? c.values[0] : c.scale.min) &&
-              mark.value <= c.values.at(-1),
+              mark.value >= (displayValues.length > 1 ? displayValues[0] : c.scale.min) &&
+              mark.value <= displayValues.at(-1),
           });
       }
       text(c.start, c.p.startLabel);
