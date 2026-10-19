@@ -378,6 +378,12 @@ bun run build:android    # 构建自包含 arm64 优化 APK
 
 `bun test ./tests/shared-state.test.ts ./tests/shared-state-tauri.test.ts` 使用真实 Pinia 与官方 Tauri JS 绑定检查恢复、双向同步、异步竞态、不同字段并发、失败重试和销毁；`tests/shared-state.browser.html` 使用两个独立文档检查实际输入与按钮、浏览器存储事件、刷新恢复和后台补同步。测试只清理自己随机生成的存储键。
 
+Android 示例的系统返回优先交给当前 WebView 的最上层弹层：级联菜单逐级返回，退出动画期间继续拦截，全部关闭后恢复原生 Activity 返回。可在原生子页的“弹层优先返回”卡片体验菜单、嵌套确认与抽屉；首页的所有弹层同样生效。输入法可见时保持系统先收起键盘的行为。
+
+宿主可通过 `MyUI.layers.dismissTop()` 请求返回，通过 `MyUI.layers.subscribe(active => {})` 立即订阅是否存在弹层并取得取消订阅方法。接口不依赖 Tauri；安卓桥接只放在 example 中。禁用 `closeOnEscape` 的弹窗也会消费系统返回，等待业务操作关闭；滑块常驻数值提示不占用返回。
+
+`bun test ./tests/overlay-back.test.ts ./tests/native-page.test.ts ./tests/popup.test.mjs` 检查原生桥接串行、页面恢复、错误重试与既有弹层生命周期；`tests/overlay-back.browser.html` 检查真实 DOM、Vue 同步、嵌套弹窗、级联菜单、关闭动画和焦点恢复。
+
 ## 目录维护
 
 项目目录名为 `my-ui`。Git 保留组件源码、示例、正式测试、原始设计参考和构建配置；依赖、构建结果、编辑器设置及本地工具配置均由 `.gitignore` 排除。

@@ -122,6 +122,13 @@ export interface MyUIApi {
     options?: NativeCreateOptions,
   ): NativeController;
   init(root?: ParentNode): NativeController[];
+  /** 平台无关的弹层返回接口；系统手势由应用宿主接入。 */
+  layers: {
+    /** 优先关闭顶层或返回上级菜单；存在弹层时消费返回，包括退出动画期间。 */
+    dismissTop(): boolean;
+    /** 立即订阅是否存在弹层，返回取消订阅方法。 */
+    subscribe(listener: (active: boolean) => void): () => void;
+  };
   popup: {
     showAlert(options: NativePopupOptions): Promise<boolean>;
     showSheet<T = unknown>(

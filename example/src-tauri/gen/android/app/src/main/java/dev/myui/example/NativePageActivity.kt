@@ -6,13 +6,13 @@ import android.webkit.WebView
 import androidx.activity.enableEdgeToEdge
 
 /** 承载独立的示例页面，保留系统 Activity 返回栈与预测性返回动画。 */
-class NativePageActivity : TauriActivity() {
+class NativePageActivity : OverlayActivity() {
     private var pageWebView: WebView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        // TauriActivity 默认不拦截 WebView 历史，系统直接返回上一个 Activity。
+        // 没有弹层时仍由系统返回上一个 Activity。
     }
 
     override fun onWebViewCreate(webView: WebView) {

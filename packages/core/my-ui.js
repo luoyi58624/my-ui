@@ -2710,6 +2710,45 @@
     };
   }
 
+  // 返回只交给最上层；退出动画期间继续消费返回，避免连续手势穿透到页面。
+  const backLayers = [], layerListeners = new Set();
+  const topBackLayer = () => backLayers.findLast(layer =>
+    layer.root.isConnected && (layer.closing || !layer.root.closest("[inert]")),
+  );
+  const notifyLayers = () => {
+    const active = !!topBackLayer();
+    for (const listener of layerListeners) listener(active);
+  };
+  function trackBackLayer(root, dismiss) {
+    const layer = { root, dismiss, closing: false };
+    backLayers.push(layer);
+    notifyLayers();
+    return {
+      closing() { layer.closing = true; },
+      release() {
+        const index = backLayers.indexOf(layer);
+        if (index < 0) return;
+        backLayers.splice(index, 1);
+        notifyLayers();
+      },
+    };
+  }
+  const layers = {
+    /** 请求最上层弹层返回；关闭受限或正在淡出时仍返回 true，阻止页面返回。 */
+    dismissTop() {
+      const layer = topBackLayer();
+      if (!layer) return false;
+      if (!layer.closing) layer.dismiss();
+      return true;
+    },
+    /** 立即订阅是否存在弹层，返回取消订阅方法，供宿主接入系统返回。 */
+    subscribe(listener) {
+      layerListeners.add(listener);
+      listener(!!topBackLayer());
+      return () => layerListeners.delete(listener);
+    },
+  };
+
   function makeFloating(owner, config) {
     const host = el("div", "floating-position"),
       panel = el("div", "floating-panel");
@@ -2717,6 +2756,7 @@
     scope(host, "Floating");
     let visible = false,
       animation,
+      backLayer,
       resize,
       mutation,
       frame = 0,
@@ -2915,6 +2955,10 @@
       (config.container?.() ?? document.body).append(host);
       api.place();
       if (!visible) return;
+      backLayer?.release();
+      backLayer = config.back === false ? undefined : trackBackLayer(host, () =>
+        (config.back ?? config.close)?.(),
+      );
       if (api.frozen) {
         for (const [key, value] of Object.entries(api.frozen))
           panel.style[key] = value;
@@ -2954,6 +2998,7 @@
     api.close = (options = {}) => {
       if (!visible) return;
       visible = false;
+      backLayer?.closing();
       const version = ++generation;
       stop();
       host.inert = true;
@@ -2978,6 +3023,8 @@
       animation = cssMotion(panel, "floating-motion", false, () => {
         if (visible || version !== generation) return;
         host.remove();
+        backLayer?.release();
+        backLayer = undefined;
         config.closed?.();
       });
     };
@@ -2987,6 +3034,8 @@
       animation?.cancel();
       stop();
       host.remove();
+      backLayer?.release();
+      backLayer = undefined;
       config.destroyed?.();
       owner.cleanups.delete(api.destroy);
     };
@@ -3265,8 +3314,13 @@
       c.release = acquireModal(c.overlay, () => {
         if (c.p.closeOnEscape !== false) c.close();
       });
+      c.backLayer?.release();
+      c.backLayer = trackBackLayer(c.overlay, () => {
+        if (c.p.closeOnEscape !== false) c.close();
+      });
       c.motion = cssMotion(c.overlay, kind + "-motion", true);
     } else {
+      c.backLayer?.closing();
       c.release?.();
       c.release = undefined;
       c.overlay.inert = true;
@@ -3275,6 +3329,8 @@
       c.motion = cssMotion(c.overlay, kind + "-motion", false, () => {
         if (c.opened) return;
         c.overlay.remove();
+        c.backLayer?.release();
+        c.backLayer = undefined;
         c.swipe?.reset();
         c.emit("after-leave");
       });
@@ -3284,6 +3340,7 @@
     c.release?.();
     c.motion?.cancel();
     c.overlay.remove();
+    c.backLayer?.release();
   }
   register("PopupActions", {
     defaults: { cancelText: "取消" },
@@ -3682,6 +3739,9 @@
         pin: () => level.pin,
         contains,
         container: () => level.parent?.floating.host.parentElement,
+        back: () => level.parent
+          ? returnTo(c.levels.indexOf(level) - 1)
+          : c.close(true),
         destroyed: () => {
           c.retiringLevels.delete(level);
           level.stopKeydown?.();
@@ -4600,6 +4660,8 @@
       placement: () => properties.placement ?? "top",
       motion: () => "fade",
       close: () => properties.close?.(),
+      // 滑块的常驻数值提示不占用返回；独立 Tooltip 才作为可关闭弹层。
+      back: properties.back ? () => properties.close?.() : false,
     });
     floating.panel.classList.add("my-tooltip-panel");
     floating.panel.style.setProperty("--floating-width", "max-content");
@@ -4640,6 +4702,7 @@
       c.element.classList.add("my-tooltip-trigger");
       c.floating = tooltipPanel(c, () => c.anchor ?? c.element, {
         id: c.id,
+        back: true,
         close: () => c.hide(),
       });
       let showTimer,
@@ -6734,6 +6797,7 @@
     mount,
     init,
     popup,
+    layers,
   };
   // 纯函数单独暴露给适配层和定向回归，不引入运行时依赖。
   Object.defineProperty(api, "utils", {

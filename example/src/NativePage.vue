@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { AppBar, Button, Card, CellGroup, Icon, Input, ListRow, Stepper } from '@my-ui/vue'
+import { h, ref } from 'vue'
+import { AppBar, Button, Card, CellGroup, Icon, Input, ListRow, Menu, Popup, Stepper, popup } from '@my-ui/vue'
 import ThemeSettings from './demo/ThemeSettings.vue'
 import { canOpenNativePage, closeNativePage } from './native-page'
 import { updateDemoCache, useSharedDemoStore } from './stores/shared'
@@ -23,6 +23,24 @@ async function updateCache() {
   try { await updateDemoCache() }
   catch (reason) { error.value = reason instanceof Error ? reason.message : String(reason) }
 }
+
+function openOverlay(kind: 'sheet' | 'drawer') {
+  const options = {
+    title: '弹层优先返回',
+    content: () => h('div', { style: 'display: grid; gap: 16px' }, [
+      h('p', '先展开菜单或确认弹窗，再试试系统返回。每次只返回一层。'),
+      h(Menu, {
+        label: '选择分类', anchor: 'element',
+        options: [{ value: 'move', label: '移动到', children: [
+          { value: 'notes', label: '日常笔记' }, { value: 'ideas', label: '灵感收藏' },
+        ] }],
+      }, () => h(Button, { variant: 'outline' }, () => '选择分类')),
+      h(Button, { onClick: () => popup.showAlert({ title: '再确认一次', message: '返回只关闭这层确认，下面的面板会保留。', confirmText: '知道了' }) }, () => '再打开一层确认'),
+    ]),
+  }
+  if (kind === 'drawer') popup.showDrawer(options)
+  else popup.showSheet(options)
+}
 </script>
 
 <template>
@@ -39,11 +57,15 @@ async function updateCache() {
         <div class="native-page-actions"><Button @click="back">{{ available ? '返回上一页' : '回到示例首页' }}</Button><Button variant="text" @click="updateCache">从本地更新</Button></div>
         <p v-if="error || shared.$shared?.error" class="native-page-error" role="alert">{{ error || shared.$shared?.error?.message }}</p>
       </Card>
+      <Card title="弹层优先返回" description="先关闭最上层弹窗，再返回当前页面">
+        <div class="native-page-actions"><Button variant="outline" @click="openOverlay('sheet')">展开底部面板</Button><Button variant="outline" @click="openOverlay('drawer')">打开抽屉</Button></div>
+      </Card>
       <Card title="继续向下看看" description="这一页也可以独立滚动">
         <CellGroup><ListRow v-for="(title, index) in ['随手记录的想法', '周末的小计划', '收藏的好风景', '想完成的一件事', '给未来的自己', '今天的好心情', '留一点空白', '慢慢来，也很好']" :key="title" :title="title" :description="'第 ' + (index + 1) + ' 条记录'" :icon="index % 2 ? 'heart' : 'spark'" /></CellGroup>
       </Card>
       <p class="native-page-footnote">备注和计数由两页共用，滚动位置与打开时间各自保留。</p>
     </main>
+    <Popup />
   </div>
 </template>
 

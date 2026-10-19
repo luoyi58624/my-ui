@@ -1,0 +1,74 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>my-ui 弹层系统返回回归</title><link rel="stylesheet" href="/packages/core/my-ui.css"><script src="/packages/core/my-ui.js"></script>
+<style>main{max-width:700px;margin:auto;padding:24px}#fixture{margin:24px 0}pre{white-space:pre-wrap;font:13px/1.8 monospace}</style>
+<main><h1>弹层系统返回</h1><button id="run">运行定向检查</button><div id="fixture"></div><pre id="result">尚未运行</pre></main>
+<script type="module">
+import {createApp,h,ref,nextTick} from 'vue'
+import {Dialog,Menu,Button} from '/packages/vue/index.ts'
+const fixture=document.querySelector('#fixture'),reports=[],owned=[];
+let app,unsubscribe;
+const assert=(value,message)=>{if(!value)throw Error(message)};
+const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const tick=async()=>{await nextTick();await new Promise(resolve=>requestAnimationFrame(resolve));await nextTick()};
+const add=(name,properties={},slots={})=>{const c=MyUI.create(name,properties,{slots});owned.push(c);fixture.append(c.element);return c};
+const shown=selector=>[...document.querySelectorAll(selector)].filter(node=>node.getClientRects().length&&!node.closest('[inert]'));
+const cleanup=async()=>{unsubscribe?.();unsubscribe=undefined;app?.unmount();app=undefined;MyUI.popup.closeAll();for(const c of owned.splice(0))c.destroy();fixture.replaceChildren();await pause(300)};
+const check=async(name,run)=>{try{await cleanup();await run();reports.push({name,pass:true})}catch(error){reports.push({name,pass:false,error:String(error.stack||error)})}finally{await cleanup()}};
+document.querySelector('#run').onclick=async()=>{
+  document.querySelector('#run').disabled=true;reports.length=0;document.querySelector('#result').textContent='检查中';
+  await check('没有弹层时放行返回，订阅立即返回状态且可取消',async()=>{
+    const events=[];unsubscribe=MyUI.layers.subscribe(active=>events.push(active));assert(events[0]===false,'初始状态错误');assert(!MyUI.layers.dismissTop(),'空页面消费了返回');
+    unsubscribe();unsubscribe=undefined;add('Dialog',{value:true,title:'订阅取消'});assert(events.length===1,'取消后仍收到通知');
+  });
+  await check('对话框淡出期间继续拦截，动画结束后释放并恢复焦点',async()=>{
+    const trigger=add('Button',{label:'打开'}).element;trigger.focus();const events=[];unsubscribe=MyUI.layers.subscribe(active=>events.push(active));
+    const dialog=add('Dialog',{value:true,title:'确认',icon:false});await pause(300);assert(MyUI.layers.dismissTop(),'未关闭对话框');
+    assert(!dialog.element.isConnected||!shown('.my-overlay.my-show').length,'对话框未进入关闭状态');
+    assert(document.querySelector('.my-overlay'),'直接销毁了动画节点');assert(MyUI.layers.dismissTop(),'淡出期间返回穿透');
+    await pause(350);assert(!MyUI.layers.dismissTop(),'动画结束仍占用返回');assert(events.at(-1)===false,'没有释放订阅状态');assert(document.activeElement===trigger,'未恢复触发器焦点');
+  });
+  await check('嵌套弹窗每次只返回一层，快速重复返回不关闭底层',async()=>{
+    add('Sheet',{value:true,title:'底层面板'});await pause(300);add('Dialog',{value:true,title:'顶层确认',icon:false});await pause(300);
+    MyUI.layers.dismissTop();MyUI.layers.dismissTop();assert(shown('.my-sheet-overlay.my-show').length===1,'关闭了底层面板');
+    await pause(350);assert(shown('.my-sheet-overlay.my-show').length===1,'底层未保留');MyUI.layers.dismissTop();await pause(350);assert(!MyUI.layers.dismissTop(),'嵌套关闭后仍有记录');
+  });
+  await check('禁止 Escape 关闭的弹层仍消费返回，允许业务按钮关闭',async()=>{
+    const dialog=add('Dialog',{value:true,title:'必须选择',closeOnEscape:false});await tick();assert(MyUI.layers.dismissTop(),'受限弹窗返回穿透');
+    assert(shown('.my-overlay.my-show').length===1,'绕过了关闭限制');dialog.exposed.close();await pause(350);assert(!MyUI.layers.dismissTop(),'程序关闭后记录残留');
+  });
+  await check('级联菜单返回子级、根菜单，源图标和触发器焦点保留',async()=>{
+    const button=document.createElement('button');button.textContent='选择分类';
+    const menu=add('Menu',{label:'分类',anchor:'element',options:[{value:'move',label:'移动到',icon:'inbox',children:[{value:'notes',label:'日常笔记'}]}]},{default:button});
+    menu.exposed.show(button);await pause(320);shown('[data-menu-item]')[0].click();await pause(320);
+    assert(shown('.my-floating-panel').length===2,'子级未展开');MyUI.layers.dismissTop();await pause(350);assert(shown('.my-floating-panel').length===1,'未逐级返回');
+    assert(shown('[data-menu-item]')[0].querySelector('svg'),'父行图标丢失');MyUI.layers.dismissTop();await pause(350);assert(!MyUI.layers.dismissTop(),'根菜单关闭后残留');assert(document.activeElement===button,'根菜单未还原焦点');
+  });
+  await check('弹窗内的 Combobox 先关闭列表，再关闭弹窗',async()=>{
+    const combo=MyUI.create('Combobox',{label:'城市',options:[{value:'hz',label:'杭州'}]});owned.push(combo);
+    add('Dialog',{value:true,title:'编辑目的地'},{default:combo.element});await pause(320);combo.element.querySelector('input').focus();await pause(200);
+    assert(shown('.my-combobox-panel').length===1,'未打开搜索列表');MyUI.layers.dismissTop();await pause(350);assert(shown('.my-overlay.my-show').length===1&&!shown('.my-combobox-panel').length,'未单独关闭列表');
+    MyUI.layers.dismissTop();await pause(350);assert(!MyUI.layers.dismissTop(),'未关闭外层');
+  });
+  await check('API 弹层返回沿用取消结果，释放内容并清空返回栈',async()=>{
+    const sheet=MyUI.popup.showSheet({title:'API 面板',content:()=>document.createTextNode('自由组合内容')});await pause(300);
+    const confirm=MyUI.popup.showAlert({title:'API 确认',message:'按返回取消'});await pause(300);MyUI.layers.dismissTop();assert(await confirm===false,'返回被当成确认');
+    await pause(350);assert(shown('.my-sheet-overlay.my-show').length===1,'API 底层被关闭');MyUI.layers.dismissTop();assert(await sheet.closed===undefined,'取消结果错误');await pause(350);assert(!MyUI.layers.dismissTop(),'API 退出后残留');
+  });
+  await check('重新打开与卸载清理返回记录，不被旧动画移除新记录',async()=>{
+    const drawer=add('Drawer',{value:true,title:'抽屉'});await pause(300);MyUI.layers.dismissTop();drawer.update({value:true});await pause(350);
+    assert(MyUI.layers.dismissTop(),'旧动画清除了重新打开的记录');drawer.destroy();await tick();assert(!MyUI.layers.dismissTop(),'销毁后仍拦截返回');
+  });
+  await check('独立 Tooltip 可关闭，滑块常驻数值不阻止页面返回',async()=>{
+    const trigger=document.createElement('button');trigger.textContent='说明';add('Tooltip',{content:'文字说明'},{default:trigger});trigger.focus();await pause(300);
+    assert(MyUI.layers.dismissTop(),'Tooltip 未拦截返回');await pause(300);trigger.blur();assert(!MyUI.layers.dismissTop(),'Tooltip 关闭后残留');
+    add('Slider',{value:30,valueLabelDisplay:'on'});await pause(300);assert(shown('.my-tooltip-panel').length>0,'数值提示未显示');assert(!MyUI.layers.dismissTop(),'常驻数值阻止页面返回');
+  });
+  await check('Vue v-model 同步且内层菜单先返回，外层内容不丢失',async()=>{
+    const open=ref(true);app=createApp({setup:()=>()=>h(Dialog,{modelValue:open.value,'onUpdate:modelValue':value=>open.value=value,title:'Vue 弹窗'},()=>h(Menu,{label:'Vue 菜单',anchor:'element',options:[{value:'one',label:'选项'}]},()=>h(Button,{id:'vue-menu-trigger'},()=> '打开菜单')))});app.mount(fixture);
+    await pause(320);document.querySelector('#vue-menu-trigger').click();await pause(320);MyUI.layers.dismissTop();await pause(350);assert(open.value,'菜单返回关闭了 Vue 弹窗');
+    MyUI.layers.dismissTop();await tick();assert(!open.value,'v-model 未同步');await pause(350);assert(!MyUI.layers.dismissTop(),'Vue 记录残留');
+  });
+  document.querySelector('#result').textContent=JSON.stringify({passed:reports.filter(item=>item.pass).length,total:reports.length,reports},null,2);
+  window.__overlayBackResults=reports;document.querySelector('#run').disabled=false;
+};
+</script></html>
