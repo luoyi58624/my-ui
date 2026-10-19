@@ -313,7 +313,11 @@ bun run dev
 bun run build
 ```
 
-开发地址默认 `http://127.0.0.1:5178/`，原生入口为 `/native.html`。CSS 保存后即时更新；修改 JS 核心会完整刷新示例，避免旧实例残留。构建结果同时提供 Vue 页面、原生页面和原样的 CSS/JS。
+开发地址默认 `http://127.0.0.1:5178/`，原生入口为 `/native.html`。首页采用移动 App 布局，顶部导航固定，底部为“基础、表单、反馈、示例”四个分类。各页独立滚动并保留输入状态，再点当前分类回到顶部；分类切换不会增加原生返回历史。旧的 `#combobox`、`#slider-options` 等链接仍会定位到对应页面，原生页面跳转与共享状态集中在“示例”页。
+
+`example/src/DemoLayout.vue` 负责导航、安全区、滚动恢复与链接定位，`App.vue` 通过四个页面插槽组织组件演示。CSS 保存后即时更新；修改 JS 核心会完整刷新示例，避免旧实例残留。构建结果同时提供 Vue 页面、原生页面和原样的 CSS/JS。
+
+`tests/demo-layout.browser.html` 使用真实示例入口检查四页切换、滚动和输入保留、旧链接、弹层返回、键盘、320px 窄屏与桌面布局。
 
 `bun run check` 检查 Vue 封装和示例类型；`bun run preview` 在 4178 端口预览 `dist/`。构建后的 `dist/native.html` 与 `dist/lib/` 可直接离线使用，`dist/lib/` 同时保留原生类型声明。
 

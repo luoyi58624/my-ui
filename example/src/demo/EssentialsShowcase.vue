@@ -59,7 +59,7 @@ onBeforeUnmount(() => clearTimeout(feedTimer))
 
 <template>
   <section id="scenarios" ref="root" class="essentials-section">
-    <div class="section-heading"><div><span class="section-number">05 / 完整示例</span><h2>让每个状态，都有回应</h2></div><p>从填写资料到浏览内容，把常用组件连成完整体验。</p></div>
+    <div class="section-heading"><div><span class="section-number">完整示例</span><h2>让每个状态，都有回应</h2></div><p>从填写资料到浏览内容，把常用组件连成完整体验。</p></div>
     <div class="scene-grid">
       <ProfileFormExample @notify="emit('notify', $event)" />
 
@@ -106,7 +106,7 @@ onBeforeUnmount(() => clearTimeout(feedTimer))
 </template>
 
 <style scoped>
-.essentials-section { margin: 62px 0 60px; }
+.essentials-section { margin: 0; }
 .section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 26px; }
 .section-number { color: var(--primary); font-size: 12px; font-weight: var(--font-weight-subtitle, 600); }
 h2 { margin: 12px 0 0; font-size: 29px; line-height: 1.35; font-weight: var(--font-weight-title, 700); letter-spacing: -.7px; }
@@ -121,5 +121,5 @@ h2 { margin: 12px 0 0; font-size: 29px; line-height: 1.35; font-weight: var(--fo
 .clear-favorite { margin-top: 16px; }
 .outlined-input { --input-background: var(--card-background); --input-border-color: var(--border); --input-radius: 8px; }
 .borderless-input { --input-border: none; --input-background: var(--fill); --input-radius: 6px; }
-@media (max-width:760px) { .essentials-section { margin-top: 44px; } .section-heading { display: block; margin-bottom: 22px; } h2 { font-size: 25px; } .section-heading p { margin-top: 12px; } .scene-grid { grid-template-columns: 1fr; gap: 16px; } }
+@media (max-width:760px) { .section-heading { display: block; margin-bottom: 22px; } h2 { font-size: 25px; } .section-heading p { margin-top: 12px; } .scene-grid { grid-template-columns: 1fr; gap: 16px; } }
 </style>

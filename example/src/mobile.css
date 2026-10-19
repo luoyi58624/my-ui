@@ -22,22 +22,4 @@ html.my-mobile-native img {
   -webkit-user-drag: none;
 }
 
-/*
- * 状态栏 / 手势条安全区（edge-to-edge + viewport-fit=cover）。
- * 移动端固定顶栏 .masthead 高 100px、body 顶部留白 100px，各加一个安全区高度；
- * content-box 让顶栏内容区保持 100px，额外 padding 只用于让出状态栏。
- */
-html.my-mobile-native .masthead {
-  height: 100px;
-  padding-top: env(safe-area-inset-top);
-  box-sizing: content-box;
-}
-
-html.my-mobile-native body {
-  padding-top: calc(100px + env(safe-area-inset-top));
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-html.my-mobile-native {
-  scroll-padding-top: calc(100px + env(safe-area-inset-top));
-}
+/* 首页 App 布局与原生子页各自处理状态栏、底部手势条的安全区。 */
