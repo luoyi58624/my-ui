@@ -124,31 +124,30 @@ async function selectAction(action: Option) {
 
 <template>
   <DemoLayout>
-    <template #components>
-      <section id="actions">
-        <div class="section-title"><div><h2>按钮与标签</h2></div><div class="subtitle">清晰的操作层级，自然的按压反馈。</div></div>
-        <div class="pair">
-          <Card title="操作按钮" description="柔和而明确的操作层级" sample="BUTTONS">
-            <div class="button-showcase">
-              <div class="button-example"><div class="button-group-title">基础按钮</div><div class="btn-row"><Button @click="notify('主要操作已执行')">主要按钮</Button><Button variant="outline" @click="notify('镂空按钮已点击')">镂空按钮</Button><Button variant="text" @click="notify('已打开详情')">文本按钮 <Icon name="chevron-right" /></Button></div></div>
-              <div class="button-example"><div class="button-group-title">图标按钮</div><div class="icon-actions"><Button variant="icon" icon="heart" aria-label="收藏" :selected="liked" :style="liked ? { color: 'var(--danger)' } : undefined" @click="toggleLike" /><Button variant="icon" icon="share" aria-label="分享" @click="openSheet" /><Button variant="icon" icon="add" aria-label="添加" @click="notify('已添加新项目（原型示例）')" /><Menu :options="sheetActions" label="更多操作" @select="selectAction"><template #default="{ trigger }"><Button v-bind="trigger" variant="bare" icon="grid" aria-label="更多" /></template></Menu></div></div>
-              <div class="button-example"><div class="button-group-title">其他状态</div><div class="btn-row"><Button icon="check" @click="notify('已保存')">带图标按钮</Button><Button disabled>禁用按钮</Button></div></div>
-            </div>
-          </Card>
-          <Card title="轻量标签" description="轻量、舒展，也包含纯展示型标签" sample="TAG / TAG GROUP">
-            <div class="tag-showcase">
-              <div class="display-block"><div class="tiny-label"><span>DISPLAY TAGS / 展示型标签</span><span>只承担信息表达</span></div><div class="display-tags" aria-label="展示型标签示例"><Tag>推荐</Tag><Tag tone="green">已完成</Tag><Tag tone="orange">处理中</Tag><Tag tone="red">需留意</Tag><Tag tone="gray">草稿</Tag></div></div>
-              <div class="soft-box"><div class="soft-box-title">今天想探索什么？</div><div class="soft-box-desc">选择一个你喜欢的方向</div><TagGroup v-model="direction" :options="directions" label="探索方向" /></div>
-              <div class="tag-selection-demo"><div class="tiny-label">多选标签</div><TagGroup v-model="multiDirections" :options="[...directions, { value: '未开放', label: '未开放', disabled: true }]" label="多选方向" /><p>已选：{{ multiDirections.join('、') || '暂无' }}</p></div>
-              <div class="tag-selection-demo"><div class="tiny-label">独立标签</div><div class="display-tags"><Tag v-model="selectedTag">稍后阅读</Tag><Tag :model-value="false" disabled>暂不可选</Tag></div><p>{{ selectedTag ? '已加入稍后阅读' : '未选择稍后阅读' }}</p></div>
-            </div>
-            <div class="chips-foot"><span>当前偏好：{{ direction }}</span><div class="color-dots" aria-label="蓝色色阶"><i></i><i></i><i></i></div></div>
-          </Card>
-        </div>
+    <template #button>
+      <section id="buttons">
+        <Card title="操作按钮" description="柔和而明确的操作层级" sample="BUTTONS">
+          <div class="button-showcase">
+            <div class="button-example"><div class="button-group-title">基础按钮</div><div class="btn-row"><Button @click="notify('主要操作已执行')">主要按钮</Button><Button variant="outline" @click="notify('镂空按钮已点击')">镂空按钮</Button><Button variant="text" @click="notify('已打开详情')">文本按钮 <Icon name="chevron-right" /></Button></div></div>
+            <div class="button-example"><div class="button-group-title">图标按钮</div><div class="icon-actions"><Button variant="icon" icon="heart" aria-label="收藏" :selected="liked" :style="liked ? { color: 'var(--danger)' } : undefined" @click="toggleLike" /><Button variant="icon" icon="share" aria-label="分享" @click="openSheet" /><Button variant="icon" icon="add" aria-label="添加" @click="notify('已添加新项目（原型示例）')" /><Menu :options="sheetActions" label="更多操作" @select="selectAction"><template #default="{ trigger }"><Button v-bind="trigger" variant="bare" icon="grid" aria-label="更多" /></template></Menu></div></div>
+            <div class="button-example"><div class="button-group-title">其他状态</div><div class="btn-row"><Button icon="check" @click="notify('已保存')">带图标按钮</Button><Button disabled>禁用按钮</Button></div></div>
+          </div>
+        </Card>
       </section>
-
-      <section id="surfaces" class="section-gap">
-        <div class="section-title"><div><h2>卡片与导航</h2></div><div class="subtitle">柔和的层次和留白，突出内容本身。</div></div>
+    </template>
+    <template #tag>
+      <Card title="轻量标签" description="轻量、舒展，也包含纯展示型标签" sample="TAG / TAG GROUP">
+        <div class="tag-showcase">
+          <div class="display-block"><div class="tiny-label"><span>DISPLAY TAGS / 展示型标签</span><span>只承担信息表达</span></div><div class="display-tags" aria-label="展示型标签示例"><Tag>推荐</Tag><Tag tone="green">已完成</Tag><Tag tone="orange">处理中</Tag><Tag tone="red">需留意</Tag><Tag tone="gray">草稿</Tag></div></div>
+          <div class="soft-box"><div class="soft-box-title">今天想探索什么？</div><div class="soft-box-desc">选择一个你喜欢的方向</div><TagGroup v-model="direction" :options="directions" label="探索方向" /></div>
+          <div class="tag-selection-demo"><div class="tiny-label">多选标签</div><TagGroup v-model="multiDirections" :options="[...directions, { value: '未开放', label: '未开放', disabled: true }]" label="多选方向" /><p>已选：{{ multiDirections.join('、') || '暂无' }}</p></div>
+          <div class="tag-selection-demo"><div class="tiny-label">独立标签</div><div class="display-tags"><Tag v-model="selectedTag">稍后阅读</Tag><Tag :model-value="false" disabled>暂不可选</Tag></div><p>{{ selectedTag ? '已加入稍后阅读' : '未选择稍后阅读' }}</p></div>
+        </div>
+        <div class="chips-foot"><span>当前偏好：{{ direction }}</span><div class="color-dots" aria-label="蓝色色阶"><i></i><i></i><i></i></div></div>
+      </Card>
+    </template>
+    <template #card>
+      <section id="surfaces">
         <div class="content-grid">
           <Card class="feature-panel">
             <div><div class="feature-icon"><Icon name="cloud" /></div><h3>云端，让美好保持同步</h3><p class="feature-desc">让重要的内容始终触手可及，<br />自由而安心地连接每一刻。</p></div>
@@ -159,86 +158,122 @@ async function selectAction(action: Option) {
             <Card class="mini-feature" title="查看最近浏览" interactive @activate="notify(laterSaved ? '稍后查看：my-ui 组件示例' : '正在查看最近浏览（原型示例）')"><div class="mini-icon mint"><Icon name="clock" /></div><div><strong>最近浏览</strong><p>从上次停下的地方继续</p></div><span class="arrow-btn" aria-hidden="true"><Icon name="chevron-right" /></span></Card>
           </div>
         </div>
-        <div class="secondary-pair"><ShadowShowcase @notify="notify" /></div>
-        <div class="secondary-pair"><IdentityShowcase /></div>
-        <div class="secondary-pair"><ImageShowcase /></div>
-        <div class="secondary-pair"><AppBarShowcase @notify="notify" /></div>
-        <Card class="navigation-panel"><div class="nav-descrip"><h3>底部导航</h3><p>图标与文字配合选中状态，支持点击与键盘切换。</p></div><Navigation v-model="navigation" :options="navOptions" /></Card>
-        <div class="list-grid" aria-label="列表示例">
-          <Card class="list-panel" title="选择列表" description="传统单选与复选，左侧选择框，右侧标题" sample="SELECTABLE LIST">
-            <div class="list-group"><div class="list-section-name">单选列表</div><Choices v-model="readerTheme" list label="阅读偏好" :options="readerOptions" /></div>
-            <div class="list-group"><div class="list-section-name">复选列表</div><Choices v-model="syncContent" type="checkbox" list label="同步内容" :options="syncOptions" /></div>
-          </Card>
-          <Card class="list-panel" title="导航列表" description="跳转页面、切换设置与锚点弹出菜单" sample="NAVIGATION LIST">
-            <CellGroup title="设置与操作">
-              <ListRow title="个人资料" description="查看与编辑账号信息" @click="notify('个人资料页面（原型示例）')" />
-              <ListRow title="隐私与安全" description="权限、账号保护" @click="notify('隐私设置页面（原型示例）')" />
-              <ListRow title="内存" description="查看内存的使用情况、当前运行的应用与最近的资源占用统计。" @click="notify('内存页面（原型示例）')" />
-              <ListRow title="WebView 实现" value="Android System WebView" @click="notify('WebView 设置（原型示例）')" />
-              <ListRow v-model="autoUpdate" toggle title="自动更新" description="在后台保持内容最新" />
-              <Popover v-model="sort" label="排序方式" :options="sortOptions"><template #default="{ toggle, open, controls }"><ListRow title="排序方式" description="选择内容的排列顺序" :value="sort" aria-haspopup="listbox" :aria-expanded="open" :aria-controls="controls" @click="toggle" /></template></Popover>
-            </CellGroup>
-          </Card>
-        </div>
       </section>
     </template>
-    <template #forms>
+    <template #shadows>
+      <ShadowShowcase @notify="notify" />
+    </template>
+    <template #identity>
+      <IdentityShowcase />
+    </template>
+    <template #image>
+      <ImageShowcase />
+    </template>
+    <template #app-bar>
+      <AppBarShowcase @notify="notify" />
+    </template>
+    <template #navigation>
+      <Card class="navigation-panel"><div class="nav-descrip"><h3>底部导航</h3><p>图标与文字配合选中状态，支持点击与键盘切换。</p></div><Navigation v-model="navigation" :options="navOptions" /></Card>
+    </template>
+    <template #list>
+      <div class="list-grid" aria-label="列表示例">
+        <Card class="list-panel" title="选择列表" description="传统单选与复选，左侧选择框，右侧标题" sample="SELECTABLE LIST">
+          <div class="list-group"><div class="list-section-name">单选列表</div><Choices v-model="readerTheme" list label="阅读偏好" :options="readerOptions" /></div>
+          <div class="list-group"><div class="list-section-name">复选列表</div><Choices v-model="syncContent" type="checkbox" list label="同步内容" :options="syncOptions" /></div>
+        </Card>
+        <Card class="list-panel" title="导航列表" description="跳转页面、切换设置与锚点弹出菜单" sample="NAVIGATION LIST">
+          <CellGroup title="设置与操作">
+            <ListRow title="个人资料" description="查看与编辑账号信息" @click="notify('个人资料页面（原型示例）')" />
+            <ListRow title="隐私与安全" description="权限、账号保护" @click="notify('隐私设置页面（原型示例）')" />
+            <ListRow title="内存" description="查看内存的使用情况、当前运行的应用与最近的资源占用统计。" @click="notify('内存页面（原型示例）')" />
+            <ListRow title="WebView 实现" value="Android System WebView" @click="notify('WebView 设置（原型示例）')" />
+            <ListRow v-model="autoUpdate" toggle title="自动更新" description="在后台保持内容最新" />
+            <Popover v-model="sort" label="排序方式" :options="sortOptions"><template #default="{ toggle, open, controls }"><ListRow title="排序方式" description="选择内容的排列顺序" :value="sort" aria-haspopup="listbox" :aria-expanded="open" :aria-controls="controls" @click="toggle" /></template></Popover>
+          </CellGroup>
+        </Card>
+      </div>
+    </template>
+    <template #input>
       <section id="controls">
-        <div class="section-title"><div><h2>输入与选择</h2></div><div class="subtitle">为手指设计的控件尺寸，状态变化一目了然。</div></div>
-        <div class="pair equal">
-          <Card title="输入与搜索" description="用轻柔的底色承接每一次输入" sample="INPUT">
-            <div class="field-group">
-              <Input v-model="search" label="搜索" icon="search" clearable placeholder="寻找你感兴趣的内容…" />
-              <Input v-model="nickname" label="昵称" :maxlength="24"><template #hint><span>为自己取个喜欢的名字</span><span :class="{ valid: nickname.trim() }"><Icon v-if="nickname.trim()" name="check" />{{ nickname.trim() ? '已填写' : '待填写' }}</span></template></Input>
-              <Select v-model="category" label="内容分类" :options="categories"><template #hint><span>已选择：{{ category }}</span><span>下拉展开简洁柔和</span></template></Select>
-            </div>
-          </Card>
-          <Card title="开关与偏好" description="简单设置，也值得被认真对待" sample="SWITCH">
-            <div class="pref-list">
-              <ListRow v-for="item in preferences" :key="item.title" v-model="item.on" toggle :title="item.title" :description="item.description">
-                <template #leading><Icon :name="item.icon" /></template>
-              </ListRow>
-            </div>
-            <div class="control-foot"><span>你的偏好已在本页实时更新</span><strong>{{ enabledCount }} 项开启</strong></div>
-          </Card>
-        </div>
-        <div class="pair equal secondary-pair">
-          <Card title="分段选择与滑块" description="更流畅的选择体验" sample="SEGMENT / SLIDER">
-            <Segmented v-model="mode" :options="modes" label="浏览方式" />
-            <div class="mode-card"><div class="mode-symbol"><Icon :name="activeMode.icon ?? 'spark'" /></div><div><strong>{{ activeMode.label }}模式</strong><p>{{ activeMode.description }}</p></div></div>
-            <Slider v-model="strength" label="显示强度" />
-            <Slider v-model="customStrength" class="custom-slider" label="自定义滑块" unit="%" />
-          </Card>
-          <Card title="选择与数量" description="干净利落的选中状态" sample="SELECTION">
-            <div class="choice-groups"><Choices v-model="plan" label="单选" :options="plans" /><Choices v-model="features" type="checkbox" label="复选" :options="featureOptions" /></div>
-            <div class="choice-bottom"><span>添加到我的收藏</span><Stepper v-model="quantity" /></div>
-          </Card>
-        </div>
-        <SelectionCollapseShowcase />
-        <div class="secondary-pair"><ComboboxShowcase /></div>
-        <div class="secondary-pair"><PickerShowcase /></div>
-        <div class="secondary-pair"><DateTimeShowcase /></div>
-        <div class="secondary-pair"><UploadShowcase /></div>
+        <Card title="输入与搜索" description="用轻柔的底色承接每一次输入" sample="INPUT">
+          <div class="field-group">
+            <Input v-model="search" label="搜索" icon="search" clearable placeholder="寻找你感兴趣的内容…" />
+            <Input v-model="nickname" label="昵称" :maxlength="24"><template #hint><span>为自己取个喜欢的名字</span><span :class="{ valid: nickname.trim() }"><Icon v-if="nickname.trim()" name="check" />{{ nickname.trim() ? '已填写' : '待填写' }}</span></template></Input>
+            <Select v-model="category" label="内容分类" :options="categories"><template #hint><span>已选择：{{ category }}</span><span>下拉展开简洁柔和</span></template></Select>
+          </div>
+        </Card>
       </section>
+    </template>
+    <template #switch>
+      <Card title="开关与偏好" description="简单设置，也值得被认真对待" sample="SWITCH">
+        <div class="pref-list">
+          <ListRow v-for="item in preferences" :key="item.title" v-model="item.on" toggle :title="item.title" :description="item.description">
+            <template #leading><Icon :name="item.icon" /></template>
+          </ListRow>
+        </div>
+        <div class="control-foot"><span>你的偏好已在本页实时更新</span><strong>{{ enabledCount }} 项开启</strong></div>
+      </Card>
+    </template>
+    <template #slider>
+      <Card title="分段选择与滑块" description="更流畅的选择体验" sample="SEGMENT / SLIDER">
+        <Segmented v-model="mode" :options="modes" label="浏览方式" />
+        <div class="mode-card"><div class="mode-symbol"><Icon :name="activeMode.icon ?? 'spark'" /></div><div><strong>{{ activeMode.label }}模式</strong><p>{{ activeMode.description }}</p></div></div>
+        <Slider v-model="strength" label="显示强度" />
+        <Slider v-model="customStrength" class="custom-slider" label="自定义滑块" unit="%" />
+      </Card>
+    </template>
+    <template #selection>
+      <Card title="选择与数量" description="干净利落的选中状态" sample="SELECTION">
+        <div class="choice-groups"><Choices v-model="plan" label="单选" :options="plans" /><Choices v-model="features" type="checkbox" label="复选" :options="featureOptions" /></div>
+        <div class="choice-bottom"><span>添加到我的收藏</span><Stepper v-model="quantity" /></div>
+      </Card>
+    </template>
+    <template #selection-collapse>
+      <SelectionCollapseShowcase />
+    </template>
+    <template #combobox>
+      <ComboboxShowcase />
+    </template>
+    <template #picker>
+      <PickerShowcase />
+    </template>
+    <template #date-time-picker>
+      <DateTimeShowcase />
+    </template>
+    <template #upload>
+      <UploadShowcase />
     </template>
     <template #feedback>
       <section id="feedback">
-        <div class="section-title"><div><h2>提示与弹层</h2></div><div class="subtitle">提示、确认对话框和移动端操作面板。</div></div>
         <div class="feedback-grid">
           <Card class="feedback-panel" title="轻提示" description="恰如其分的成功反馈" sample="TOAST"><div class="toast-sample"><Icon name="check" /><div><strong>保存成功</strong><small>你的更改已经同步</small></div></div><Button variant="link" @click="notify('你的更改已经同步')">体验轻提示 <Icon name="arrow-right" /></Button></Card>
           <Card class="feedback-panel" title="确认弹窗" description="重要操作，清晰表达" sample="DIALOG"><div class="empty-illustration"><div class="empty-image"><Icon name="shield" /></div><span>每个决定，都值得确认</span></div><Button variant="link" @click="openDialog">打开确认弹窗 <Icon name="arrow-right" /></Button></Card>
           <Card class="feedback-panel" title="底部操作单" description="符合移动端习惯的选择方式" sample="BOTTOM SHEET"><div class="sheet-sample"><div class="handle"></div><div class="sheet-line"></div><div class="sheet-line"></div></div><Button variant="link" @click="openSheet">展开操作面板 <Icon name="arrow-right" /></Button></Card>
         </div>
-        <FeedbackPrimitives @notify="notify" />
-        <NoticeStepsShowcase @notify="notify" />
-        <PopupShowcase @notify="notify" />
-        <TouchShowcase @notify="notify" />
-        <MenuShowcase @notify="notify" />
       </section>
     </template>
-    <template #examples>
+    <template #primitives>
+      <FeedbackPrimitives @notify="notify" />
+    </template>
+    <template #notice-steps>
+      <NoticeStepsShowcase @notify="notify" />
+    </template>
+    <template #popup>
+      <PopupShowcase @notify="notify" />
+    </template>
+    <template #touch-gestures>
+      <TouchShowcase @notify="notify" />
+    </template>
+    <template #menu>
+      <MenuShowcase @notify="notify" />
+    </template>
+    <template #native-navigation>
       <NativeNavigationShowcase @notify="notify" />
+    </template>
+    <template #scenarios>
       <EssentialsShowcase @notify="notify" />
+    </template>
+    <template #native-html>
       <Card class="native-example" title="原生 HTML 示例" description="同样的组件，也可以直接在 HTML 中使用">
         <a class="native-example-link" href="./native.html">打开原生 HTML 示例 <Icon name="arrow-right" /></a>
       </Card>
@@ -290,44 +325,6 @@ async function selectAction(action: Option) {
   border-radius: 20px;
   background: var(--gray);
   margin: 0 auto 14px;
-}
-
-.section-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  margin: 0 4px 24px;
-}
-
-.section-title h2 {
-  font-size: 24px;
-  line-height: 1.32;
-  letter-spacing: -.8px;
-  margin: 0;
-  font-weight: var(--font-weight-title, 700);
-}
-
-.section-title .subtitle {
-  color: var(--text-secondary);
-  line-height: 1.65;
-  max-width: 400px;
-  text-align: right;
-  font-size: 13px;
-}
-
-.section-gap {
-  margin-top: 36px;
-}
-
-.pair {
-  display: grid;
-  grid-template-columns: 1.07fr .93fr;
-  gap: 22px;
-}
-
-.pair.equal {
-  grid-template-columns: 1fr 1fr;
 }
 
 .button-showcase {
@@ -793,31 +790,6 @@ async function selectAction(action: Option) {
 
 @media (max-width: 760px) {
 
-  .section-title {
-    display: block;
-    margin-bottom: 20px;
-  }
-
-  .section-title h2 {
-    font-size: 22px;
-  }
-
-  .section-title .subtitle {
-    margin-top: 8px;
-    text-align: left;
-    font-size: 13px;
-  }
-
-  .pair {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .pair.equal {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
   .content-grid {
     grid-template-columns: 1fr;
     gap: 16px;
@@ -826,10 +798,6 @@ async function selectAction(action: Option) {
   .feedback-grid {
     grid-template-columns: 1fr;
     gap: 16px;
-  }
-
-  .section-gap {
-    margin-top: 28px;
   }
 
   .navigation-panel {
@@ -942,10 +910,6 @@ async function selectAction(action: Option) {
     gap: 16px;
     margin-top: 16px;
   }
-}
-
-.secondary-pair {
-  margin-top: 22px;
 }
 
 @media (max-width:760px) {

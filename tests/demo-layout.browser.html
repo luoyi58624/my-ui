@@ -1,11 +1,11 @@
 <!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>my-ui 移动 App 布局检查</title><style>body{font:14px system-ui;margin:20px;background:#f2f3f5;color:#17191e}iframe{display:block;width:390px;height:844px;max-width:none;border:1px solid #ddd;background:white;margin-top:20px}pre{white-space:pre-wrap}</style>
-<main><h1>移动 App 布局</h1><button id="run">运行定向检查</button><pre id="result">尚未运行</pre><div id="fixture"></div></main>
+<title>my-ui 首页列表与示例导航检查</title><style>body{font:14px system-ui;margin:20px;background:#f2f3f5;color:#17191e}iframe{display:block;width:390px;height:844px;max-width:none;border:1px solid #ddd;background:white;margin-top:20px}pre{white-space:pre-wrap}</style>
+<main><h1>首页列表与示例导航</h1><button id="run">运行定向检查</button><pre id="result">尚未运行</pre><div id="fixture"></div></main>
 <script type="module">
 const params=new URLSearchParams(location.search);
 if(params.has('frame')){
   document.body.innerHTML='<div id="app"></div>';
-  // 使用与正式示例相同的入口、主题、Pinia 和原生返回接入。
+  // 使用正式入口验证目录、真实组件、持久状态与弹层返回。
   await import('/example/src/main.ts');
 }else{
   const reports=[],fixture=document.querySelector('#fixture'),pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -16,43 +16,66 @@ if(params.has('frame')){
   const page=()=>doc.querySelector('.demo-page:not([inert])');
   const pick=async index=>{tab(index).click();await pause(90)};
   const route=async hash=>{win.location.hash=hash;await pause(160)};
+  const open=async id=>{doc.querySelector('[data-demo-link="'+id+'"]').click();await until(()=>page()?.dataset.demoPage==='example/'+id,'无法进入 '+id);await pause(70)};
+  const back=async()=>{doc.querySelector('.demo-top [aria-label="返回组件列表"]').click();await until(()=>page()?.dataset.demoPage==='home','无法返回列表');await pause(70)};
   const check=async(name,run)=>{await run();reports.push({name,passed:true})};
   document.querySelector('#run').onclick=async()=>{
     document.querySelector('#run').disabled=true;document.querySelector('#result').textContent='运行中';reports.length=0;fixture.replaceChildren();
     try{
-      frame=document.createElement('iframe');frame.src='/tests/demo-layout.browser.html?frame=1#controls';frame.title='移动 App 布局';fixture.append(frame);
-      await until(()=>frame.contentDocument?.querySelectorAll('.demo-bottom button').length===4,'示例加载失败');doc=frame.contentDocument;win=frame.contentWindow;await pause(250);
-      await check('四个底部页面真实切换，旧深链接自动选择正确页面',async()=>{
-        assert(page().dataset.demoPage==='forms'&&doc.querySelector('.demo-title').textContent==='输入与选择','初始链接没有打开表单页');
-        assert([...doc.querySelectorAll('.demo-bottom button')].map(node=>node.textContent.trim()).join(',')==='基础,表单,反馈,示例','底部不是四个分类');
-        for(const [index,value]of[[0,'components'],[1,'forms'],[2,'feedback'],[3,'examples']]){await pick(index);assert(page().dataset.demoPage===value,'未切换页面 '+value);assert(doc.querySelectorAll('.demo-page:not([inert])').length===1,'多个页面同时可交互');assert(tab(index).getAttribute('aria-current')==='page','导航未同步选中态')}
+      frame=document.createElement('iframe');frame.src='/tests/demo-layout.browser.html?frame=1#actions';frame.title='移动 App 示例';fixture.append(frame);
+      await until(()=>frame.contentDocument?.querySelectorAll('.demo-bottom button').length===4,'示例加载失败');doc=frame.contentDocument;win=frame.contentWindow;await pause(180);
+      const ids=[...doc.querySelectorAll('[data-demo-link]')].map(node=>node.dataset.demoLink);
+      await check('首页使用分组 List 导航，另外三个 Tab 为 Demo，首屏不加载组件示例',async()=>{
+        assert(page().dataset.demoPage==='home','首页未展示目录');assert(ids.length===27&&new Set(ids).size===ids.length,'目录不完整或重复');
+        assert(doc.querySelectorAll('.demo-detail').length===0,'首屏提前挂载全部示例');
+        assert([...doc.querySelectorAll('.demo-bottom button')].map(node=>node.textContent.trim()).join(',')==='首页,发现,消息,我的','底部导航不正确');
+        for(let index=1;index<4;index++){await pick(index);assert(page().querySelector('.demo-placeholder')&&page().textContent.includes('Demo 页面'),'不是 Demo 占位页');assert(!page().querySelector('.my-card'),'其他 Tab 混入组件演示')}
+        await pick(0);
       });
-      await check('移动端顶栏和底栏固定，正文独立滚动且不被遮挡',async()=>{
-        await pick(0);const header=doc.querySelector('.demo-top').getBoundingClientRect(),footer=doc.querySelector('.demo-bottom').getBoundingClientRect(),content=page().getBoundingClientRect();
-        assert(header.top===0&&Math.abs(footer.bottom-win.innerHeight)<2,'导航没有贴住窗口');assert(content.top>=header.bottom-1&&content.bottom<=footer.top+1,'内容被导航遮住');
-        page().scrollTop=600;await pause(60);assert(page().scrollTop>550&&win.scrollY===0,'正文没有独立滚动');assert(doc.querySelector('.demo-top').getBoundingClientRect().top===header.top,'滚动带走了顶栏');
+      await check('整行点击进入独立示例，详情隐藏底栏，顶栏显示返回按钮',async()=>{
+        const length=win.history.length;await open('button');assert(win.location.hash==='#example/button'&&win.history.length===length+1,'未建立详情返回历史');
+        assert(doc.querySelector('.demo-top .demo-title').textContent==='Button 按钮'&&page().textContent.includes('主要按钮'),'示例或标题错误');
+        assert(win.getComputedStyle(doc.querySelector('.demo-bottom')).display==='none'&&doc.querySelector('.demo-bottom').inert,'详情仍可操作底栏');
+        assert(doc.activeElement===doc.querySelector('.demo-top .demo-title'),'进入详情未转移焦点');assert(doc.querySelector('[data-demo-page="home"]').inert,'列表仍可交互');await back();
       });
-      await check('切换恢复各页滚动位置，再点当前分类回到顶部且不增加返回历史',async()=>{
-        const historyLength=win.history.length;await pick(1);page().scrollTop=720;await pause(60);await pick(0);assert(Math.abs(page().scrollTop-600)<2,'基础页位置丢失');await pick(1);assert(Math.abs(page().scrollTop-720)<2,'表单页位置丢失');await pick(1);assert(page().scrollTop===0,'重复点击没有回到顶部');assert(win.history.length===historyLength,'分类切换污染 Activity 返回历史');
+      await check('返回恢复目录滚动与入口焦点，Tab 切换不增加返回层级',async()=>{
+        const home=page();home.scrollTop=630;await pause(50);await open('input');await back();assert(Math.abs(page().scrollTop-630)<2,'返回丢失目录位置');
+        assert(doc.activeElement===doc.querySelector('[data-demo-link="input"]'),'返回焦点没有落回入口');const length=win.history.length;
+        await pick(1);await pick(2);await pick(3);await pick(0);assert(Math.abs(page().scrollTop-630)<2,'Tab 切换丢失目录位置');assert(win.history.length===length,'同级切换增加历史');
+        await pick(0);assert(page().scrollTop===0,'重复点击首页未回到顶部');
       });
-      await check('输入状态与组件实例保留，隐藏页面离开焦点与辅助树',async()=>{
-        const input=doc.querySelector('#controls input'),root=input.closest('[data-my-component]');input.value='保留这次输入';input.dispatchEvent(new win.Event('input',{bubbles:true}));await pause(60);await pick(2);await pick(1);assert(doc.querySelector('#controls input')===input&&input.value==='保留这次输入','切换重新创建或清空输入');
-        for(const hidden of doc.querySelectorAll('.demo-page[inert]'))assert(hidden.getAttribute('aria-hidden')==='true'&&win.getComputedStyle(hidden).display==='none','隐藏页面仍可参与交互');
+      await check('27 个目录入口全部有独立内容，返回不会跳到其他示例',async()=>{
+        for(const id of ids){await open(id);assert(page().querySelector('.demo-page-inner').children.length>0,'空示例 '+id);assert(page().querySelector('[data-my-component],.my-card'),'缺失真实组件 '+id);assert(doc.querySelectorAll('.demo-page:not([inert])').length===1,'多个页面可交互 '+id);await back()}
       });
-      await check('任意组件深链接定位到对应页，保留全部演示',async()=>{
-        for(const [hash,value]of[['image','components'],['combobox','forms'],['slider-options','feedback'],['native-navigation','examples'],['scenarios','examples']]){await route(hash);assert(page().dataset.demoPage===value,'链接选错分类 '+hash);const target=doc.getElementById(hash).getBoundingClientRect(),panel=page().getBoundingClientRect();assert(target.top>=panel.top-1&&target.top<panel.bottom,'组件未滚入正文 '+hash)}
-        for(const id of ['actions','surfaces','controls','combobox','picker','date-time-picker','calendar','upload','feedback','native-navigation','primitives','slider-options','touch-gestures','scenarios'])assert(doc.getElementById(id),'丢失示例 '+id);
+      await check('打开过的示例保留输入与实例，隐藏内容离开焦点与辅助树',async()=>{
+        await open('input');const input=page().querySelector('input');input.value='保留本次输入';input.dispatchEvent(new win.Event('input',{bubbles:true}));await pause(40);await back();await open('combobox');await back();await open('input');
+        assert(page().querySelector('input')===input&&input.value==='保留本次输入','返回重建或清空输入');
+        for(const hidden of doc.querySelectorAll('.demo-page[inert]'))assert(hidden.getAttribute('aria-hidden')==='true'&&win.getComputedStyle(hidden).display==='none','隐藏页面仍可参与交互');await back();
       });
-      await check('主题弹窗仍置顶并优先返回，关闭后恢复分类导航',async()=>{
-        const settings=doc.querySelector('.demo-top [aria-label="主题定制"]');settings.click();await until(()=>doc.querySelector('.my-overlay.my-show'),'主题弹窗未打开');assert(doc.querySelector('#app').inert,'未隔离底部导航');assert(win.MyUI.layers.dismissTop(),'系统返回未消费');await pause(450);assert(!doc.querySelector('.my-overlay.my-show')&&!doc.querySelector('#app').inert,'关闭未恢复导航');await pick(0);assert(page().dataset.demoPage==='components','弹窗关闭后导航无效');
+      await check('浏览器返回与前进同步详情，旧组件链接仍能定位',async()=>{
+        await open('image');win.history.back();await until(()=>page().dataset.demoPage==='home','浏览器返回没有回目录');win.history.forward();await until(()=>page().dataset.demoPage==='example/image','浏览器前进没有恢复详情');await back();
+        for(const [hash,id]of[['combobox','combobox'],['calendar','date-time-picker'],['slider-options','primitives'],['native-navigation','native-navigation'],['scenarios','scenarios']]){await route(hash);assert(page().dataset.demoPage==='example/'+id,'旧链接选错页面 '+hash);const target=doc.getElementById(hash).getBoundingClientRect(),panel=page().getBoundingClientRect();assert(target.top>=panel.top-1&&target.top<panel.bottom,'旧链接没有定位 '+hash)}
+        await route('home');
       });
-      await check('320px 与桌面宽度均无横向溢出，正文与四个按钮完整可见',async()=>{
-        for(const width of[320,1100,390]){frame.style.width=width+'px';await pause(160);for(let index=0;index<4;index++){await pick(index);assert(page().scrollWidth<=page().clientWidth+2,'正文横向溢出 '+width+'/'+index);const buttons=[...doc.querySelectorAll('.demo-bottom button')];for(const button of buttons){const rect=button.getBoundingClientRect();assert(rect.width>=44&&rect.height>=44&&rect.left>=0&&rect.right<=win.innerWidth+1,'按钮不可用 '+width)}}}
+      await check('详情内弹窗优先关闭，页面与返回入口仍正常',async()=>{
+        await open('feedback');doc.querySelector('.demo-top [aria-label="主题定制"]').click();await until(()=>doc.querySelector('.my-overlay.my-show'),'主题弹窗未打开');assert(doc.querySelector('#app').inert,'弹窗未隔离页面');
+        assert(win.MyUI.layers.dismissTop(),'弹层返回未消费');await pause(450);assert(page().dataset.demoPage==='example/feedback'&&!doc.querySelector('#app').inert,'关闭弹层误退页面');assert(!win.MyUI.layers.dismissTop(),'弹层退出后仍占返回');await back();
       });
-      await check('键盘可切换分类，非法链接安全回到基础页',async()=>{
-        await pick(0);tab(0).focus();tab(0).dispatchEvent(new win.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true,cancelable:true}));await pause(120);assert(page().dataset.demoPage==='forms'&&doc.activeElement===tab(1),'方向键切换或焦点失效');await route('not-a-demo');assert(page().dataset.demoPage==='components','非法链接未回默认页');
+      await check('顶栏固定，320px 与桌面均无横向溢出，四个 Tab 有完整触控范围',async()=>{
+        for(const width of[320,1100,390]){frame.style.width=width+'px';await pause(100);await pick(0);const header=doc.querySelector('.demo-top').getBoundingClientRect(),footer=doc.querySelector('.demo-bottom').getBoundingClientRect(),content=page().getBoundingClientRect();
+          assert(header.top===0&&Math.abs(footer.bottom-win.innerHeight)<2&&content.bottom<=footer.top+1,'固定导航或正文区域错误');assert(page().scrollWidth<=page().clientWidth+2&&win.scrollY===0,'目录横向溢出');
+          for(let index=0;index<4;index++){await pick(index);const rect=tab(index).getBoundingClientRect();assert(rect.width>=44&&rect.height>=44&&rect.right<=win.innerWidth+1,'Tab 触控区域不完整')}
+          await pick(0);for(const id of['button','input','combobox','picker','menu']){await open(id);assert(page().scrollWidth<=page().clientWidth+2,'详情横向溢出 '+width+'/'+id);const detail=page().getBoundingClientRect();assert(detail.top>=header.bottom-1&&Math.abs(detail.bottom-win.innerHeight)<2,'详情没有用满剩余高度');await back()}
+        }
       });
-      document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,total:8,reports},null,2);
+      await check('键盘切换 Tab，未知与非法链接安全回到目录',async()=>{
+        await pick(0);tab(0).focus();tab(0).dispatchEvent(new win.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true,cancelable:true}));await pause(90);assert(page().dataset.demoPage==='discover'&&doc.activeElement===tab(1),'方向键切换或焦点失效');
+        await route('not-a-demo');assert(page().dataset.demoPage==='home','未知链接没有回目录');await route('%E0%A4%A');assert(page().dataset.demoPage==='home','非法编码没有回目录');await route('home');
+      });
+      await check('直接访问详情时，顶栏返回也能回到列表',async()=>{
+        frame.src='/tests/demo-layout.browser.html?frame=1&direct=1#example/image';await until(()=>frame.contentDocument!==doc&&frame.contentDocument?.querySelector('.demo-detail:not([inert])'),'直接访问详情失败');doc=frame.contentDocument;win=frame.contentWindow;await back();assert(win.location.hash==='#home','直接进入的详情无法回首页');
+      });
+      document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,total:10,reports},null,2);
     }catch(error){document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,error:String(error.stack||error),reports},null,2)}
     finally{document.querySelector('#run').disabled=false;window.__demoLayoutReports=reports}
   };

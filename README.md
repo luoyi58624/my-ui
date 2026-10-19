@@ -313,11 +313,11 @@ bun run dev
 bun run build
 ```
 
-开发地址默认 `http://127.0.0.1:5178/`，原生入口为 `/native.html`。首页采用移动 App 布局，顶部导航固定，底部为“基础、表单、反馈、示例”四个分类。各页独立滚动并保留输入状态，再点当前分类回到顶部；分类切换不会增加原生返回历史。旧的 `#combobox`、`#slider-options` 等链接仍会定位到对应页面，原生页面跳转与共享状态集中在“示例”页。
+开发地址默认 `http://127.0.0.1:5178/`，原生入口为 `/native.html`。示例采用顶部导航与四个底部 Tab 的移动 App 布局。首页按用途分组，以 List 导航进入独立组件示例；“发现、消息、我的”暂为 Demo 占位页。示例页隐藏底部导航，顶部返回按钮、浏览器返回及 Android 返回可回到列表并恢复滚动位置；弹窗仍优先响应 Android 返回。打开过的示例保留输入状态，底部同级切换不增加返回历史。
 
-`example/src/DemoLayout.vue` 负责导航、安全区、滚动恢复与链接定位，`App.vue` 通过四个页面插槽组织组件演示。CSS 保存后即时更新；修改 JS 核心会完整刷新示例，避免旧实例残留。构建结果同时提供 Vue 页面、原生页面和原样的 CSS/JS。
+`example/src/DemoLayout.vue` 负责目录、导航、安全区与滚动恢复，`demo/catalog.ts` 统一维护列表项和路由，`App.vue` 用同名插槽组织示例内容。每个示例首次进入时挂载，链接为 `#example/组件标识`；旧的 `#combobox`、`#slider-options` 等链接仍可直接定位。原生 Activity 与共享状态示例位于首页的“完整示例”分组。CSS 保存后即时更新；修改 JS 核心会完整刷新示例，避免旧实例残留。构建结果同时提供 Vue 页面、原生页面和原样的 CSS/JS。
 
-`tests/demo-layout.browser.html` 使用真实示例入口检查四页切换、滚动和输入保留、旧链接、弹层返回、键盘、320px 窄屏与桌面布局。
+`tests/demo-layout.browser.html` 使用真实示例入口检查全部目录跳转、详情返回与前进、滚动和输入保留、旧链接、弹层返回、键盘、320px 窄屏与桌面布局。
 
 `bun run check` 检查 Vue 封装和示例类型；`bun run preview` 在 4178 端口预览 `dist/`。构建后的 `dist/native.html` 与 `dist/lib/` 可直接离线使用，`dist/lib/` 同时保留原生类型声明。
 

@@ -1,60 +1,89 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, type ComponentPublicInstance } from 'vue'
-import { AppBar, Navigation, type Option } from '@my-ui/vue'
+import { AppBar, Button, CellGroup, Icon, ListRow, Navigation, type Option } from '@my-ui/vue'
 import ThemeSettings from './demo/ThemeSettings.vue'
+import { demoExamples, demoGroups } from './demo/catalog'
 
-const pages: (Option & { title: string; anchor: string })[] = [
-  { value: 'components', label: '基础', title: '基础组件', icon: 'grid', anchor: 'actions' },
-  { value: 'forms', label: '表单', title: '输入与选择', icon: 'sliders', anchor: 'controls' },
-  { value: 'feedback', label: '反馈', title: '反馈与交互', icon: 'message', anchor: 'feedback' },
-  { value: 'examples', label: '示例', title: '完整示例', icon: 'layer', anchor: 'scenarios' },
+const pages: (Option & { title: string; demo?: number })[] = [
+  { value: 'home', label: '首页', title: '组件示例', icon: 'home' },
+  { value: 'discover', label: '发现', title: '发现', icon: 'grid', demo: 1 },
+  { value: 'messages', label: '消息', title: '消息', icon: 'message', demo: 2 },
+  { value: 'profile', label: '我的', title: '我的', icon: 'user', demo: 3 },
 ]
-const active = ref('components')
-const current = computed(() => pages.find(page => page.value === active.value)!)
+const active = ref('home'), visited = ref(new Set<string>())
+const example = computed(() => demoExamples.find(item => active.value === 'example/' + item.id))
+const title = computed(() => example.value?.title ?? pages.find(page => page.value === active.value)?.title ?? '组件示例')
+const openedExamples = computed(() => demoExamples.filter(item => visited.value.has(item.id)))
+const titleElement = ref<HTMLElement>()
 const elements = new Map<string, HTMLElement>(), positions = new Map<string, number>()
-let navigationVersion = 0
+let navigationVersion = 0, returning = false, handledHash: string | undefined
 
 function setPageElement(value: string, element: Element | ComponentPublicInstance | null) {
   if (element instanceof HTMLElement) elements.set(value, element)
   else elements.delete(value)
 }
 
-async function selectPage(value: string, target?: HTMLElement, reset = false) {
+async function selectPage(value: string, reset = false, anchor?: string) {
+  const previousExample = example.value
   if (value !== active.value) {
     const previous = elements.get(active.value)
     if (previous?.offsetHeight) positions.set(active.value, previous.scrollTop)
   }
+  const id = value.startsWith('example/') ? value.slice(8) : undefined
+  if (id) visited.value.add(id)
   active.value = value
   const version = ++navigationVersion
   await nextTick()
   if (version !== navigationVersion) return
   const page = elements.get(value)
   if (!page) return
-  // 页面自己滚动，导航栏与系统安全区始终留在原位。
-  const top = target
+  const target = anchor ? document.getElementById(anchor) : undefined
+  const top = target && page.contains(target)
     ? target.getBoundingClientRect().top - page.getBoundingClientRect().top + page.scrollTop - 20
     : reset ? 0 : positions.get(value) ?? 0
   page.scrollTo({ top: Math.max(0, top), behavior: 'instant' })
+  if (previousExample && value === 'home') {
+    page.querySelector<HTMLElement>('[data-demo-link="' + previousExample.id + '"]')?.focus({ preventScroll: true })
+  } else if (id) titleElement.value?.focus({ preventScroll: true })
 }
 
 function navigate(value: string) {
-  const page = pages.find(page => page.value === value)
-  if (!page) return
-  const reset = active.value === value
-  // 底部分类属于同一级，不向 Activity 的 WebView 返回历史叠加记录。
-  history.replaceState(history.state, '', '#' + page.anchor)
-  void selectPage(value, undefined, reset)
+  if (!pages.some(page => page.value === value)) return
+  // 底部同级切换不堆积历史；进入示例才添加一层，浏览器与 Android 返回行为一致。
+  history.replaceState({ ...history.state, myUiDemoDetail: false }, '', '#' + value)
+  handledHash = location.hash
+  void selectPage(value, active.value === value)
+}
+
+function openExample(id: string) {
+  if (!demoExamples.some(item => item.id === id)) return
+  history.pushState({ ...history.state, myUiDemoDetail: true }, '', '#example/' + id)
+  handledHash = location.hash
+  void selectPage('example/' + id, true)
+}
+
+function goBack() {
+  if (returning) return
+  if (history.state?.myUiDemoDetail) {
+    returning = true
+    history.back()
+  } else {
+    history.replaceState(history.state, '', '#home')
+    handledHash = location.hash
+    void selectPage('home')
+  }
 }
 
 function followHash() {
+  returning = false
+  // 同一次返回会同时发出 popstate 与 hashchange，只恢复一次滚动和焦点。
+  if (handledHash === location.hash) return
+  handledHash = location.hash
   let anchor = ''
-  try { anchor = decodeURIComponent(location.hash.slice(1)) } catch { /* 非法片段回到默认页。 */ }
-  const target = document.getElementById(anchor)
-  const value = target?.closest<HTMLElement>('[data-demo-page]')?.dataset.demoPage
-    ?? pages.find(page => page.value === anchor || page.anchor === anchor)?.value
-    ?? 'components'
-  const page = pages.find(page => page.value === value)!
-  void selectPage(value, target && anchor !== page.anchor ? target : undefined, true)
+  try { anchor = decodeURIComponent(location.hash.slice(1)) } catch { /* 非法片段回到首页。 */ }
+  const item = demoExamples.find(item => anchor === 'example/' + item.id || anchor === item.id || item.anchors?.includes(anchor))
+  const value = item ? 'example/' + item.id : pages.find(page => page.value === anchor)?.value ?? 'home'
+  void selectPage(value, false, item && !anchor.startsWith('example/') ? anchor : undefined)
 }
 
 onMounted(() => {
@@ -72,41 +101,94 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="demo-app">
+  <div class="demo-app" :class="{ 'demo-app-detail': example }">
     <div class="demo-top">
-      <AppBar :title="current.title" class="demo-app-bar">
+      <AppBar v-if="example" :title="title" back back-label="返回组件列表" class="demo-app-bar" @back="goBack">
+        <h1 ref="titleElement" class="demo-title" tabindex="-1">{{ title }}</h1>
+        <template #actions><ThemeSettings /></template>
+      </AppBar>
+      <AppBar v-else :title="title" class="demo-app-bar">
         <template #leading><span class="demo-brand"><img src="/favicon.svg" alt="" width="28" height="28" /><strong>my-ui</strong></span></template>
-        <h1 class="demo-title">{{ current.title }}</h1>
+        <h1 class="demo-title">{{ title }}</h1>
         <template #actions><ThemeSettings /></template>
       </AppBar>
     </div>
-    <main class="demo-main" :aria-label="current.title">
+    <main class="demo-main" :aria-label="title">
       <section v-for="page in pages" v-show="active === page.value" :key="page.value"
         :ref="element => setPageElement(page.value, element)" class="demo-page"
         :data-demo-page="page.value" :aria-label="page.title"
         :inert="active !== page.value" :aria-hidden="active !== page.value ? true : undefined">
-        <div class="demo-page-inner"><slot :name="page.value" /></div>
+        <div v-if="page.value === 'home'" class="demo-catalog">
+          <div class="demo-intro"><h2>组件目录</h2><p>选择组件，查看示例与交互。</p></div>
+          <div class="demo-catalog-groups">
+            <section v-for="group in demoGroups" :key="group.title" class="demo-catalog-group" :aria-label="group.title">
+              <h3>{{ group.title }}<span>{{ group.items.length }}</span></h3>
+              <CellGroup :label="group.title">
+                <ListRow v-for="item in group.items" :key="item.id" :data-demo-link="item.id"
+                  :title="item.title" :description="item.description" @click="openExample(item.id)">
+                  <template #leading><span class="demo-catalog-icon"><Icon :name="item.icon" /></span></template>
+                </ListRow>
+              </CellGroup>
+            </section>
+          </div>
+        </div>
+        <div v-else class="demo-placeholder">
+          <span class="demo-placeholder-icon"><Icon :name="page.icon!" /></span>
+          <span class="demo-placeholder-label">DEMO {{ page.demo }}</span>
+          <h2>{{ page.title }}</h2><p>这是预留的 Demo 页面。</p>
+          <Button variant="outline" @click="navigate('home')">浏览组件</Button>
+        </div>
+      </section>
+      <section v-for="item in openedExamples" v-show="example?.id === item.id" :key="item.id"
+        :ref="element => setPageElement('example/' + item.id, element)" class="demo-page demo-detail"
+        :data-demo-page="'example/' + item.id" :aria-label="item.title"
+        :inert="example?.id !== item.id" :aria-hidden="example?.id !== item.id ? true : undefined">
+        <div class="demo-page-inner"><slot :name="item.id" /></div>
       </section>
     </main>
-    <div class="demo-bottom"><Navigation class="demo-navigation" :model-value="active" :options="pages" label="示例分类" @update:model-value="navigate" /></div>
+    <div v-show="!example" class="demo-bottom" :inert="!!example" :aria-hidden="example ? true : undefined">
+      <Navigation class="demo-navigation" :model-value="active" :options="pages" label="主导航" @update:model-value="navigate" />
+    </div>
   </div>
 </template>
 
 <style scoped>
 :global(html.my-demo-app), :global(html.my-demo-app body) { height: 100%; overflow: hidden; padding: 0; scrollbar-gutter: auto; }
 .demo-app { display: grid; grid-template-rows: calc(57px + env(safe-area-inset-top)) minmax(0, 1fr) calc(65px + env(safe-area-inset-bottom)); height: 100dvh; background: var(--background); }
+.demo-app-detail { grid-template-rows: calc(57px + env(safe-area-inset-top)) minmax(0, 1fr) env(safe-area-inset-bottom); }
 .demo-top { padding-top: env(safe-area-inset-top); border-bottom: 1px solid var(--border); background: var(--card-background); z-index: 40; }
 .demo-top :deep(.my-app-bar) { height: 56px; min-height: 56px; width: min(100%, 1160px); margin: auto; padding: 6px max(12px, env(safe-area-inset-left)) 6px max(12px, env(safe-area-inset-right)); border: 0; }
 .demo-brand { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
 .demo-brand img { display: block; border-radius: 8px; }
 .demo-brand strong { font-size: 14px; font-weight: var(--font-weight-title, 700); }
 .demo-title { margin: 0; font: inherit; font-weight: var(--font-weight-subtitle, 600); }
+.demo-title:focus { outline: none; }
 .demo-main { position: relative; min-width: 0; min-height: 0; }
 .demo-page { position: absolute; inset: 0; overflow: auto; overscroll-behavior-y: contain; padding: 24px max(20px, env(safe-area-inset-right)) 32px max(20px, env(safe-area-inset-left)); scrollbar-gutter: stable; }
 .demo-page-inner { width: min(100%, 1120px); margin: auto; }
+.demo-page-inner > :deep(:first-child) { margin-top: 0; }
+.demo-catalog { max-width: 960px; margin: auto; }
+.demo-intro { margin: 0 4px 28px; }
+.demo-intro h2 { margin: 0 0 8px; font-size: 26px; font-weight: var(--font-weight-title, 700); }
+.demo-intro p { margin: 0; color: var(--text-secondary); font-size: 14px; line-height: 1.6; }
+.demo-catalog-groups { display: grid; gap: 28px; }
+.demo-catalog-group { min-width: 0; }
+.demo-catalog-group h3 { display: flex; align-items: center; gap: 8px; margin: 0 6px 10px; font-size: 13px; color: var(--text-secondary); font-weight: var(--font-weight-subtitle, 600); }
+.demo-catalog-group h3 span { font-size: 11px; opacity: .7; font-variant-numeric: tabular-nums; }
+.demo-catalog-group :deep(.my-group-body) { background: var(--card-background); }
+.demo-catalog-group :deep(.my-list-row) { min-height: 76px; --list-padding-inline: 16px; }
+.demo-catalog-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; color: var(--primary); background: var(--fill); }
+.demo-catalog-icon svg { width: 19px; height: 19px; }
+.demo-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100%; text-align: center; padding: 24px; }
+.demo-placeholder-icon { display: grid; place-items: center; width: 72px; height: 72px; border-radius: 24px; color: var(--primary); background: var(--fill); margin-bottom: 24px; }
+.demo-placeholder-icon svg { width: 30px; height: 30px; }
+.demo-placeholder-label { color: var(--text-secondary); font-size: 11px; letter-spacing: 2px; }
+.demo-placeholder h2 { margin: 10px 0; font-size: 24px; }
+.demo-placeholder p { margin: 0 0 28px; color: var(--text-secondary); font-size: 14px; }
 .demo-bottom { padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); border-top: 1px solid var(--border); background: var(--card-background); z-index: 40; }
 .demo-bottom :deep(.my-navigation) { width: min(100%, 680px); height: 64px; min-height: 64px; margin: auto; padding: 5px 8px; border: 0; border-radius: 0; background: transparent; }
 .demo-bottom :deep(button) { gap: 4px; min-height: 48px; }
+@media (min-width: 900px) { .demo-catalog-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
 @media (max-width: 760px) { .demo-page { padding: 20px max(14px, env(safe-area-inset-right)) 24px max(14px, env(safe-area-inset-left)); } }
 @media (max-width: 360px) { .demo-brand { gap: 5px; } .demo-brand strong { font-size: 12px; } .demo-brand img { width: 24px; height: 24px; } }
 </style>
