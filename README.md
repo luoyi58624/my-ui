@@ -18,6 +18,11 @@ example/                @my-ui/example：展示与使用示例
   index.html            Vue 入口
   native.html           不加载 Vue 的原生 HTML 示例
   vite.config.ts        示例的开发与构建配置
+  src-tauri/            桌面应用壳，直接加载同一个示例
+    src/                Rust 启动入口
+    tauri.conf.json     窗口、开发地址与前端产物路径
+    capabilities/       原生能力权限
+    icons/              共用品牌图标的桌面版本
 tests/                  正式测试与浏览器回归页面
 scripts/                构建辅助脚本
 reference/              原始设计参考
@@ -265,6 +270,29 @@ bun run build
 开发地址默认 `http://127.0.0.1:5178/`，原生入口为 `/native.html`。CSS 保存后即时更新；修改 JS 核心会完整刷新示例，避免旧实例残留。构建结果同时提供 Vue 页面、原生页面和原样的 CSS/JS。
 
 `bun run check` 检查 Vue 封装和示例类型；`bun run preview` 在 4178 端口预览 `dist/`。构建后的 `dist/native.html` 与 `dist/lib/` 可直接离线使用，`dist/lib/` 同时保留原生类型声明。
+
+## PC 桌面应用
+
+桌面示例使用 Tauri 2，原生工程放在 `example/src-tauri/`，继续属于现有示例 workspace。前端仍是 `example/src/main.ts` → `App.vue` → `demo/`，共用 `@my-ui/vue`、原生 CSS/JS 和示例主题。
+
+```powershell
+bun install
+bun run dev:desktop
+```
+
+这条命令自动启动现有 Vite 示例并打开桌面窗口，组件与示例修改继续热更新。5178 端口由它管理，运行前先结束单独启动的 `bun run dev`。
+
+```powershell
+bun run build:desktop
+```
+
+构建时先在仓库根目录执行现有类型检查与 Web 构建，再把 `dist/` 嵌入桌面应用；Windows 可执行文件为 `example/src-tauri/target/release/my-ui-example.exe`，运行时无需开发服务器。此命令生成直接运行的程序；需要安装包时可在示例目录执行 `bun run tauri build`。
+
+桌面配置保留系统标题栏，窗口可调整大小，默认 1280×860，最小 760×560，工作区不足时自动限制初始大小以适配系统缩放。关闭 Tauri 的原生文件拖放接管，让已有 Upload 的 HTML 拖放继续工作。Rust 编译产物与自动生成的权限类型已排除 Git，`Cargo.lock` 与 `bun.lock` 提交以固定依赖。
+
+本机开发需要 Rust 与对应系统的编译环境，Windows 使用 MSVC 和 WebView2；详见 [Tauri 官方环境要求](https://v2.tauri.app/start/prerequisites/)。
+
+## 浏览器回归
 
 浏览器回归使用 `bun run dev:test`，在 `http://127.0.0.1:5179/tests/文件名.browser.html` 打开对应页面。测试服务以仓库为根目录，示例服务以 `example/` 为根目录，互不混入构建产物。纯函数测试通过 `bun test ./tests/文件名.test.mjs` 按模块运行。
 

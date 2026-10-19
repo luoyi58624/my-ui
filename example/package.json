@@ -5,9 +5,18 @@
   "description": "my-ui 的 Vue 展示页与原生 HTML 示例",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 5178 --strictPort",
+    "dev:desktop": "tauri dev",
     "dev:test": "vite --mode test --host 127.0.0.1 --port 5179 --strictPort",
     "build": "vite build",
+    "build:desktop": "tauri build --no-bundle",
+    "tauri": "tauri",
     "preview": "vite preview --host 127.0.0.1 --port 4178 --strictPort"
   },
-  "dependencies": { "@my-ui/vue": "workspace:*", "vue": "3.5.43" }
+  "dependencies": {
+    "@my-ui/vue": "workspace:*",
+    "vue": "3.5.43"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.3"
+  }
 }

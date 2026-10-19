@@ -1,0 +1,43 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "my-ui",
+  "version": "1.0.0",
+  "identifier": "dev.myui.example",
+  "build": {
+    "frontendDist": "../../dist",
+    "devUrl": "http://127.0.0.1:5178",
+    "beforeDevCommand": "bun run dev",
+    "beforeBuildCommand": "bun run --cwd .. build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "my-ui · 组件示例",
+        "width": 1280,
+        "height": 860,
+        "minWidth": 760,
+        "minHeight": 560,
+        "center": true,
+        "preventOverflow": true,
+        "dragDropEnabled": false,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}

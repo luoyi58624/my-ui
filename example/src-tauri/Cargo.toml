@@ -1,0 +1,16 @@
+[package]
+name = "my-ui-example"
+version = "1.0.0"
+description = "加载现有 my-ui 示例的桌面应用"
+edition = "2024"
+rust-version = "1.90"
+
+[lib]
+name = "my_ui_example_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.7.3", features = [] }
+
+[dependencies]
+tauri = { version = "2.12.4", features = [] }

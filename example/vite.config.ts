@@ -6,12 +6,17 @@ const projectRoot = decodeURIComponent(new URL('..', import.meta.url).pathname).
 
 export default defineConfig(({ mode }) => ({
   root: mode === 'test' ? projectRoot : exampleRoot,
+  clearScreen: false,
   publicDir: exampleRoot + 'public',
   resolve: {
     alias: { '/packages': projectRoot + 'packages' },
     dedupe: ['vue'],
   },
-  server: { fs: { allow: [projectRoot] } },
+  server: {
+    fs: { allow: [projectRoot] },
+    // Rust 编译与生成文件交给 Tauri 监听，避免反复刷新示例。
+    watch: { ignored: ['**/src-tauri/**'] },
+  },
   build: { outDir: projectRoot + 'dist', emptyOutDir: true },
   plugins: [
     vue(),

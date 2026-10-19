@@ -1,0 +1,4 @@
+# Rust 编译缓存与可执行文件，不属于源码。
+/target/
+# Tauri 根据配置生成的权限和配置类型。
+/gen/schemas
