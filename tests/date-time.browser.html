@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>日期、时间与日历定向回归</title>
+<link rel="stylesheet" href="/lib/my-ui.css"><script src="/lib/my-ui.js"></script>
+<style>main{max-width:820px;margin:auto;padding:24px}#fixture{margin:24px 0;max-width:600px}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.6 monospace}</style>
+<main><h1>日期、时间与日历</h1><button id="run" disabled>运行日期时间回归</button><div id="fixture"></div><pre id="result">尚未运行</pre></main>
+<script type="module">
+import { createApp, h, ref, nextTick } from 'vue'
+import { DatePicker, TimePicker, Calendar, Sheet, Button } from '/vue/index.ts'
+const fixture = document.querySelector('#fixture'), result = document.querySelector('#result'), run = document.querySelector('#run')
+let owned = [], app
+const assert = (value, message) => { if (!value) throw Error(message) }
+const equal = (actual, expected) => assert(JSON.stringify(actual) === JSON.stringify(expected), JSON.stringify(actual) + ' != ' + JSON.stringify(expected))
+const pause = ms => new Promise(resolve => setTimeout(resolve, ms))
+const tick = async () => { await nextTick(); await nextTick(); await new Promise(resolve => requestAnimationFrame(resolve)) }
+const add = (name, props = {}, attributes) => { const c = MyUI.create(name, props, { attributes }); owned.push(c); fixture.append(c.element); return c }
+const key = (node, key, props = {}) => { const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...props }); node.dispatchEvent(event); return event }
+const wheel = (c, index = 0) => c.element.querySelectorAll('[role="listbox"]')[index]
+const chosen = (c, index = 0) => wheel(c, index).querySelector('[aria-selected="true"]')?.textContent
+const day = (c, date) => c.element.querySelector(`[data-calendar-date="${date}"]`)
+const click = (c, date) => { const node = day(c, date); assert(node, '日期不在当前网格 ' + date); node.click() }
+const heading = c => c.element.querySelector('.my-calendar-heading').textContent
+const center = node => { const rect = node.getBoundingClientRect(); return rect.top + rect.height / 2 }
+const pointer = (node, type, y) => node.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 35, pointerType: 'touch', button: 0, isPrimary: true, clientX: 100, clientY: y }))
+const clean = () => { app?.unmount(); app = undefined; owned.forEach(c => c.destroy()); owned = []; fixture.replaceChildren() }
+run.onclick = async () => {
+  run.disabled = true; result.textContent = '运行中'
+  const reports = [], check = async (name, action) => {
+    if (new URLSearchParams(location.search).get('case') && !name.includes(new URLSearchParams(location.search).get('case'))) return
+    clean(); try { await action(); reports.push({ name, pass: true }) } catch (error) { reports.push({ name, pass: false, error: String(error) }) } finally { clean() }
+  }
+  await check('原生 DatePicker 初始化不发事件，调整年时只发一个日期字符串', async () => {
+    let value, count = 0; const c = add('DatePicker', { value: '2024-02-29', min: '2024-01-01', max: '2026-12-31' }); c.element.addEventListener('my:change', e => { value = e.detail; count++ }); await tick()
+    assert(count === 0, '初始化改写值'); key(wheel(c), 'ArrowDown'); equal(value, '2025-02-28'); equal(count, 1); equal(chosen(c, 2), '28日')
+  })
+  await check('月底联动、日期上下限和外部更新同步', async () => {
+    let value; const c = add('DatePicker', { value: '2026-01-31', min: '2026-01-10', max: '2026-03-05', onChange: next => value = next }); key(wheel(c, 1), 'ArrowDown'); equal(value, '2026-02-28'); key(wheel(c, 1), 'End'); equal(value, '2026-03-05')
+    c.update({ value: '2026-01-11' }); equal(chosen(c, 2), '11日'); key(wheel(c, 2), 'Home'); equal(value, '2026-01-10')
+  })
+  await check('日期拖动联动时不打断活动列，连续跟手后修正月底', async () => {
+    let value; const c = add('DatePicker', { value: '2026-01-31', min: '2026-01-01', max: '2026-12-31', onChange: next => value = next }); await tick()
+    const node = wheel(c, 1), row = node.querySelector('[aria-selected="true"]'), y = center(node), height = row.getBoundingClientRect().height
+    pointer(node, 'pointerdown', y); pointer(document, 'pointermove', y - .7 * height); equal(value, '2026-02-28')
+    assert(Math.abs(center(row) - (y - .7 * height)) < 1, '联动后活动列跳动'); pointer(document, 'pointermove', y - 1.1 * height)
+    assert(Math.abs(center(row) - (y - 1.1 * height)) < 1, '联动取消了手势'); pointer(document, 'pointercancel', y - 1.1 * height)
+  })
+  await check('日期禁用、反向边界与空值不产生无效回调', async () => {
+    let count = 0; const c = add('DatePicker', { value: null, min: '2026-02-10', max: '2026-02-10', onChange: () => count++ }); await tick(); equal(count, 0); equal(chosen(c, 2), '10日')
+    c.update({ disabled: true }); key(wheel(c, 2), 'ArrowDown'); equal(count, 0); equal(wheel(c).tabIndex, -1)
+    c.update({ disabled: false, min: '2027-01-01' }); assert(!chosen(c) && wheel(c).tabIndex === -1, '反向范围仍可选')
+  })
+  await check('时间步长和首尾小时联动，原生事件只包含时间字符串', async () => {
+    let value, count = 0; const c = add('TimePicker', { value: '09:15', min: '09:10', max: '18:35', minuteStep: 15 }); c.element.addEventListener('my:change', e => { value = e.detail; count++ })
+    key(wheel(c, 1), 'ArrowDown'); equal(value, '09:30'); equal(count, 1); key(wheel(c), 'End'); key(wheel(c, 1), 'End'); equal(value, '18:30'); equal(chosen(c, 1), '30分')
+  })
+  await check('动态开启秒列及精确边界，关闭秒列后恢复可见焦点', async () => {
+    const c = add('TimePicker', { value: '09:10:10', showSeconds: true, min: '09:10:07', max: '09:10:42', secondStep: 5 }); equal(c.element.querySelectorAll('[role="listbox"]').length, 3); key(wheel(c, 2), 'End'); equal(chosen(c, 2), '40秒')
+    wheel(c, 2).focus(); c.update({ showSeconds: false, min: '09:00', max: '10:00' }); equal(c.element.querySelectorAll('[role="listbox"]').length, 2); assert(document.activeElement === wheel(c, 1), '被移除秒列仍占据焦点')
+  })
+  await check('无符合步长的时刻显示空列，时间禁用后键盘失效', async () => {
+    let count = 0; const c = add('TimePicker', { value: '09:00', min: '09:01', max: '09:14', minuteStep: 15, onChange: () => count++ }); assert(!chosen(c) && wheel(c).tabIndex === -1, '空时段仍可选')
+    c.update({ min: '09:00', max: '10:00', disabled: true }); key(wheel(c), 'End'); equal(count, 0)
+  })
+  await check('声明式三种组件均可初始化', async () => {
+    fixture.innerHTML = '<div data-my="DatePicker" data-options=\'{"value":"2026-10-19"}\'></div><div data-my="TimePicker" data-options=\'{"value":"09:30"}\'></div><div data-my="Calendar" data-options=\'{"value":"2026-10-19"}\'></div>'
+    owned.push(...MyUI.init(fixture)); equal(owned.length, 3); equal(owned[2].element.querySelector('[aria-selected="true"] button').dataset.calendarDate, '2026-10-19')
+  })
+  await check('日历固定六周、七列与单个日期 Tab 入口，初始化没有事件', async () => {
+    let count = 0; const c = add('Calendar', { value: '2024-02-29', onChange: () => count++ }); await tick(); equal(count, 0); equal(c.element.querySelectorAll('[role="gridcell"]').length, 42); equal(c.element.querySelectorAll('[role="columnheader"]').length, 7)
+    equal(c.element.querySelectorAll('.my-calendar-day[tabindex="0"]').length, 1); c.exposed.focus(); equal(document.activeElement.dataset.calendarDate, '2024-02-29'); assert(!key(document.activeElement, 'Tab').defaultPrevented, '日历拦截 Tab')
+  })
+  await check('月份导航只换展示月不改值，月份属性可以外部更新', async () => {
+    let changes = 0, months = [], callbacks = []; const c = add('Calendar', { value: '2026-10-19', onChange: () => changes++, onMonthChange: value => callbacks.push(value) }); c.element.addEventListener('my:month-change', e => months.push(e.detail)); c.element.querySelector('[aria-label="下个月"]').click(); equal(heading(c), '2026年11月'); equal(changes, 0); equal(months, ['2026-11']); equal(callbacks, months)
+    c.update({ month: '2027-02' }); equal(heading(c), '2027年2月'); equal(months.length, 1); c.update({ value: '2028-02-29' }); equal(heading(c), '2028年2月')
+  })
+  await check('点击单日触发选择与 change，点击补位日期切换月份且保留焦点', async () => {
+    const changes = [], selected = []; const c = add('Calendar', { value: '2026-10-19', onChange: value => changes.push(value), onSelect: value => selected.push(value) }); click(c, '2026-11-01'); equal(changes, ['2026-11-01']); equal(selected, changes); equal(heading(c), '2026年11月'); equal(document.activeElement.dataset.calendarDate, '2026-11-01')
+  })
+  await check('范围反向排序、同日范围、完整范围后重选及 select 时机', async () => {
+    let value, count = 0; const c = add('Calendar', { range: true, value: [], month: '2026-10', onChange: next => value = next, onSelect: () => count++ }); click(c, '2026-10-20'); equal(value, ['2026-10-20']); equal(count, 0); click(c, '2026-10-15'); equal(value, ['2026-10-15', '2026-10-20']); equal(count, 1)
+    click(c, '2026-10-28'); click(c, '2026-10-28'); equal(value, ['2026-10-28', '2026-10-28']); equal(count, 2)
+  })
+  await check('跨月范围结束后留在结束月，不跳回开始月', async () => {
+    let value; const c = add('Calendar', { range: true, value: ['2026-10-30'], onChange: next => value = next }); click(c, '2026-11-02'); equal(value, ['2026-10-30', '2026-11-02']); equal(heading(c), '2026年11月'); equal(document.activeElement.dataset.calendarDate, '2026-11-02')
+  })
+  await check('禁用日期无法选择且范围不能跨过禁用日', async () => {
+    let value = [], count = 0; const c = add('Calendar', { range: true, value: [], month: '2026-10', disabledDate: value => value === '2026-10-13', onChange: next => value = next, onSelect: () => count++ })
+    click(c, '2026-10-13'); equal(value, []); equal(day(c, '2026-10-13').getAttribute('aria-disabled'), 'true'); click(c, '2026-10-10'); click(c, '2026-10-15'); equal(value, ['2026-10-15']); equal(count, 0); click(c, '2026-10-16'); equal(count, 1)
+  })
+  await check('范围鼠标预览离开后清除，不改变选值', async () => {
+    let changes = 0; const c = add('Calendar', { range: true, value: ['2026-10-10'], onChange: () => changes++ }), grid = c.element.querySelector('[role="grid"]'); day(c, '2026-10-15').dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' })); assert(c.element.querySelector('.my-preview'), '没有预览')
+    grid.dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'mouse' })); assert(!c.element.querySelector('.my-preview'), '残留预览'); equal(changes, 0)
+  })
+  await check('键盘按日、周、月份和年份移动，闰日正确回退', async () => {
+    let changes = 0; const c = add('Calendar', { value: '2024-02-29', onChange: () => changes++ }); c.exposed.focus(); key(document.activeElement, 'PageDown', { shiftKey: true }); equal(document.activeElement.dataset.calendarDate, '2025-02-28'); key(document.activeElement, 'ArrowRight'); equal(document.activeElement.dataset.calendarDate, '2025-03-01'); key(document.activeElement, 'ArrowDown'); equal(document.activeElement.dataset.calendarDate, '2025-03-08'); key(document.activeElement, 'Home'); equal(document.activeElement.dataset.calendarDate, '2025-03-03'); key(document.activeElement, 'End'); equal(document.activeElement.dataset.calendarDate, '2025-03-09'); equal(changes, 0)
+  })
+  await check('键盘可浏览禁用日但不能选择，日期边界不会越界', async () => {
+    let count = 0; const c = add('Calendar', { value: '2026-10-10', min: '2026-10-10', max: '2026-10-15', disabledDate: date => date === '2026-10-11', onChange: () => count++ }); c.exposed.focus(); key(document.activeElement, 'ArrowLeft'); equal(document.activeElement.dataset.calendarDate, '2026-10-10'); key(document.activeElement, 'ArrowRight'); equal(document.activeElement.dataset.calendarDate, '2026-10-11'); document.activeElement.click(); equal(count, 0); key(document.activeElement, 'PageDown'); equal(document.activeElement.dataset.calendarDate, '2026-10-15')
+  })
+  await check('周日起始与月边界、公历首尾不会生成无效日期', async () => {
+    const c = add('Calendar', { month: '2026-11', firstDayOfWeek: 0 }); equal(c.element.querySelector('[role="columnheader"]').textContent, '日'); equal(c.element.querySelector('.my-calendar-day').dataset.calendarDate, '2026-11-01')
+    c.update({ month: '0001-01', min: '0001-01-01' }); equal(heading(c), '1年1月'); assert(c.element.querySelector('[aria-label="上个月"]').disabled, '公历首月仍可向前')
+    c.update({ month: '9999-12' }); assert(c.element.querySelector('[aria-label="下个月"]').disabled, '公历末月仍可向后')
+  })
+  await check('全禁用和反向范围不循环查找，禁用后没有键盘入口或事件', async () => {
+    let changes = 0; const c = add('Calendar', { month: '2026-10', disabledDate: () => true, onChange: () => changes++ }); c.exposed.focus(); equal(document.activeElement.dataset.calendarDate, '2026-10-01'); key(document.activeElement, 'ArrowRight'); document.activeElement.click(); equal(changes, 0)
+    c.update({ disabled: true }); assert([...c.element.querySelectorAll('button')].every(button => button.disabled), '禁用日历仍可操作'); c.update({ disabled: false, min: '2027-01-01', max: '2026-01-01' }); equal(c.element.querySelector('.my-calendar-status').textContent, '没有可选日期')
+  })
+  await check('Vue 日期和时间双向绑定、外部更新与 focus 共用原生实现', async () => {
+    const date = ref('2024-02-29'), time = ref('09:30'), picker = ref(); app = createApp({ render: () => [h(DatePicker, { ref: picker, modelValue: date.value, 'onUpdate:modelValue': value => date.value = value }), h(TimePicker, { modelValue: time.value, minuteStep: 15, 'onUpdate:modelValue': value => time.value = value })] }); app.mount(fixture); await tick(); picker.value.focus(); key(document.activeElement, 'ArrowDown'); await tick(); equal(date.value, '2025-02-28'); key(fixture.querySelector('.my-time-picker [role="listbox"]'), 'End'); await tick(); equal(time.value, '23:30'); date.value = '2028-02-29'; await tick(); equal(fixture.querySelector('.my-date-picker [aria-selected="true"]').textContent, '2028年')
+  })
+  await check('Vue Calendar 范围更新与月份事件保持一致', async () => {
+    const value = ref([]), events = []; app = createApp({ render: () => h(Calendar, { modelValue: value.value, range: true, month: '2026-10', 'onUpdate:modelValue': next => value.value = next, onSelect: next => events.push(next) }) }); app.mount(fixture); await tick(); const c = { element: fixture.querySelector('.my-calendar') }; click(c, '2026-10-19'); await tick(); equal(value.value, ['2026-10-19']); click(c, '2026-10-22'); await tick(); equal(value.value, ['2026-10-19', '2026-10-22']); equal(events.length, 1)
+  })
+  await check('Sheet 中日期草稿取消保留原值，确认保存且焦点在面板内', async () => {
+    const value = ref('2026-10-19'), draft = ref(value.value), open = ref(false); app = createApp({ render: () => [h(Button, { onClick: () => { draft.value = value.value; open.value = true } }, () => '选择日期'), h(Sheet, { modelValue: open.value, 'onUpdate:modelValue': next => open.value = next, title: '出发日期', confirmText: '确定', onConfirm: () => value.value = draft.value }, { default: () => h(DatePicker, { modelValue: draft.value, 'onUpdate:modelValue': next => draft.value = next }) })] }); app.mount(fixture); await tick(); fixture.querySelector('button').click(); await pause(300); const dialog = document.querySelector('[role="dialog"][aria-modal="true"]'); assert(dialog && dialog.contains(document.activeElement), '焦点不在面板内'); key(dialog.querySelectorAll('[role="listbox"]')[2], 'ArrowDown'); await tick(); equal(draft.value, '2026-10-20'); [...dialog.querySelectorAll('button')].find(button => button.textContent === '取消').click(); await pause(250); equal(value.value, '2026-10-19'); fixture.querySelector('button').click(); await pause(250); const nextDialog = document.querySelector('[role="dialog"][aria-modal="true"]'); key(nextDialog.querySelectorAll('[role="listbox"]')[2], 'ArrowDown'); await tick(); [...nextDialog.querySelectorAll('button')].find(button => button.textContent === '确定').click(); await pause(250); equal(value.value, '2026-10-20')
+  })
+  await check('紧凑宽度不溢出、SVG 尺寸固定、文字和选中态对齐', async () => {
+    const c = add('Calendar', { value: '2026-10-19' }, { style: 'width:260px' }); const rect = c.element.getBoundingClientRect(); assert(c.element.scrollWidth <= rect.width + 1, '日历横向溢出'); equal(c.element.querySelector('svg').getBoundingClientRect().width, 18); const active = day(c, '2026-10-19').getBoundingClientRect(), cell = day(c, '2026-10-19').parentElement.getBoundingClientRect(); assert(Math.abs(active.x + active.width / 2 - cell.x - cell.width / 2) < 1, '日期未居中')
+  })
+  await check('明暗样式只依赖 CSS，不写入主题色', async () => {
+    const mode = document.documentElement.dataset.theme, primary = document.documentElement.style.getPropertyValue('--primary'), c = add('Calendar', { value: '2026-10-19' }); try { document.documentElement.dataset.theme = 'light'; await pause(150); const light = getComputedStyle(day(c, '2026-10-19')).backgroundColor; document.documentElement.dataset.theme = 'dark'; await pause(150); assert(getComputedStyle(day(c, '2026-10-19')).backgroundColor !== light, '未切换主题'); equal(document.documentElement.style.getPropertyValue('--primary'), primary) } finally { if (mode) document.documentElement.dataset.theme = mode; else delete document.documentElement.dataset.theme }
+  })
+  await check('销毁日期动画和日历监听，迟到事件不再触发回调', async () => {
+    let count = 0; const c = add('DatePicker', { value: '2026-10-19', onChange: () => count++ }); wheel(c).dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 200 })); await tick(); c.destroy(); const before = count; await pause(150); equal(count, before)
+    const calendar = add('Calendar', { value: '2026-10-19', onChange: () => count++ }), button = day(calendar, '2026-10-20'); calendar.destroy(); button.click(); equal(count, before)
+  })
+  result.textContent = JSON.stringify({ pass: reports.filter(report => report.pass).length, total: reports.length, reports }, null, 2); run.disabled = false
+}
+run.disabled = false
+</script>

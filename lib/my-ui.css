@@ -1510,6 +1510,92 @@ input[data-my-slider]:disabled {
   font-size: 13px;
 }
 
+/* ── DatePicker / TimePicker / Calendar ───────────────────────── */
+
+/* 日期和时间滚轮沿用 Picker 变量，独立日历用紧凑的七列网格。 */
+.my-date-picker[data-my-date-picker],
+.my-time-picker[data-my-time-picker] { min-width: 0; }
+.my-calendar[data-my-calendar] {
+  width: 100%;
+  max-width: var(--calendar-width, 360px);
+  min-width: 0;
+  color: var(--text);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.my-calendar-header[data-my-calendar] { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 18px; }
+.my-calendar-heading[data-my-calendar] { font-size: 17px; font-weight: var(--font-weight-subtitle, 600); white-space: nowrap; }
+.my-calendar-nav[data-my-calendar] { display: flex; align-items: center; gap: 4px; }
+.my-calendar-nav-button[data-my-calendar],
+.my-calendar-today[data-my-calendar] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  transition: background 120ms, color 120ms;
+}
+.my-calendar-nav-button[data-my-calendar] { width: 32px; }
+.my-calendar-nav-button svg[data-my-calendar] { width: 18px; height: 18px; }
+.my-calendar-previous svg[data-my-calendar] { rotate: 180deg; }
+.my-calendar-today[data-my-calendar] { padding: 0 8px; font-size: 12px; }
+.my-calendar-nav-button[data-my-calendar]:disabled,
+.my-calendar-today[data-my-calendar]:disabled { opacity: .3; cursor: default; }
+.my-calendar-weekdays[data-my-calendar],
+.my-calendar-week[data-my-calendar] { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.my-calendar-weekdays[data-my-calendar] { margin-bottom: 6px; color: var(--text-secondary); font-size: 12px; text-align: center; line-height: 28px; }
+.my-calendar-week[data-my-calendar] { padding: 3px 0; }
+.my-calendar-cell[data-my-calendar] { position: relative; display: flex; justify-content: center; align-items: center; min-width: 0; }
+.my-calendar-cell.my-in-range[data-my-calendar]::before {
+  content: "";
+  position: absolute;
+  inset: 1px 0;
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  pointer-events: none;
+}
+.my-calendar-cell.my-range-start[data-my-calendar]::before { left: 50%; }
+.my-calendar-cell.my-range-end[data-my-calendar]::before { right: 50%; }
+.my-calendar-cell.my-range-start.my-range-end[data-my-calendar]::before { display: none; }
+.my-calendar-cell.my-preview[data-my-calendar]::before { background: color-mix(in srgb, var(--primary) 9%, transparent); }
+.my-calendar-day[data-my-calendar] {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(var(--calendar-day-size, 36px), 100%);
+  height: var(--calendar-day-size, 36px);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1;
+  transition: background 120ms, color 120ms;
+}
+.my-calendar-cell.my-outside .my-calendar-day[data-my-calendar] { color: var(--text-secondary); opacity: .5; }
+.my-calendar-day[aria-current="date"][data-my-calendar]::after { content: ""; position: absolute; bottom: 3px; width: 3px; height: 3px; border-radius: 50%; background: currentColor; }
+.my-calendar-day.my-is-disabled[data-my-calendar] { opacity: .28; cursor: default; text-decoration: line-through; }
+.my-calendar-day.my-selected[data-my-calendar] { background: var(--primary); color: var(--primary-text); opacity: 1; font-weight: var(--font-weight-subtitle, 600); }
+.my-calendar-day[data-my-calendar]:focus-visible { outline-offset: 1px; z-index: 1; }
+.my-calendar-status[data-my-calendar] { margin-top: 12px; min-height: 20px; color: var(--text-secondary); font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+@media (hover: hover) {
+  .my-calendar-nav-button[data-my-calendar]:not(:disabled):hover,
+  .my-calendar-today[data-my-calendar]:not(:disabled):hover,
+  .my-calendar-day[data-my-calendar]:not(.my-is-disabled):not(.my-selected):hover { background: var(--hover); color: var(--text); }
+}
+.my-calendar-nav-button[data-my-calendar]:not(:disabled):active,
+.my-calendar-today[data-my-calendar]:not(:disabled):active,
+.my-calendar-day[data-my-calendar]:not(.my-is-disabled):not(.my-selected):active { background: var(--press); }
+@media (prefers-reduced-motion: reduce) {
+  .my-calendar button[data-my-calendar] { transition: none; }
+}
+
 /* ── ProgressTrack ───────────────────────────────────────────── */
 
 .my-progress-track[data-my-progress-track] {

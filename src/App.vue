@@ -12,6 +12,7 @@ import ShadowShowcase from './demo/ShadowShowcase.vue'
 import TouchShowcase from './demo/TouchShowcase.vue'
 import ComboboxShowcase from './demo/ComboboxShowcase.vue'
 import PickerShowcase from './demo/PickerShowcase.vue'
+import DateTimeShowcase from './demo/DateTimeShowcase.vue'
 import SharePanel from './demo/SharePanel.vue'
 import {
   Button, Card, CellGroup, TagGroup, Choices, Icon, Input,
@@ -229,6 +230,7 @@ onBeforeUnmount(() => {
         <SelectionCollapseShowcase />
         <div class="secondary-pair"><ComboboxShowcase /></div>
         <div class="secondary-pair"><PickerShowcase /></div>
+        <div class="secondary-pair"><DateTimeShowcase /></div>
       </section>
 
       <section id="surfaces" class="section-gap">
