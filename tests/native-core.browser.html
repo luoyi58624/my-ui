@@ -1,11 +1,11 @@
 <!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>my-ui 原生核心与 Vue 适配回归</title>
-<link rel="stylesheet" href="/lib/my-ui.css"><script src="/lib/my-ui.js"></script>
+<link rel="stylesheet" href="/packages/core/my-ui.css"><script src="/packages/core/my-ui.js"></script>
 <style>main{padding:24px;max-width:900px;margin:auto}#fixture{margin:20px 0;max-width:360px;padding:16px;border:1px solid var(--border);border-radius:16px;background:var(--card-background)}pre{white-space:pre-wrap;font:12px/1.6 monospace}</style>
 <main><h1>原生核心与 Vue 适配</h1><button id="run" disabled>运行定向回归</button><div id="fixture"></div><pre id="result">尚未运行</pre></main>
 <script type="module">
 import {createApp,h,ref,nextTick} from 'vue'
-import {Icon,Button,Input,Textarea,Select,Combobox,Form,FormField,Radio,RadioGroup,Checkbox,CheckboxGroup,TagGroup,Menu,Dialog,Popup,popup,Tabs,Collapse,CollapseItem,Segmented,ListRow,Progress} from '/vue/index.ts'
+import {Icon,Button,Input,Textarea,Select,Combobox,Form,FormField,Radio,RadioGroup,Checkbox,CheckboxGroup,TagGroup,Menu,Dialog,Popup,popup,Tabs,Collapse,CollapseItem,Segmented,ListRow,Progress} from '/packages/vue/index.ts'
 const {create}=MyUI,fixture=document.querySelector('#fixture'),results=[];
 let owned=[],app;
 const add=(name,props={},slots={})=>{const c=create(name,props,{slots});owned.push(c);fixture.append(c.element);return c;};

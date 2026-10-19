@@ -3,27 +3,37 @@
 可以直接复制、本地修改的组件源码。原生 HTML 与 Vue 共用同一套样式、交互、定位与动画；不发布 npm 包。组件只提供 CSS 默认明暗样式，展示页的配色预设和主题编辑器独立于组件库。
 
 ```text
-lib/
-  my-ui.css           所有组件样式，按组件分节
-  my-ui.js            原生 DOM 交互核心，无框架依赖，无需编译
-  my-ui.d.ts          原生 API 类型
-vue/
-  index.ts            Vue 组件入口
-  adapter.ts          props、v-model、事件、插槽和生命周期适配
-  popup.ts            Vue 内容渲染适配
-  components/         51 个组件的类型与薄封装，无组件样式
-src/                  Vue 示例页面与演示业务
-  theme/              示例专用的配色预设、主题编辑与类型
-native.html           不加载 Vue、可直接打开的 HTML 示例
+packages/
+  core/                 @my-ui/core：原生组件，无框架依赖，无需编译
+    my-ui.css           所有组件样式，按组件分节
+    my-ui.js            所有 DOM 交互、定位与动画
+    my-ui.d.ts          原生 API 类型
+  vue/                  @my-ui/vue：Vue 3 薄封装
+    index.ts            51 个组件的公共入口
+    adapter.ts          props、v-model、事件、插槽和生命周期适配
+    components/         组件封装及类型，无组件样式
+example/                @my-ui/example：展示与使用示例
+  src/                  Vue 示例页面、演示业务和示例专用 theme/
+  public/               示例静态资源
+  index.html            Vue 入口
+  native.html           不加载 Vue 的原生 HTML 示例
+  vite.config.ts        示例的开发与构建配置
+tests/                  正式测试与浏览器回归页面
+scripts/                构建辅助脚本
+reference/              原始设计参考
+package.json            Bun workspace 与统一命令
+bun.lock                唯一依赖锁文件
 ```
+
+仓库只划分原生核心、Vue 封装、示例三个私有 workspace，由 Bun 统一安装与关联。示例通过 `@my-ui/vue` 直接使用本地源码，修改组件后实时更新；所有包均为 `private`，无需发布 npm。
 
 ## 普通 HTML
 
-复制 `lib/my-ui.css` 与 `lib/my-ui.js`，直接引用。可离线运行，不需要 Vue、npm 或构建工具。项目中的 `native.html` 就是完整示例。
+复制 `packages/core/my-ui.css` 与 `packages/core/my-ui.js`，直接引用。可离线运行，不需要 Vue、包管理器或构建工具。项目中的 `example/native.html` 就是完整示例。
 
 ```html
-<link rel="stylesheet" href="./lib/my-ui.css">
-<script src="./lib/my-ui.js" defer></script>
+<link rel="stylesheet" href="./my-ui.css">
+<script src="./my-ui.js" defer></script>
 
 <button class="my-button" type="button">保存</button>
 <input data-my="Switch" data-options='{"value":true,"label":"自动保存"}'>
@@ -56,7 +66,7 @@ native.html           不加载 Vue、可直接打开的 HTML 示例
 
 ## Vue
 
-复制 `lib/` 和 `vue/` 到自己的源码目录。Vue 只需使用已有的 Vue 3 依赖；入口自动引入公共 CSS 与原生 JS，无需再次添加 script。
+复制 `packages/core/` 和 `packages/vue/` 到自己的 `my-ui/` 目录，保留 `core/`、`vue/` 的同级关系。Vue 只需使用已有的 Vue 3 依赖；入口自动引入公共 CSS 与原生 JS，无需再次添加 script。在本仓库的示例中，直接从 `@my-ui/vue` 导入。
 
 ```vue
 <script setup lang="ts">
@@ -97,7 +107,7 @@ const actions = [
 没有 `request` 时只选择和管理文件，不会假装上传成功。传入 `request(file, { signal, onProgress })` 后默认自动上传：Promise 兑现表示成功、拒绝表示失败。应用自行决定服务器、请求方式与返回结果，支持用 Fetch、XHR 或已有上传服务实现；取消时组件中止 `signal`，请求函数应响应信号并清理资源。
 
 ```ts
-import type { UploadRequest } from './vue'
+import type { UploadRequest } from './my-ui/vue'
 const upload: UploadRequest = async (file, { signal }) => {
   const body = new FormData()
   body.append('file', file)
@@ -129,7 +139,7 @@ Notice 的 `type` 为 `info` / `success` / `warning` / `error`，支持 `title`�
 
 Steps 的 `options` 使用 `{ label, description?, icon?, disabled? }`，`value` / `v-model` 是从零开始的当前索引，等于总数表示全部完成；`status="error"` 将当前步骤标为失败，`vertical` 使用纵向布局。默认只展示进度；开启 `interactive` 后允许点击与方向键切换，Home / End 到首尾，跳过禁用项，整组只有一个 Tab 入口；`disabled` 禁止所有操作。CSS 变量 `--step-size` 默认 32px。
 
-四个组件的原生入口同样为 `MyUI.create('Upload', props)`、`MyUI.mount('#host', 'Upload', props)` 或 `data-my`；Upload / Notice / Steps 的双向值使用 `value` 与 `onChange`，AppBar 的返回使用 `onBack`。完整原生写法见 `native.html`，Vue 示例在 `src/demo/UploadShowcase.vue`、`AppBarShowcase.vue`、`NoticeStepsShowcase.vue`。
+四个组件的原生入口同样为 `MyUI.create('Upload', props)`、`MyUI.mount('#host', 'Upload', props)` 或 `data-my`；Upload / Notice / Steps 的双向值使用 `value` 与 `onChange`，AppBar 的返回使用 `onBack`。完整原生写法见 `example/native.html`，Vue 示例在 `example/src/demo/UploadShowcase.vue`、`AppBarShowcase.vue`、`NoticeStepsShowcase.vue`。
 
 ## Image 图片
 
@@ -167,7 +177,7 @@ Steps 的 `options` 使用 `{ label, description?, icon?, disabled? }`，`value`
 
 原生用法为 `MyUI.mount('#picker', 'Picker', { value, options, onChange(value) {} })`，或使用 `data-my="Picker"`。Vue 可通过 ref 的 `focus()` 聚焦首个可用列。CSS 变量为 `--picker-item-height`（默认 44px）、`--picker-height`（默认 220px）和 `--picker-radius`；颜色沿用现有主题变量。
 
-Picker 可直接嵌入页面，也可放入 Sheet。面板中使用一份临时值，确认后写回，取消时丢弃；示例见 `src/demo/PickerShowcase.vue`。
+Picker 可直接嵌入页面，也可放入 Sheet。面板中使用一份临时值，确认后写回，取消时丢弃；示例见 `example/src/demo/PickerShowcase.vue`。
 
 ## DatePicker / TimePicker / Calendar
 
@@ -201,7 +211,7 @@ MyUI.mount('#date', 'DatePicker', { value: '2026-10-19' });
 MyUI.mount('#time', 'TimePicker', { value: '09:30', minuteStep: 15 });
 ```
 
-原生声明式入口同样支持 `data-my="Calendar"` / `DatePicker` / `TimePicker` 和 JSON `data-options`。DatePicker / TimePicker 沿用 Picker 的 CSS 变量；Calendar 提供 `--calendar-width`（默认 360px）和 `--calendar-day-size`（默认 36px），颜色只沿用 CSS 主题变量。示例见 `src/demo/DateTimeShowcase.vue` 与 `native.html`。
+原生声明式入口同样支持 `data-my="Calendar"` / `DatePicker` / `TimePicker` 和 JSON `data-options`。DatePicker / TimePicker 沿用 Picker 的 CSS 变量；Calendar 提供 `--calendar-width`（默认 360px）和 `--calendar-day-size`（默认 36px），颜色只沿用 CSS 主题变量。示例见 `example/src/demo/DateTimeShowcase.vue` 与 `example/native.html`。
 
 ## API 弹层
 
@@ -226,7 +236,7 @@ Vue 从 `./my-ui/vue` 导入 `popup`，`content` 返回 `h()` 构建的 Vue 内�
 
 ## 改样式、主题和交互
 
-组件类名统一为 `my-` 前缀，例如 `.my-button`、`.my-input-box`、`.my-list-row`。所有组件规则只在 `lib/my-ui.css` 中维护，组件内部选择器带有隔离标记，避免影响宿主页面。变量保留简短的语义名，按需覆盖即可。
+组件类名统一为 `my-` 前缀，例如 `.my-button`、`.my-input-box`、`.my-list-row`。所有组件规则只在 `packages/core/my-ui.css` 中维护，组件内部选择器带有隔离标记，避免影响宿主页面。变量保留简短的语义名，按需覆盖即可。
 
 ```css
 /* 单个输入框也可直接通过 style 覆写这些变量。 */
@@ -238,27 +248,31 @@ Vue 从 `./my-ui/vue` 导入 `popup`，`content` 返回 `h()` 构建的 Vue 内�
 .my-slider { --slider-thumb-size: 22px; }
 ```
 
-`my-ui.js` 按主题、DOM 基础、输入与选择、列表、浮层、菜单、滑块和触摸手势分节。修改公共行为只改这一个文件，Vue 与 HTML 同时生效。
+`my-ui.js` 按 DOM 基础、输入与选择、列表、浮层、菜单、滑块和触摸手势分节。修改公共行为只改这一个文件，Vue 与 HTML 同时生效。
 
 明暗样式通过 `document.documentElement.dataset.theme = 'dark'` 切换，浅色使用 `'light'`。颜色、阴影、字重和背景模糊都可直接覆写 CSS 变量，组件 JS 不会应用配色或覆盖这些值。
 
-展示页的 14 组主色、3 组层级风格、系统外观监听与主题编辑逻辑位于 `src/theme/index.js`，由 `src/demo/ThemeSettings.vue` 使用；它们不属于 `MyUI` 或 Vue 组件入口。用户只复制 `lib/` 和 `vue/` 时，不会带入这套示例配置。
+展示页的 14 组主色、3 组层级风格、系统外观监听与主题编辑逻辑位于 `example/src/theme/index.js`，由 `example/src/demo/ThemeSettings.vue` 使用；它们不属于 `MyUI` 或 Vue 组件入口。用户只复制 `packages/core/` 和 `packages/vue/` 时，不会带入这套示例配置。
 
 ## 本地展示与验证
 
 ```powershell
-npm install
-npm run dev
-npm run build
+bun install
+bun run dev
+bun run build
 ```
 
 开发地址默认 `http://127.0.0.1:5178/`，原生入口为 `/native.html`。CSS 保存后即时更新；修改 JS 核心会完整刷新示例，避免旧实例残留。构建结果同时提供 Vue 页面、原生页面和原样的 CSS/JS。
+
+`bun run check` 检查 Vue 封装和示例类型；`bun run preview` 在 4178 端口预览 `dist/`。构建后的 `dist/native.html` 与 `dist/lib/` 可直接离线使用，`dist/lib/` 同时保留原生类型声明。
+
+浏览器回归使用 `bun run dev:test`，在 `http://127.0.0.1:5179/tests/文件名.browser.html` 打开对应页面。测试服务以仓库为根目录，示例服务以 `example/` 为根目录，互不混入构建产物。纯函数测试通过 `bun test ./tests/文件名.test.mjs` 按模块运行。
 
 两个示例入口都禁用移动端页面缩放，并保留单指滚动。自己的页面需要相同策略时，在 `html` 添加 `my-no-zoom`，并沿用示例的 viewport 配置；仅引入组件不会自动限制宿主页面缩放。按钮统一禁用文本选中，输入与正文复制不受影响。
 
 `tests/date-time.browser.html` 检查日期时间联动、跟手、日历范围、禁用日期、键盘、面板草稿、原生与 Vue 同步、样式和卸载；`tests/date-time.test.mjs` 检查闰年、边界、时分秒步长、网格与范围规则。
 
-`tests/picker.browser.html` 检查滚轮跟手、惯性、级联、键盘、禁用态、面板草稿和卸载；`tests/picker-value.test.mjs` 检查多列选值与吸附规则。`tests/image.browser.html` 检查图片加载、缓存、懒加载、切换地址、失败重试、属性、插槽与销毁；`tests/native-core.browser.html` 覆盖原生与 Vue 的值同步、布局尺寸、SVG 显隐、明暗主题、插槽、焦点及弹层生命周期；`tests/input-affixes.browser.html` 检查输入框图标对齐、完整点击区域和显隐操作。其余浏览器回归保留原交互场景。纯函数测试继续使用 Node 内置测试器，按改动范围选择测试文件运行。
+`tests/picker.browser.html` 检查滚轮跟手、惯性、级联、键盘、禁用态、面板草稿和卸载；`tests/picker-value.test.mjs` 检查多列选值与吸附规则。`tests/image.browser.html` 检查图片加载、缓存、懒加载、切换地址、失败重试、属性、插槽与销毁；`tests/native-core.browser.html` 覆盖原生与 Vue 的值同步、布局尺寸、SVG 显隐、明暗主题、插槽、焦点及弹层生命周期；`tests/input-affixes.browser.html` 检查输入框图标对齐、完整点击区域和显隐操作。其余浏览器回归保留原交互场景。纯函数测试使用 Bun 运行，按改动范围选择测试文件运行。
 
 `tests/upload-structure.browser.html` 定向检查上传状态与取消、移除、重试、对象地址释放、原生与 Vue 同步、顶栏居中、通知焦点和过渡、步骤键盘与语义。`tests/upload-structure.test.mjs` 检查文件校验与步骤状态；级联菜单标题图标的连续显示由 `tests/menu-cascade.browser.html` 的触屏标题用例覆盖。
 

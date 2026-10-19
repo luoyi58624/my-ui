@@ -1,4 +1,4 @@
-import '../lib/my-ui.js'
+import '../packages/core/my-ui.js'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'

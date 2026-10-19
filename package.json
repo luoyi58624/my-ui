@@ -4,23 +4,24 @@
   "private": true,
   "type": "module",
   "description": "my-ui：可直接复制修改的 CSS + JavaScript 组件，附 Vue 3 薄封装与示例",
+  "packageManager": "bun@1.3.8",
+  "workspaces": ["packages/core", "packages/vue", "example"],
   "scripts": {
-    "dev": "vite --host 127.0.0.1 --port 5178 --strictPort",
-    "build": "vue-tsc --noEmit && vite build && node scripts/copy-native.mjs",
-    "preview": "vite preview --host 127.0.0.1 --port 4178 --strictPort",
+    "dev": "bun run --cwd example dev",
+    "dev:test": "bun run --cwd example dev:test",
+    "build": "bun run check && bun run --cwd example build && bun scripts/copy-native.mjs",
+    "preview": "bun run --cwd example preview",
     "check": "vue-tsc --noEmit",
-    "test:theme": "node --test tests/theme.test.mjs",
-    "test:components": "node --test tests/components.test.mjs",
-    "test:popup": "node --test tests/popup.test.mjs",
-    "test:floating": "node --test tests/floating.test.mjs"
-  },
-  "dependencies": {
-    "vue": "3.5.43"
+    "test:theme": "bun test ./tests/theme.test.mjs",
+    "test:components": "bun test ./tests/components.test.mjs",
+    "test:popup": "bun test ./tests/popup.test.mjs",
+    "test:floating": "bun test ./tests/floating.test.mjs"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "6.0.10",
     "typescript": "5.9.3",
     "vite": "8.3.4",
+    "vue": "3.5.43",
     "vue-tsc": "3.3.13"
   }
 }

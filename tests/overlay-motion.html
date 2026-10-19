@@ -11,8 +11,8 @@
 <div id="app"></div>
 <script type="module">
 import { createApp, h, nextTick, ref } from 'vue'
-import { Button, Dialog, Drawer, Sheet, Popup, popup } from '/vue/index.ts'
-import { applyTheme } from '/src/theme/index.js'
+import { Button, Dialog, Drawer, Sheet, Popup, popup } from '/packages/vue/index.ts'
+import { applyTheme } from '/example/src/theme/index.js'
 
 applyTheme({ mode: 'light' })
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms))

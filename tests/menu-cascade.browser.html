@@ -10,8 +10,8 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
 <div id="app"></div>
 <script type="module">
 import { createApp, h, nextTick, ref } from 'vue'
-import { Button, Dialog, Icon, ListRow, Menu } from '/vue/index.ts'
-import { applyTheme } from '/src/theme/index.js'
+import { Button, Dialog, Icon, ListRow, Menu } from '/packages/vue/index.ts'
+import { applyTheme } from '/example/src/theme/index.js'
 
 applyTheme({ mode: 'light' })
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms))

@@ -8,8 +8,8 @@ main{max-width:860px;margin:32px auto;padding:24px}.fixtures{display:grid;gap:24
 <div id="app"></div>
 <script type="module">
 import {createApp,h,nextTick,ref} from 'vue'
-import { Button, Progress, Slider } from '/vue/index.ts'
-import { applyTheme } from '/src/theme/index.js'
+import { Button, Progress, Slider } from '/packages/vue/index.ts'
+import { applyTheme } from '/example/src/theme/index.js'
 
 applyTheme({mode:'light'})
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms))

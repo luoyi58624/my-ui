@@ -3,8 +3,8 @@
 <style>main{max-width:900px;padding:24px;margin:auto}.tools{display:flex;gap:12px;flex-wrap:wrap;margin:18px 0}.test-page{min-height:260px;padding:20px;background:var(--fill);border-radius:16px}.test-page h2{font-size:20px}.scroll-test{overflow:auto;width:180px;height:58px;margin-top:16px}.scroll-test>div{width:580px;height:50px}.panel-row{padding:18px 0;border-bottom:1px solid var(--border)}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}</style>
 <div id="app"></div><script type="module">
 import{createApp,h,nextTick,ref}from'vue'
-import { Button, Drawer, Sheet, Tabs, Popup, popup } from '/vue/index.ts'
-import { applyTheme } from '/src/theme/index.js'
+import { Button, Drawer, Sheet, Tabs, Popup, popup } from '/packages/vue/index.ts'
+import { applyTheme } from '/example/src/theme/index.js'
 applyTheme({backdropBlur:false})
 const frame=()=>new Promise(resolve=>requestAnimationFrame(resolve))
 // 后台标签页的帧回调可能节流，等待预算与组件的实际动画时长分开。

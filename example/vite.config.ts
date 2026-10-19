@@ -1,0 +1,29 @@
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+
+const exampleRoot = decodeURIComponent(new URL('.', import.meta.url).pathname).replace(/^\/(\w:)/, '$1')
+const projectRoot = decodeURIComponent(new URL('..', import.meta.url).pathname).replace(/^\/(\w:)/, '$1')
+
+export default defineConfig(({ mode }) => ({
+  root: mode === 'test' ? projectRoot : exampleRoot,
+  publicDir: exampleRoot + 'public',
+  resolve: {
+    alias: { '/packages': projectRoot + 'packages' },
+    dedupe: ['vue'],
+  },
+  server: { fs: { allow: [projectRoot] } },
+  build: { outDir: projectRoot + 'dist', emptyOutDir: true },
+  plugins: [
+    vue(),
+    {
+      name: 'my-ui-core-reload',
+      handleHotUpdate(context) {
+        // 核心是同页单例；编辑 JS 后完整刷新，避免遗留旧控制器与监听。
+        if (/[\\/]packages[\\/]core[\\/]my-ui\.js$/.test(context.file)) {
+          context.server.ws.send({ type: 'full-reload' })
+          return []
+        }
+      },
+    },
+  ],
+}))

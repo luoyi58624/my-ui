@@ -1,0 +1,9 @@
+{
+  "name": "@my-ui/vue",
+  "private": true,
+  "type": "module",
+  "description": "my-ui 的 Vue 3 薄封装，共用原生核心与样式",
+  "exports": { ".": "./index.ts" },
+  "dependencies": { "@my-ui/core": "workspace:*" },
+  "peerDependencies": { "vue": "^3.5.0" }
+}

@@ -1,12 +1,12 @@
 <!doctype html>
 <html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Upload / AppBar / Notice / Steps 定向回归</title>
-<link rel="stylesheet" href="/lib/my-ui.css"><script src="/lib/my-ui.js"></script>
+<link rel="stylesheet" href="/packages/core/my-ui.css"><script src="/packages/core/my-ui.js"></script>
 <style>main{max-width:820px;margin:auto;padding:24px}#fixture{margin:24px 0;max-width:600px}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.6 monospace}</style>
 <main><h1>上传与页面结构组件</h1><button id="run" disabled>运行上传与结构回归</button><div id="fixture"></div><pre id="result">尚未运行</pre></main>
 <script type="module">
 import { createApp, h, ref, nextTick } from 'vue'
-import { Upload, AppBar, Notice, Steps, Button } from '/vue/index.ts'
+import { Upload, AppBar, Notice, Steps, Button } from '/packages/vue/index.ts'
 const fixture = document.querySelector('#fixture'), run = document.querySelector('#run'), result = document.querySelector('#result')
 let app, owned = []
 const assert = (value, message) => { if (!value) throw Error(message) }

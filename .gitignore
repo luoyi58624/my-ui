@@ -4,6 +4,7 @@ dist/
 coverage/
 .vite/
 *.tsbuildinfo
+*.timestamp-*.mjs
 
 # 本地开发工具配置
 .idea/

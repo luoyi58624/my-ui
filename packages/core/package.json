@@ -1,0 +1,10 @@
+{
+  "name": "@my-ui/core",
+  "private": true,
+  "type": "module",
+  "description": "无框架依赖、可直接复制修改的原生 CSS 与 JavaScript 组件",
+  "exports": {
+    ".": { "types": "./my-ui.d.ts", "default": "./my-ui.js" },
+    "./style.css": "./my-ui.css"
+  }
+}
