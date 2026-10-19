@@ -1,0 +1,43 @@
+/*
+ * 仅移动端生效：html.my-mobile-native 由 mobile.ts 按 UA 添加。
+ * 全局禁止长按选中文字、系统长按 callout 与点击高亮，贴近原生 app 手感；
+ * 可编辑控件与可复制提示仍显式放开选择，不影响输入和粘贴。
+ */
+html.my-mobile-native {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html.my-mobile-native :is(input, textarea, [contenteditable=""], [contenteditable="true"], .my-tooltip-copyable) {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
+/* 避免长按图片触发系统拖拽/保存菜单。 */
+html.my-mobile-native img {
+  -webkit-user-drag: none;
+}
+
+/*
+ * 状态栏 / 手势条安全区（edge-to-edge + viewport-fit=cover）。
+ * 移动端固定顶栏 .masthead 高 100px、body 顶部留白 100px，各加一个安全区高度；
+ * content-box 让顶栏内容区保持 100px，额外 padding 只用于让出状态栏。
+ */
+html.my-mobile-native .masthead {
+  height: 100px;
+  padding-top: env(safe-area-inset-top);
+  box-sizing: content-box;
+}
+
+html.my-mobile-native body {
+  padding-top: calc(100px + env(safe-area-inset-top));
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+html.my-mobile-native {
+  scroll-padding-top: calc(100px + env(safe-area-inset-top));
+}

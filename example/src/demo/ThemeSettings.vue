@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { Button, Dialog, Icon, Input, Segmented, Slider, Switch } from '@my-ui/vue'
 import { applyTheme, createTheme, contrastRatio, defaultThemeOptions, themeColors, themeStyles, type ThemeColorId, type ThemeData, type ThemeMode, type ThemePreference, type ThemeStyleId } from '../theme/index.js'
+import { createSystemFontWeightSync, supportsSystemFontWeight } from '../font-weight'
 
 type Settings = { mode: ThemePreference; backdropBlur: boolean; fontWeight: number; light: ThemeData; dark: ThemeData }
 function defaults(): Settings {
@@ -46,7 +47,31 @@ watch(settings, value => {
   stopTheme = applyTheme(snapshot)
   try { localStorage.setItem('my-ui:theme', JSON.stringify(snapshot)) } catch { /* 存储失败时仍可在本页使用主题。 */ }
 }, { deep: true, immediate: true })
-onBeforeUnmount(() => { stopTheme?.(); systemMedia.removeEventListener('change', followSystem) })
+const weightSync = createSystemFontWeightSync(weight => { settings.fontWeight = weight }, defaultThemeOptions.fontWeight)
+const restoringWeight = ref(false)
+async function restoreSystemWeight() {
+  if (restoringWeight.value) return
+  restoringWeight.value = true
+  try {
+    const wght = await weightSync.restore()
+    notice.value = wght == null ? '未读取到系统字重，已保留当前设置' : supportsSystemFontWeight() ? `已同步系统字重 ${Math.round(wght)}` : '已恢复默认字重'
+  } finally {
+    restoringWeight.value = false
+  }
+}
+function resumeSystemWeight() {
+  if (document.visibilityState === 'visible') void weightSync.sync(true)
+}
+onMounted(() => {
+  void weightSync.sync()
+  document.addEventListener('visibilitychange', resumeSystemWeight)
+})
+onBeforeUnmount(() => {
+  weightSync.dispose()
+  stopTheme?.()
+  systemMedia.removeEventListener('change', followSystem)
+  document.removeEventListener('visibilitychange', resumeSystemWeight)
+})
 
 function setMode(value: string) {
   if (value !== 'light' && value !== 'dark' && value !== 'system') return
@@ -73,6 +98,7 @@ function reset() {
   drafts.light = createTheme(settings).primary
   drafts.dark = createTheme({ ...settings, mode: 'dark' }).primary
   notice.value = '已恢复默认主题'
+  void restoreSystemWeight()
 }
 function colorInk(hex: string) { return contrastRatio(hex, '#ffffff') >= contrastRatio(hex, '#000000') ? '#ffffff' : '#000000' }
 async function copy() {
@@ -123,10 +149,10 @@ async function copy() {
         </div>
         <div class="theme-preview-column">
           <section class="theme-section">
-            <div class="section-label"><h3>文字字重</h3><Button class="weight-reset" variant="text" @click="settings.fontWeight = 400">恢复字重</Button></div>
-            <Slider v-model="settings.fontWeight" label="全局字重" :min="100" :max="1000" :step="1" unit="" start-label="100 · 更细" end-label="1000 · 更粗" />
+            <div class="section-label"><h3>文字字重</h3><Button class="weight-reset" variant="text" :disabled="restoringWeight" @click="restoreSystemWeight">恢复字重</Button></div>
+            <Slider :model-value="settings.fontWeight" label="全局字重" :min="100" :max="1000" :step="1" unit="" start-label="100 · 更细" end-label="1000 · 更粗" @update:model-value="weightSync.customize" />
             <p class="weight-sample">清晰且自然 Aa 0123456789</p>
-            <p class="weight-note">默认 400，保留文字层级。字体支持可变字重时，粗细会连续变化。</p>
+            <p class="weight-note">Android 默认跟随系统字重，手动调整后保留你的设置；恢复字重可重新跟随系统。</p>
           </section>
           <section class="theme-section">
             <h3>弹窗效果</h3>

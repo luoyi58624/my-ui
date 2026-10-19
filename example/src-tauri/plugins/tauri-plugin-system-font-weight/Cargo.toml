@@ -1,0 +1,16 @@
+[package]
+name = "tauri-plugin-system-font-weight"
+# tauri-plugin 构建助手靠 links 名透传 DEP_*_ANDROID_LIBRARY_PATH，需与包名一致。
+links = "tauri-plugin-system-font-weight"
+version = "0.1.0"
+description = "读取 Android 系统字体字重（国产 ROM 私有设置 + 墨水覆盖探针），供 WebView 对齐系统字体粗细"
+authors = ["luoyi"]
+edition = "2021"
+rust-version = "1.77"
+
+[build-dependencies]
+# 插件专用构建助手：生成 ACL 权限并导出 Android 库路径（不需要 app 的 tauri.conf.json）。
+tauri-plugin = { version = "2", features = ["build"] }
+
+[dependencies]
+tauri = { version = "2", features = [] }

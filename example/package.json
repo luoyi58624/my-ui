@@ -6,9 +6,11 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 5178 --strictPort",
     "dev:desktop": "tauri dev",
+    "dev:android": "tauri android dev",
     "dev:test": "vite --mode test --host 127.0.0.1 --port 5179 --strictPort",
     "build": "vite build",
     "build:desktop": "tauri build --no-bundle",
+    "build:android": "tauri android build --apk --target aarch64",
     "tauri": "tauri",
     "preview": "vite preview --host 127.0.0.1 --port 4178 --strictPort"
   },

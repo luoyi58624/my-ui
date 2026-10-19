@@ -9,9 +9,11 @@
   "scripts": {
     "dev": "bun run --cwd example dev",
     "dev:desktop": "bun run --cwd example dev:desktop",
+    "dev:android": "bun run --cwd example dev:android",
     "dev:test": "bun run --cwd example dev:test",
     "build": "bun run check && bun run --cwd example build && bun scripts/copy-native.mjs",
     "build:desktop": "bun run --cwd example build:desktop",
+    "build:android": "bun run --cwd example build:android",
     "preview": "bun run --cwd example preview",
     "check": "vue-tsc --noEmit",
     "test:theme": "bun test ./tests/theme.test.mjs",

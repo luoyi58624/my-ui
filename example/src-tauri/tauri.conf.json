@@ -10,6 +10,7 @@
     "beforeBuildCommand": "bun run --cwd .. build"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "label": "main",
