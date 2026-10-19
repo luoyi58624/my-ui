@@ -3,6 +3,12 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, type ComponentPubl
 import { AppBar, Button, CellGroup, Icon, ListRow, Navigation, type Option } from '@my-ui/vue'
 import ThemeSettings from './demo/ThemeSettings.vue'
 import { demoExamples, demoGroups } from './demo/catalog'
+import { closePage, isChildPage, isNativeApp, openPage } from './navigation'
+
+const emit = defineEmits<{
+  /** 跳转或关闭失败时交给应用展示错误。 */
+  navigationError: [message: string]
+}>()
 
 const pages: (Option & { title: string; demo?: number })[] = [
   { value: 'home', label: '首页', title: '组件示例', icon: 'home' },
@@ -49,29 +55,32 @@ async function selectPage(value: string, reset = false, anchor?: string) {
 
 function navigate(value: string) {
   if (!pages.some(page => page.value === value)) return
-  // 底部同级切换不堆积历史；进入示例才添加一层，浏览器与 Android 返回行为一致。
-  history.replaceState({ ...history.state, myUiDemoDetail: false }, '', '#' + value)
+  // 底部同级切换留在当前主页面，只有组件入口调用跨页导航。
+  history.replaceState({ ...history.state, myUiPageParent: undefined }, '', '#' + value)
   handledHash = location.hash
   void selectPage(value, active.value === value)
 }
 
 function openExample(id: string) {
-  if (!demoExamples.some(item => item.id === id)) return
-  history.pushState({ ...history.state, myUiDemoDetail: true }, '', '#example/' + id)
-  handledHash = location.hash
-  void selectPage('example/' + id, true)
+  const item = demoExamples.find(item => item.id === id)
+  if (!item) return
+  void openPage('#example/' + id, { title: item.title }).catch(reportError)
+}
+
+function reportError(error: unknown) {
+  returning = false
+  emit('navigationError', error instanceof Error ? error.message : String(error))
 }
 
 function goBack() {
   if (returning) return
-  if (history.state?.myUiDemoDetail) {
-    returning = true
-    history.back()
-  } else {
-    history.replaceState(history.state, '', '#home')
-    handledHash = location.hash
-    void selectPage('home')
+  if (isNativeApp() && !isChildPage()) {
+    // 主窗口直接打开旧链接时回到目录，不能误关主窗口。
+    navigate('home')
+    return
   }
+  returning = true
+  void closePage().catch(reportError)
 }
 
 function followHash() {
@@ -103,7 +112,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="demo-app" :class="{ 'demo-app-detail': example }">
     <div class="demo-top">
-      <AppBar v-if="example" :title="title" back back-label="返回组件列表" class="demo-app-bar" @back="goBack">
+      <AppBar v-if="example" :title="title" back :back-label="isChildPage() ? '返回上一页' : '返回组件列表'" class="demo-app-bar" @back="goBack">
         <h1 ref="titleElement" class="demo-title" tabindex="-1">{{ title }}</h1>
         <template #actions><ThemeSettings /></template>
       </AppBar>

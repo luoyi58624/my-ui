@@ -1,4 +1,4 @@
-mod native_page;
+mod navigation;
 mod overlay_back;
 
 /// 启动原生壳，桌面与 Android 直接使用 example 的开发地址或构建产物。
@@ -6,8 +6,8 @@ mod overlay_back;
 pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
-            native_page::open_native_page,
-            native_page::close_native_page,
+            navigation::open_page,
+            navigation::close_page,
             overlay_back::set_overlay_back_enabled
         ])
         .plugin(tauri_plugin_store::Builder::default().build())

@@ -1,0 +1,51 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>my-ui 原生页面导航接入检查</title><style>body{font:14px system-ui;margin:20px;background:#f2f3f5;color:#17191e}iframe{display:block;width:390px;height:844px;border:1px solid #ddd;margin-top:20px}pre{white-space:pre-wrap}</style>
+<main><h1>原生页面导航接入</h1><button id="run">运行定向检查</button><pre id="result">尚未运行</pre><div id="fixture"></div></main>
+<script type="module">
+if(new URLSearchParams(location.search).has('frame')){
+  document.body.innerHTML='<div id="app"></div>';
+  await import('/example/src/main.ts');
+}else{
+  const reports=[],calls=[],pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));let frame,doc,win,respond=()=>Promise.resolve();
+  const assert=(value,message)=>{if(!value)throw Error(message)};
+  const until=async(check,message)=>{const start=performance.now();while(!check()){if(performance.now()-start>10000)throw Error(message);await pause(30)}};
+  const check=async(name,run)=>{await run();reports.push({name,passed:true})};
+  async function load(suffix){
+    const previous=doc;frame.src='/tests/navigation.browser.html?frame=1&'+suffix;
+    await until(()=>frame.contentDocument!==previous&&frame.contentDocument?.querySelector('.demo-bottom button'),'示例加载失败');
+    doc=frame.contentDocument;win=frame.contentWindow;await pause(120);
+    // 组件和状态先按网页真实挂载，再替换宿主命令；验证视图到桥接的调用，不模拟操作系统。
+    win.__TAURI__={core:{invoke:(command,args)=>{calls.push({command,args});return respond(command,args)}}};
+  }
+  const click=id=>doc.querySelector('[data-demo-link="'+id+'"]').click();
+  document.querySelector('#run').onclick=async()=>{
+    document.querySelector('#run').disabled=true;document.querySelector('#result').textContent='运行中';reports.length=0;calls.length=0;document.querySelector('#fixture').replaceChildren();
+    try{
+      frame=document.createElement('iframe');document.querySelector('#fixture').append(frame);await load('start=1#home');
+      await check('首页列表调用原生打开命令并携带正确地址与标题，父页保持原位',async()=>{
+        const home=doc.querySelector('[data-demo-page="home"]');home.scrollTop=440;click('button');await until(()=>calls.length===1,'没有调用原生跳转');await pause(70);
+        assert(calls[0].command==='open_page'&&calls[0].args.path.endsWith('#example/button')&&calls[0].args.title==='Button 按钮','地址或标题未传递');
+        assert(win.location.hash==='#home'&&!home.inert&&home.scrollTop===440,'父页面发生网页切换或丢失位置');assert(!doc.querySelector('.demo-detail'),'父页挂载了子页示例');
+      });
+      await check('原生创建未完成时连续点击只请求一次，完成后可以再打开',async()=>{
+        let finish;respond=()=>new Promise(resolve=>{finish=resolve});const count=calls.length;click('input');click('input');await pause(80);assert(calls.length===count+1,'重复创建原生页面');
+        respond=()=>Promise.resolve();finish();await pause(60);click('input');await pause(80);assert(calls.length===count+2,'完成后无法重新打开');
+      });
+      await check('原生打开失败展示错误并保留目录，下一次能够重试',async()=>{
+        respond=()=>Promise.reject(new Error('无法创建示例窗口'));click('image');await until(()=>doc.body.textContent.includes('无法创建示例窗口'),'未显示错误');
+        assert(win.location.hash==='#home'&&!doc.querySelector('[data-demo-page="home"]').inert,'失败后丢失目录');respond=()=>Promise.resolve();const count=calls.length;click('image');await pause(80);assert(calls.length===count+1,'失败后不能重试');
+      });
+      await check('独立子页显示目标内容，返回调用原生关闭且不改网页历史',async()=>{
+        await load('child=1&pageWindow=1#example/image');win.location.hash='#example/button';await until(()=>doc.querySelector('.demo-top [aria-label="返回上一页"]'),'子页没有原生返回入口');
+        assert(doc.querySelector('.demo-detail:not([inert])').textContent.includes('主要按钮'),'没有渲染目标示例');assert(win.getComputedStyle(doc.querySelector('.demo-bottom')).display==='none','子页仍显示主 Tab');
+        const count=calls.length,hash=win.location.hash;doc.querySelector('.demo-top [aria-label="返回上一页"]').click();await pause(80);assert(calls.length===count+1&&calls.at(-1).command==='close_page','返回没有关闭当前原生子页');assert(win.location.hash===hash,'返回修改了子页网页路由');
+      });
+      await check('主窗口直接访问组件旧链接，返回只回目录而不会误关主窗口',async()=>{
+        await load('direct=1#example/button');const count=calls.length;doc.querySelector('.demo-top [aria-label="返回组件列表"]').click();await until(()=>win.location.hash==='#home','没有回到主目录');assert(calls.length===count,'主窗口错误调用了关闭命令');
+      });
+      document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,total:5,reports},null,2);
+    }catch(error){document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,error:String(error.stack||error),reports},null,2)}
+    finally{document.querySelector('#run').disabled=false}
+  };
+}
+</script></html>

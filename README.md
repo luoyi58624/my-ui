@@ -313,9 +313,9 @@ bun run dev
 bun run build
 ```
 
-开发地址默认 `http://127.0.0.1:5178/`，原生入口为 `/native.html`。示例采用顶部导航与四个底部 Tab 的移动 App 布局。首页按用途分组，以 List 导航进入独立组件示例；“发现、消息、我的”暂为 Demo 占位页。示例页隐藏底部导航，顶部返回按钮、浏览器返回及 Android 返回可回到列表并恢复滚动位置；弹窗仍优先响应 Android 返回。打开过的示例保留输入状态，底部同级切换不增加返回历史。
+开发地址默认 `http://127.0.0.1:5178/`，原生入口为 `/native.html`。示例采用顶部导航与四个底部 Tab 的移动 App 布局。首页按用途分组，以 List 导航进入独立组件示例；“发现、消息、我的”暂为 Demo 占位页。Android App 的每个列表入口创建独立 Activity，桌面 App 创建独立窗口，父页面与滚动位置保留。顶部返回关闭当前子页，Android 弹窗仍优先响应系统返回。普通网页使用页内导航，返回恢复列表位置与输入状态，底部同级切换不增加返回历史。
 
-`example/src/DemoLayout.vue` 负责目录、导航、安全区与滚动恢复，`demo/catalog.ts` 统一维护列表项和路由，`App.vue` 用同名插槽组织示例内容。每个示例首次进入时挂载，链接为 `#example/组件标识`；旧的 `#combobox`、`#slider-options` 等链接仍可直接定位。原生 Activity 与共享状态示例位于首页的“完整示例”分组。CSS 保存后即时更新；修改 JS 核心会完整刷新示例，避免旧实例残留。构建结果同时提供 Vue 页面、原生页面和原样的 CSS/JS。
+`example/src/DemoLayout.vue` 负责目录、安全区与页面展示，`demo/catalog.ts` 统一维护列表项和路由，`App.vue` 用同名插槽组织示例内容。统一的 `example/src/navigation.ts` 负责跨平台打开与返回，组件库不依赖 Tauri。子页通过 `index.html?pageWindow=1#example/组件标识` 加载对应内容并隐藏主 Tab；旧的 `#combobox`、`#slider-options` 等链接仍可直接定位。原生 Activity 与共享状态示例位于首页的“完整示例”分组。CSS 保存后即时更新；修改 JS 核心会完整刷新示例，避免旧实例残留。构建结果同时提供 Vue 页面、原生页面和原样的 CSS/JS。
 
 `tests/demo-layout.browser.html` 使用真实示例入口检查全部目录跳转、详情返回与前进、滚动和输入保留、旧链接、弹层返回、键盘、320px 窄屏与桌面布局。
 
@@ -362,9 +362,19 @@ bun run build:android    # 构建自包含 arm64 优化 APK
 
 **移动端适配**（只写在示例层，组件库保持中立）：`example/src/mobile.ts` 按 UA 加 `my-mobile-native` 类并拦截长按选中与系统 callout（输入框、可复制文本除外）；`mobile.css` 处理 edge-to-edge 下的状态栏与手势条安全区；viewport 使用 `viewport-fit=cover`。字重统一走主题系统的 `settings.fontWeight`，不另设一套变量。
 
-**原生页面跳转与共享状态**：在 Android App 的「状态反馈 → 跨页共享状态」中修改备注或计数，再点「打开原生页面」。新页由独立的 `NativePageActivity` 承载，两页通过 Pinia 共享插件同步备注与计数，「从本地更新」演示绕过 Pinia 修改存储后通知页面。系统返回手势或页内返回按钮关闭新页，恢复首页原有滚动位置；重新打开或重启应用会恢复已保存的共享数据。网页中同一示例会打开另一个标签页。当前原生跳转使用 Tauri 内置多窗口能力，需要 Android 12L（API 32）或更高版本，具体系统转场跟随设备与 ROM。
+**统一页面跳转**：从 `example/src/navigation.ts` 使用 `openPage(path, { title? })` 和 `closePage(fallback?)`。Android 创建独立 `NativePageActivity`，桌面 App 创建独立窗口；关闭只作用于当前子页，父页保持原有状态，桌面关闭后聚焦父窗口。同一页面的创建请求进行中时合并连续点击，失败可重试并向调用者返回错误。仅接受应用内地址，不将宿主开发地址写死在原生层。
 
-这部分放在示例工程内，无需新增插件包：`example/src-tauri/src/native_page.rs` 通过 Tauri 的 `WebviewWindowBuilder` 创建 Activity，固定加载 `native-page.html`；`example/src/native-page.ts` 提供打开和返回的薄入口，`NativePage.vue` 复用原有组件、主题和系统字重。子页按 `native-page-*` 精确授权，首页不能被子页的关闭命令误关。未启用网页路由，也没有用 CSS 模拟页面进退动画。
+```ts
+import { openPage, closePage } from './navigation'
+
+await openPage('#example/button', { title: 'Button 按钮' })
+// 子页调用同一个关闭接口，由平台处理返回。
+await closePage()
+```
+
+普通网页的同页链接使用浏览器历史，直接访问详情时返回 `fallback`（默认 `#home`）；独立 HTML 打开另一标签页。示例层使用这套封装，原生侧的 `example/src-tauri/src/navigation.rs` 通过 Tauri 内置多窗口能力加载传入地址，无需新增插件包。子页按 `native-page-*` 授权，首页不能被关闭命令误关。Android 多窗口能力要求 Android 12L（API 32）或更高版本，原生转场跟随系统与 ROM。
+
+**跨页共享状态**：首页「完整示例 → 原生页面与共享状态」可以修改备注和计数，再打开另一页。两页通过 Pinia 共享插件同步，「从本地更新」演示绕过 Pinia 修改存储后通知页面。重新打开或重启应用会恢复已保存的数据。每个原生子页都有独立的 WebView、Vue 实例和普通局部状态，只有显式共享的数据跨页同步。
 
 返回命令通过当前子页的 JNI 句柄调用 `Activity.finish()`，不依赖 Android 上不会结束 Activity 的窗口 `close()`；系统返回继续使用原生返回栈，销毁时显式释放子页 WebView。两个 WebView 的 TS 模块、Vue 状态和全局变量仍各有一份，跨页数据通过共享存储同步；本次打开时间和滚动位置各自保留。
 
@@ -386,7 +396,7 @@ Android 示例的系统返回优先交给当前 WebView 的最上层弹层：级
 
 宿主可通过 `MyUI.layers.dismissTop()` 请求返回，通过 `MyUI.layers.subscribe(active => {})` 立即订阅是否存在弹层并取得取消订阅方法。接口不依赖 Tauri；安卓桥接只放在 example 中。禁用 `closeOnEscape` 的弹窗也会消费系统返回，等待业务操作关闭；滑块常驻数值提示不占用返回。
 
-`bun test ./tests/overlay-back.test.ts ./tests/native-page.test.ts ./tests/popup.test.mjs` 检查原生桥接串行、页面恢复、错误重试与既有弹层生命周期；`tests/overlay-back.browser.html` 检查真实 DOM、Vue 同步、嵌套弹窗、级联菜单、关闭动画和焦点恢复。
+`bun test ./tests/overlay-back.test.ts ./tests/navigation.test.ts` 检查原生桥接、跨平台导航、连续点击、错误重试与网页回退；`cargo test --lib navigation::tests` 检查原生目标地址和窗口边界。`tests/navigation.browser.html` 使用真实 Vue 页面和模拟宿主命令检查跳转接入，`tests/demo-layout.browser.html` 检查普通网页导航，`tests/overlay-back.browser.html` 检查真实弹层交互；浏览器模拟宿主不代替原生设备验证。
 
 ## 目录维护
 

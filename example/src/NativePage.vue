@@ -2,10 +2,11 @@
 import { h, ref } from 'vue'
 import { AppBar, Button, Card, CellGroup, Icon, Input, ListRow, Menu, Popup, Stepper, popup } from '@my-ui/vue'
 import ThemeSettings from './demo/ThemeSettings.vue'
-import { canOpenNativePage, closeNativePage } from './native-page'
+import { closePage, isNativeApp } from './navigation'
 import { updateDemoCache, useSharedDemoStore } from './stores/shared'
 
-const available = canOpenNativePage()
+const available = isNativeApp()
+const android = /android/i.test(navigator.userAgent)
 const shared = useSharedDemoStore()
 const error = ref('')
 const openedAt = new Date().toLocaleTimeString('zh-CN', { hour12: false })
@@ -13,8 +14,7 @@ const openedAt = new Date().toLocaleTimeString('zh-CN', { hour12: false })
 async function back() {
   try {
     await shared.$shared?.flush()
-    if (available) await closeNativePage()
-    else location.assign('./index.html#native-navigation')
+    await closePage('./index.html#native-navigation')
   }
   catch (reason) { error.value = reason instanceof Error ? reason.message : String(reason) }
 }
@@ -49,7 +49,7 @@ function openOverlay(kind: 'sheet' | 'drawer') {
       <template #actions><ThemeSettings /></template>
     </AppBar>
     <main class="native-page-content">
-      <div class="native-page-intro"><span class="native-page-symbol"><Icon name="layer" /></span><h1>来到另一页</h1><p>{{ available ? '从屏幕边缘向内滑动，试试系统的返回效果。' : '在这里修改备注和计数，另一标签页也会更新。' }}</p></div>
+      <div class="native-page-intro"><span class="native-page-symbol"><Icon name="layer" /></span><h1>来到另一页</h1><p>{{ available ? android ? '从屏幕边缘向内滑动，试试系统的返回效果。' : '当前内容在独立窗口中，关闭后回到原窗口。' : '在这里修改备注和计数，另一标签页也会更新。' }}</p></div>
       <Card title="共享的内容" description="两页修改即时同步，重新打开也会恢复">
         <Input v-model="shared.note" label="共享备注" clearable />
         <div class="native-page-counter"><span>共享计数</span><Stepper v-model="shared.count" label="共享计数" /></div>

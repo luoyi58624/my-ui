@@ -1,22 +1,22 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Button, Card, Icon, Input } from '@my-ui/vue'
-import { canOpenNativePage, openNativePage } from '../native-page'
+import { isNativeApp, openPage } from '../navigation'
 import { updateDemoCache, useSharedDemoStore } from '../stores/shared'
 
 const emit = defineEmits<{ notify: [message: string] }>()
-const available = canOpenNativePage()
+const available = isNativeApp()
 const opening = ref(false)
 const shared = useSharedDemoStore()
 
 async function open() {
   if (!available) {
-    window.open(new URL('/native-page.html', location.href), '_blank', 'noopener')
+    void openPage('native-page.html', { title: '跨页共享状态' }).catch(error => emit('notify', String(error)))
     return
   }
   if (opening.value) return
   opening.value = true
-  try { await shared.$shared?.flush(); await openNativePage() }
+  try { await shared.$shared?.flush(); await openPage('native-page.html', { title: '跨页共享状态' }) }
   catch (error) { emit('notify', error instanceof Error ? error.message : String(error)) }
   finally { opening.value = false }
 }

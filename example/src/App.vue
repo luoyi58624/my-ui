@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, h, reactive, ref } from 'vue'
 import DemoLayout from './DemoLayout.vue'
+import { openPage } from './navigation'
 import NativeNavigationShowcase from './demo/NativeNavigationShowcase.vue'
 import EssentialsShowcase from './demo/EssentialsShowcase.vue'
 import PopupShowcase from './demo/PopupShowcase.vue'
@@ -26,6 +27,10 @@ import {
 
 const toast = ref<InstanceType<typeof Toast>>()
 function notify(message: string) { toast.value?.show(message) }
+function openHtmlExample() {
+  void openPage('./native.html', { title: '原生 HTML 示例' })
+    .catch(error => notify(error instanceof Error ? error.message : String(error)))
+}
 function readSaved(key: string) {
   try { return (localStorage.getItem('my-ui:' + key) ?? localStorage.getItem('chenglan:' + key)) === 'true' } catch { return false }
 }
@@ -123,7 +128,7 @@ async function selectAction(action: Option) {
 </script>
 
 <template>
-  <DemoLayout>
+  <DemoLayout @navigation-error="notify">
     <template #button>
       <section id="buttons">
         <Card title="操作按钮" description="柔和而明确的操作层级" sample="BUTTONS">
@@ -275,7 +280,7 @@ async function selectAction(action: Option) {
     </template>
     <template #native-html>
       <Card class="native-example" title="原生 HTML 示例" description="同样的组件，也可以直接在 HTML 中使用">
-        <a class="native-example-link" href="./native.html">打开原生 HTML 示例 <Icon name="arrow-right" /></a>
+        <a class="native-example-link" href="./native.html" @click.prevent="openHtmlExample">打开原生 HTML 示例 <Icon name="arrow-right" /></a>
       </Card>
     </template>
   </DemoLayout>
