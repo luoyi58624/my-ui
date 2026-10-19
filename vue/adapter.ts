@@ -30,6 +30,8 @@ const tags: Record<string, string> = {
   Choices: "fieldset",
   Form: "form",
   Card: "article",
+  AppBar: "header",
+  Steps: "ol",
   ListRow: "button",
   Navigation: "nav",
 };
@@ -106,8 +108,18 @@ export function useNative(name: string, props: object, emit: unknown) {
     select: () => controller?.exposed.select?.(),
     /** 重新计算浮层位置。 */
     updatePosition: () => controller?.exposed.updatePosition?.(),
-    /** 重新加载当前图片，失败后可主动重试。 */
-    retry: () => controller?.exposed.retry?.(),
+    /** 重新加载图片，或按文件标识重试上传。 */
+    retry: (...args: any[]) => controller?.exposed.retry?.(...args),
+    /** 打开原生文件选择窗口，需由用户操作触发。 */
+    choose: () => controller?.exposed.choose?.(),
+    /** 将 File 数组或 FileList 加入上传列表并执行校验。 */
+    addFiles: (files: Iterable<File>) => controller?.exposed.addFiles?.(files),
+    /** 开始所有待上传、已取消或失败的文件，返回完成 Promise。 */
+    submit: () => controller?.exposed.submit?.(),
+    /** 取消指定上传，省略标识时取消全部进行中的上传。 */
+    abort: (id?: string) => controller?.exposed.abort?.(id),
+    /** 移除指定文件，同时中止它的请求。 */
+    remove: (id: string) => controller?.exposed.remove?.(id),
   };
   const render: Component = () => {
     revision.value;

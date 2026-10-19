@@ -11,7 +11,7 @@ vue/
   index.ts            Vue 组件入口
   adapter.ts          props、v-model、事件、插槽和生命周期适配
   popup.ts            Vue 内容渲染适配
-  components/         47 个组件的类型与薄封装，无组件样式
+  components/         51 个组件的类型与薄封装，无组件样式
 src/                  Vue 示例页面与演示业务
   theme/              示例专用的配色预设、主题编辑与类型
 native.html           不加载 Vue、可直接打开的 HTML 示例
@@ -83,7 +83,53 @@ const actions = [
 
 保留原来的 Vue 组件名、v-model、事件、具名插槽与作用域插槽。适配层使用实际原生元素作为根节点，组件之间通过 DOM 上下文共享布局与分组状态。
 
-公共组件：Icon、Avatar、Image、Badge、Button、Tag、TagGroup、Input、Textarea、Form、FormField、Radio、RadioGroup、Checkbox、CheckboxGroup、Choices、Switch、Select、Combobox、Segmented、Slider、Picker、DatePicker、TimePicker、Calendar、Progress、Tabs、Navigation、Stepper、CellGroup、ListRow、Collapse、CollapseItem、Card、Tooltip、Divider、Loading、Skeleton、Empty、Floating、Menu、Popover、Dialog、Sheet、Drawer、Popup、Toast。
+公共组件：Icon、Avatar、Image、Badge、Button、Tag、TagGroup、Input、Textarea、Form、FormField、Radio、RadioGroup、Checkbox、CheckboxGroup、Choices、Switch、Select、Combobox、Segmented、Slider、Picker、DatePicker、TimePicker、Calendar、Upload、AppBar、Notice、Steps、Progress、Tabs、Navigation、Stepper、CellGroup、ListRow、Collapse、CollapseItem、Card、Tooltip、Divider、Loading、Skeleton、Empty、Floating、Menu、Popover、Dialog、Sheet、Drawer、Popup、Toast。
+
+## Upload 文件上传
+
+```vue
+<Upload v-model="files" multiple drag accept="image/*,.pdf" :max-count="3"
+  :max-size="5 * 1024 * 1024" :request="upload" hint="图片或 PDF，每个最多 5 MB" />
+```
+
+`files` 是 `UploadFile[]`，使用唯一 `id` 与展示名称 `name`；记录可含原生 `file`、`size`（字节）、`type`（MIME）、已有图片 `url`。组件通过新数组同步值，不直接修改传入记录。状态为 `ready` / `uploading` / `success` / `error` / `canceled`，进度为 `percentage`（0—100），失败说明在 `error`，请求结果在 `response`。已有文件可不传 `file`，省略状态时视为成功；含原始文件时省略状态视为待上传。
+
+没有 `request` 时只选择和管理文件，不会假装上传成功。传入 `request(file, { signal, onProgress })` 后默认自动上传：Promise 兑现表示成功、拒绝表示失败。应用自行决定服务器、请求方式与返回结果，支持用 Fetch、XHR 或已有上传服务实现；取消时组件中止 `signal`，请求函数应响应信号并清理资源。
+
+```ts
+import type { UploadRequest } from './vue'
+const upload: UploadRequest = async (file, { signal }) => {
+  const body = new FormData()
+  body.append('file', file)
+  const response = await fetch('/api/files', { method: 'POST', body, signal })
+  if (!response.ok) throw new Error('上传失败，请重试')
+  return response.json()
+}
+```
+
+`accept` 支持 `.pdf`、`image/png`、`image/*` 等逗号分隔规则；类型、单文件大小、重复文件、剩余数量均在加入前校验，一次选择可接收其中的合法文件，并通过 `reject` 返回其余文件的原因。默认单选且最多一个文件，启用 `multiple` 后默认不限数量，`maxCount` 可进一步限制。相同名称、大小和修改时间的原始文件视为重复；移除后可重新选择。
+
+`autoUpload=false` 时用 ref 的 `submit()` 批量启动待上传、已取消或失败的文件；`retry(id)` 重试一个文件，`abort(id?)` 取消指定或全部进行中的上传，`remove(id)` 移除，`choose()` 打开文件窗口（须由用户操作触发），`addFiles(files)` 接受 FileList / File 数组。原生通过 `instance.exposed` 调用相同方法。`success` / `error` / `cancel` / `remove` 返回文件记录；`reject` 返回 `{ file, reason, message }[]`。
+
+移除、外部删除或替换原始文件、卸载都会终止旧任务，忽略迟到的结果和进度；图片对象地址也同时释放。`disabled` 禁止用户操作，已开始的请求继续运行。改变 `request` 只影响后续请求。示例的上传服务仅模拟进度，不发送文件。
+
+## AppBar / Notice / Steps
+
+```vue
+<AppBar title="我的收藏" subtitle="12 个灵感" back sticky @back="goBack">
+  <template #actions><Button variant="bare" icon="search" aria-label="搜索" /></template>
+</AppBar>
+<Notice v-model="visible" type="warning" title="空间不足" message="清理一些文件后继续。" closable />
+<Steps v-model="step" :options="[{ label: '填写资料' }, { label: '确认内容' }, { label: '完成' }]" />
+```
+
+AppBar 默认标题居中，会根据左右内容的实际宽度预留对称空间；`center=false` 改为左对齐，长标题省略。`leading` 插槽优先于默认返回按钮，默认插槽替换标题，`actions` 放右侧操作。`back` 只发送事件，不调用浏览器历史；`sticky` 在当前滚动容器顶部吸附。CSS 变量为 `--app-bar-height`（默认 60px）和 `--app-bar-top`。
+
+Notice 的 `type` 为 `info` / `success` / `warning` / `error`，支持 `title`、`message`，默认插槽替换正文，`actions` 添加操作。`icon=false` 可隐藏图标，或传入内置图标名；`closable` 开启关闭按钮并同步布尔值，200ms 淡出收起，关闭时立即退出辅助树与键盘焦点。更新绑定值可重新展开，错误通知使用 alert，其余使用 status。CSS 变量 `--notice-radius` 默认 12px。
+
+Steps 的 `options` 使用 `{ label, description?, icon?, disabled? }`，`value` / `v-model` 是从零开始的当前索引，等于总数表示全部完成；`status="error"` 将当前步骤标为失败，`vertical` 使用纵向布局。默认只展示进度；开启 `interactive` 后允许点击与方向键切换，Home / End 到首尾，跳过禁用项，整组只有一个 Tab 入口；`disabled` 禁止所有操作。CSS 变量 `--step-size` 默认 32px。
+
+四个组件的原生入口同样为 `MyUI.create('Upload', props)`、`MyUI.mount('#host', 'Upload', props)` 或 `data-my`；Upload / Notice / Steps 的双向值使用 `value` 与 `onChange`，AppBar 的返回使用 `onBack`。完整原生写法见 `native.html`，Vue 示例在 `src/demo/UploadShowcase.vue`、`AppBarShowcase.vue`、`NoticeStepsShowcase.vue`。
 
 ## Image 图片
 
@@ -213,6 +259,8 @@ npm run build
 `tests/date-time.browser.html` 检查日期时间联动、跟手、日历范围、禁用日期、键盘、面板草稿、原生与 Vue 同步、样式和卸载；`tests/date-time.test.mjs` 检查闰年、边界、时分秒步长、网格与范围规则。
 
 `tests/picker.browser.html` 检查滚轮跟手、惯性、级联、键盘、禁用态、面板草稿和卸载；`tests/picker-value.test.mjs` 检查多列选值与吸附规则。`tests/image.browser.html` 检查图片加载、缓存、懒加载、切换地址、失败重试、属性、插槽与销毁；`tests/native-core.browser.html` 覆盖原生与 Vue 的值同步、布局尺寸、SVG 显隐、明暗主题、插槽、焦点及弹层生命周期；`tests/input-affixes.browser.html` 检查输入框图标对齐、完整点击区域和显隐操作。其余浏览器回归保留原交互场景。纯函数测试继续使用 Node 内置测试器，按改动范围选择测试文件运行。
+
+`tests/upload-structure.browser.html` 定向检查上传状态与取消、移除、重试、对象地址释放、原生与 Vue 同步、顶栏居中、通知焦点和过渡、步骤键盘与语义。`tests/upload-structure.test.mjs` 检查文件校验与步骤状态；级联菜单标题图标的连续显示由 `tests/menu-cascade.browser.html` 的触屏标题用例覆盖。
 
 ## 目录维护
 

@@ -195,11 +195,28 @@
       <p class="caption">内容由节点或构建函数传入，使用 value 与 onChange 同步状态。</p>
       <div id="tabs"></div>
     </section>
+    <section class="demo-card wide" id="native-structure">
+      <h2>顶栏、通知与步骤</h2>
+      <p class="caption">只引入 CSS 与 JS，即可直接组合页面结构。</p>
+      <header id="native-app-bar" data-my="AppBar" data-options='{"title":"我的工作空间","subtitle":"原生 HTML 示例","back":true}'></header>
+      <div style="margin:20px 0" data-my="Notice" data-options='{"title":"内容已保存","message":"这条通知可以关闭。","type":"success","closable":true}'></div>
+      <ol data-my="Steps" data-options='{"value":1,"interactive":true,"options":[{"label":"填写资料"},{"label":"确认内容"},{"label":"提交完成"}]}'></ol>
+      <output id="structure-result" aria-live="polite">点击步骤可以切换当前进度。</output>
+    </section>
+    <section class="demo-card wide" id="native-upload-card">
+      <h2>选择附件</h2>
+      <p class="caption">选择或拖放文件；这个示例只保存当前页面的文件列表。</p>
+      <div id="native-upload" data-my="Upload" data-options='{"multiple":true,"drag":true,"maxCount":3,"maxSize":5242880,"accept":"image/*,.txt,.pdf","hint":"图片、文本或 PDF，每个最多 5 MB，最多 3 个"}'></div>
+      <output id="upload-result" aria-live="polite">尚未选择文件</output>
+    </section>
   </div>
 </main>
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     const {mount, create, popup} = MyUI;
+    document.querySelector('#native-app-bar').addEventListener('my:back', () => { document.querySelector('#structure-result').textContent = '已点击返回，导航由页面决定'; });
+    document.querySelector('#native-structure ol').addEventListener('my:change', event => { document.querySelector('#structure-result').textContent = '当前步骤：' + (event.detail + 1); });
+    document.querySelector('#native-upload').addEventListener('my:change', event => { document.querySelector('#upload-result').textContent = event.detail.length ? '已选择：' + event.detail.map(file => file.name).join('、') : '尚未选择文件'; });
     document.querySelector('#date-time').addEventListener('my:change', event => {
       document.querySelector('#date-time-result').textContent = '当前选择：' + event.detail;
     });

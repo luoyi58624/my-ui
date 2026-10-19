@@ -66,6 +66,8 @@ createApp({ setup() {
     running.value = true; result.value = '运行中'
     const reports = []
     async function check(name, work) {
+      const filter = new URLSearchParams(location.search).get('case')
+      if (filter && !name.includes(filter)) return
       await clear(); mounted.value = true; options.value = baseOptions(); mode.value = 'normal'; value.value = undefined; custom.value = false; hoverDelay.value = 120; calls.value = 0; callback.value = undefined; afterSelect = undefined
       await settle(); await work(); reports.push({ name, passed: true })
     }
@@ -312,10 +314,13 @@ createApp({ setup() {
           await pause(260); await settle(); assert(old.every(element => !element.isConnected), '外部淡出结束后仍有旧级联')
         })
         await check('触屏标题从原行连续移动展开，保留二级说明且返回后恢复源行', async () => {
+          options.value[1].icon = 'inbox'; await settle()
           await open(); const sourceRow = row('move'), origin = sourceRow.getBoundingClientRect()
           pointer('pointerdown', sourceRow, point(sourceRow), { pointerType: 'touch' }); sourceRow.click(); await tick()
           const panel = roots().at(-1).querySelector(".my-floating-panel"), header = backButton(), reduced = matchMedia('(prefers-reduced-motion:reduce)').matches
           assert(panel.hasAttribute('data-cascade') && header.querySelector('small')?.textContent === 'Choose a destination', '标题丢失原行内容')
+          const sourceIcon = sourceRow.querySelector('.my-leading-content svg'), headerIcon = header.querySelector('.my-leading-content svg')
+          assert(sourceIcon && headerIcon && headerIcon.innerHTML === sourceIcon.innerHTML && headerIcon.getBoundingClientRect().width > 0 && !headerIcon.closest('[hidden]'), '进入子菜单后丢失了触发行图标')
           if (!reduced) {
             assert(Math.abs(header.getBoundingClientRect().top - origin.top) < 1, '标题没有从原条目位置开始')
             assert(+getComputedStyle(panel).opacity === 1 && getComputedStyle(panel).clipPath !== 'none', '子层变成整体淡入缩放')

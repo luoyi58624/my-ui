@@ -28,6 +28,9 @@ export interface Option {
   disabled?: boolean
 }
 
+/** 步骤选项，以数组索引标识当前位置，不需要额外的 value。 */
+export type StepOption = Omit<Option, 'value'>
+
 /** 菜单选项；添加 children 即为子菜单，只有叶子项触发选择。 */
 export interface MenuOption extends Option {
   /** 子菜单选项；同一菜单树中的 value 应保持唯一。 */

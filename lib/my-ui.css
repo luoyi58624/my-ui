@@ -3604,7 +3604,8 @@ img[data-my-avatar] {
   font-size: 13px;
   line-height: 1.5;
 }
-.my-sr-only[data-my-loading] {
+.my-sr-only[data-my-loading],
+.my-sr-only[data-my-steps] {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -3723,6 +3724,111 @@ p[data-my-empty] {
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 20px;
+}
+
+/* ── AppBar ────────────────────────────────────────────── */
+
+.my-app-bar[data-my-app-bar] {
+  display: flex; align-items: center; gap: 12px;
+  min-height: var(--app-bar-height, 60px); padding: 8px 12px; margin: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--card-background); color: var(--text);
+}
+.my-app-bar.my-centered[data-my-app-bar] { display: grid; grid-template-columns: var(--app-bar-side, 40px) minmax(0, 1fr) var(--app-bar-side, 40px); }
+.my-app-bar.my-sticky[data-my-app-bar] { position: sticky; top: var(--app-bar-top, 0px); z-index: 20; }
+.my-app-bar-leading[data-my-app-bar], .my-app-bar-leading-slot[data-my-app-bar], .my-app-bar-actions[data-my-app-bar] { display: flex; align-items: center; flex: 0 0 auto; width: max-content; gap: 4px; }
+.my-app-bar-leading[data-my-app-bar] { justify-self: start; }
+.my-app-bar-actions[data-my-app-bar] { justify-self: end; }
+.my-app-bar-body[data-my-app-bar] { flex: 1; min-width: 0; }
+.my-app-bar.my-centered > .my-app-bar-body[data-my-app-bar] { text-align: center; }
+.my-app-bar-title[data-my-app-bar] { font-size: 17px; font-weight: var(--font-weight-subtitle, 600); line-height: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.my-app-bar-subtitle[data-my-app-bar] { margin-top: 1px; color: var(--text-secondary); font-size: 11px; line-height: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.my-app-bar-back[data-my-app-bar], .my-notice-close[data-my-notice], .my-upload-action[data-my-upload] { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; padding: 0; border: 0; background: transparent; color: inherit; }
+.my-app-bar-back[data-my-app-bar] { width: 40px; height: 40px; border-radius: 50%; }
+.my-app-bar-back svg[data-my-app-bar] { width: 22px; height: 22px; rotate: 180deg; }
+.my-app-bar-back[data-my-app-bar]:active { background: var(--press); }
+
+/* ── Notice ────────────────────────────────────────────── */
+
+.my-notice[data-my-notice] { --notice-color: var(--primary); display: grid; grid-template-rows: 1fr; min-width: 0; opacity: 1; transition: grid-template-rows 200ms ease, opacity 200ms ease; }
+.my-notice.my-success[data-my-notice] { --notice-color: var(--success); }
+.my-notice.my-warning[data-my-notice] { --notice-color: var(--warning); }
+.my-notice.my-error[data-my-notice] { --notice-color: var(--danger); }
+.my-notice.my-closed[data-my-notice] { grid-template-rows: 0fr; opacity: 0; pointer-events: none; }
+.my-notice-clip[data-my-notice] { min-height: 0; overflow: hidden; }
+.my-notice-box[data-my-notice] { display: flex; align-items: flex-start; gap: 10px; padding: 13px 14px; border: 1px solid color-mix(in srgb, var(--notice-color) 18%, transparent); border-radius: var(--notice-radius, 12px); background: color-mix(in srgb, var(--notice-color) 7%, var(--card-background)); color: var(--text); }
+.my-notice-icon[data-my-notice] { display: flex; align-items: center; flex: 0 0 20px; height: 22px; color: var(--notice-color); }
+.my-notice-icon svg[data-my-notice] { width: 20px; height: 20px; }
+.my-notice-body[data-my-notice] { flex: 1; min-width: 0; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.my-notice-title[data-my-notice] { display: block; font-size: 13px; font-weight: var(--font-weight-subtitle, 600); }
+.my-notice-title:not([hidden]) + .my-notice-message[data-my-notice] { color: var(--text-secondary); }
+.my-notice-actions[data-my-notice] { display: flex; align-items: center; flex: 0 0 auto; min-height: 22px; gap: 4px; }
+.my-notice-close[data-my-notice] { width: 26px; height: 26px; margin: -2px -4px -2px 0; border-radius: 50%; color: var(--text-secondary); }
+.my-notice-close svg[data-my-notice] { width: 16px; height: 16px; }
+.my-notice-close[data-my-notice]:active { background: color-mix(in srgb, var(--notice-color) 15%, transparent); }
+
+/* ── Steps ─────────────────────────────────────────────── */
+
+.my-steps[data-my-steps] { display: flex; align-items: flex-start; min-width: 0; padding: 0; margin: 0; list-style: none; }
+.my-step[data-my-steps] { position: relative; flex: 1; min-width: 0; }
+.my-step[data-my-steps]:not(:last-child)::after { content: ""; position: absolute; top: calc(var(--step-size, 32px) / 2 + 3px); left: calc(50% + var(--step-size, 32px) / 2 + 6px); right: calc(-50% + var(--step-size, 32px) / 2 + 6px); height: 1px; background: var(--border); pointer-events: none; }
+.my-step.my-finish[data-my-steps]::after { background: var(--primary); }
+.my-step-body[data-my-steps] { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; min-width: 0; padding: 3px 8px; border: 0; border-radius: 10px; background: transparent; color: var(--text-secondary); font: inherit; text-align: center; }
+button.my-step-body[data-my-steps]:disabled { cursor: default; opacity: .4; }
+.my-step-mark[data-my-steps] { display: flex; align-items: center; justify-content: center; flex: 0 0 auto; width: var(--step-size, 32px); height: var(--step-size, 32px); border: 1px solid var(--border); border-radius: 50%; background: var(--card-background); font-size: 13px; font-variant-numeric: tabular-nums; }
+.my-step-mark svg[data-my-steps] { width: 17px; height: 17px; }
+.my-step-copy[data-my-steps] { display: block; min-width: 0; }
+.my-step-label[data-my-steps] { display: block; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.my-step-description[data-my-steps] { display: block; margin-top: 3px; font-size: 11px; line-height: 1.6; color: var(--text-secondary); overflow-wrap: anywhere; }
+.my-step.my-process .my-step-mark[data-my-steps] { border-color: var(--primary); background: var(--primary); color: var(--primary-text); }
+.my-step.my-finish .my-step-mark[data-my-steps] { border-color: var(--primary); color: var(--primary); }
+.my-step.my-process .my-step-label[data-my-steps] { color: var(--text); font-weight: var(--font-weight-subtitle, 600); }
+.my-step.my-error .my-step-mark[data-my-steps] { border-color: var(--danger); color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, var(--card-background)); }
+.my-step.my-error .my-step-label[data-my-steps] { color: var(--danger); }
+.my-steps.my-vertical[data-my-steps] { flex-direction: column; gap: 22px; }
+.my-steps.my-vertical .my-step[data-my-steps] { flex: none; width: 100%; }
+.my-steps.my-vertical .my-step-body[data-my-steps] { flex-direction: row; align-items: flex-start; gap: 12px; padding: 3px; text-align: start; }
+.my-steps.my-vertical .my-step-copy[data-my-steps] { padding-top: 5px; }
+.my-steps.my-vertical .my-step[data-my-steps]:not(:last-child)::after { top: calc(var(--step-size, 32px) + 10px); bottom: -16px; left: calc(var(--step-size, 32px) / 2 + 3px); right: auto; width: 1px; height: auto; }
+
+/* ── Upload ────────────────────────────────────────────── */
+
+.my-upload[data-my-upload] { min-width: 0; }
+.my-upload-controls[data-my-upload] { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.my-upload-hint[data-my-upload], .my-upload-drop-hint[data-my-upload] { color: var(--text-secondary); font-size: 12px; line-height: 1.7; }
+.my-upload-drop[data-my-upload] { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 164px; padding: 24px 18px; border: 1px dashed var(--border); border-radius: var(--upload-radius, 14px); background: var(--fill); color: var(--text); transition: border-color 150ms, background 150ms; }
+.my-upload-drop > svg[data-my-upload] { width: 28px; height: 28px; color: var(--primary); }
+.my-upload-drop > strong[data-my-upload] { font-size: 14px; }
+.my-upload-drop[data-my-upload]:disabled { opacity: .5; cursor: default; }
+.my-upload-drop.my-dragging[data-my-upload] { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, var(--card-background)); }
+.my-upload-list[data-my-upload] { display: grid; gap: 10px; padding: 0; margin: 16px 0 0; list-style: none; }
+.my-upload-file[data-my-upload] { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 12px; border: 1px solid var(--border); border-radius: 12px; }
+.my-upload-thumb[data-my-upload] { display: flex; align-items: center; justify-content: center; flex: 0 0 40px; height: 40px; overflow: hidden; border-radius: 8px; background: var(--fill); color: var(--text-secondary); }
+.my-upload-thumb img[data-my-upload] { width: 100%; height: 100%; object-fit: cover; }
+.my-upload-thumb svg[data-my-upload] { width: 22px; height: 22px; }
+.my-upload-file-body[data-my-upload] { flex: 1; min-width: 0; }
+.my-upload-name[data-my-upload] { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; line-height: 1.6; }
+.my-upload-detail[data-my-upload] { display: flex; flex-wrap: wrap; gap: 2px 8px; color: var(--text-secondary); font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
+.my-upload-file.my-error .my-upload-status[data-my-upload], .my-upload-message.my-error[data-my-upload] { color: var(--danger); }
+.my-upload-file.my-success .my-upload-status[data-my-upload] { color: var(--success); }
+.my-upload-file .my-progress[data-my-progress] { margin-top: 6px; }
+.my-upload-file .my-progress-track[data-my-progress-track] { height: 3px; }
+.my-upload-actions[data-my-upload] { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+.my-upload-action[data-my-upload] { min-width: 28px; height: 30px; padding: 0 5px; border-radius: 8px; color: var(--primary); font-size: 12px; }
+.my-upload-action[data-upload-action="remove"][data-my-upload] { width: 30px; padding: 0; color: var(--text-secondary); }
+.my-upload-action svg[data-my-upload] { width: 16px; height: 16px; }
+.my-upload-action[data-my-upload]:disabled { opacity: .4; cursor: default; }
+.my-upload-action[data-my-upload]:not(:disabled):active { background: var(--press); }
+.my-upload-message[data-my-upload] { margin-top: 10px; color: var(--text-secondary); font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.my-upload-message[data-my-upload]:empty { display: none; }
+@media (hover: hover) {
+  .my-app-bar-back[data-my-app-bar]:hover, .my-upload-action[data-my-upload]:not(:disabled):hover { background: var(--hover); }
+  .my-notice-close[data-my-notice]:hover { background: color-mix(in srgb, var(--notice-color) 12%, transparent); }
+  button.my-step-body[data-my-steps]:not(:disabled):hover { background: var(--fill); }
+  .my-upload-drop[data-my-upload]:not(:disabled):hover { border-color: var(--primary); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .my-notice[data-my-notice], .my-upload-drop[data-my-upload] { transition: none; }
 }
 
 /* ── Divider ───────────────────────────────────────────── */

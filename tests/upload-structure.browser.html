@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Upload / AppBar / Notice / Steps 定向回归</title>
+<link rel="stylesheet" href="/lib/my-ui.css"><script src="/lib/my-ui.js"></script>
+<style>main{max-width:820px;margin:auto;padding:24px}#fixture{margin:24px 0;max-width:600px}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.6 monospace}</style>
+<main><h1>上传与页面结构组件</h1><button id="run" disabled>运行上传与结构回归</button><div id="fixture"></div><pre id="result">尚未运行</pre></main>
+<script type="module">
+import { createApp, h, ref, nextTick } from 'vue'
+import { Upload, AppBar, Notice, Steps, Button } from '/vue/index.ts'
+const fixture = document.querySelector('#fixture'), run = document.querySelector('#run'), result = document.querySelector('#result')
+let app, owned = []
+const assert = (value, message) => { if (!value) throw Error(message) }
+const equal = (actual, expected) => assert(JSON.stringify(actual) === JSON.stringify(expected), JSON.stringify(actual) + ' != ' + JSON.stringify(expected))
+const pause = ms => new Promise(resolve => setTimeout(resolve, ms))
+const tick = async () => { await nextTick(); await nextTick(); await new Promise(resolve => requestAnimationFrame(resolve)) }
+const add = (name, props = {}, options = {}) => { const c = MyUI.create(name, props, options); owned.push(c); fixture.append(c.element); return c }
+const file = (name = '笔记.txt', type = 'text/plain') => new File(['一段文字'], name, { type, lastModified: 1 })
+const image = () => new File(['<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10" fill="blue"/></svg>'], '封面.svg', { type: 'image/svg+xml' })
+const key = (node, name) => { const event = new KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true }); node.dispatchEvent(event); return event }
+const cleanup = () => { app?.unmount(); app = undefined; owned.forEach(c => c.destroy()); owned = []; fixture.replaceChildren() }
+const options = [{ label: '填写资料' }, { label: '确认内容' }, { label: '暂未开放', disabled: true }, { label: '完成' }]
+const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b }); return { promise, resolve, reject } }
+run.onclick = async () => {
+  run.disabled = true; result.textContent = '运行中'; const reports = []
+  const check = async (name, action) => {
+    const filter = new URLSearchParams(location.search).get('case'); if (filter && !name.includes(filter)) return
+    cleanup(); try { await action(); reports.push({ name, pass: true }) } catch (error) { reports.push({ name, pass: false, error: String(error) }) } finally { cleanup() }
+  }
+  await check('原生选择只建立待上传列表，不伪造成功，不修改已有数组', async () => {
+    const original = [], c = add('Upload', { value: original }); c.exposed.addFiles([file()]); await tick(); equal(original, []); equal(c.p.value[0].status, 'ready'); equal(c.p.value[0].file.name, '笔记.txt'); assert(c.element.textContent.includes('待上传') && !c.element.textContent.includes('已上传'), '无请求仍显示上传成功'); assert(c.element.querySelector('input').disabled, '单选已满仍允许选择')
+  })
+  await check('原生文件 input 和拖放共用校验，单个批次只产生一份列表事件', async () => {
+    let count = 0, rejected; const c = add('Upload', { multiple: true, drag: true, accept: '.txt', maxCount: 2, onReject: value => rejected = value }); c.element.addEventListener('my:change', () => count++)
+    const transfer = new DataTransfer(); transfer.items.add(file()); transfer.items.add(file('照片.png', 'image/png')); const input = c.element.querySelector('input'); input.files = transfer.files; input.dispatchEvent(new Event('change', { bubbles: true })); equal(count, 1); equal(rejected[0].reason, 'accept'); equal(input.value, '')
+    const second = new DataTransfer(); second.items.add(file('第二份.txt')); c.drop.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: second })); equal(c.p.value.length, 2); equal(count, 2)
+  })
+  await check('拖放进入子元素再离开时，高亮不会残留', async () => {
+    const c = add('Upload', { drag: true }), transfer = new DataTransfer(); transfer.items.add(file()); const nested = c.drop.querySelector('strong');
+    c.drop.dispatchEvent(new DragEvent('dragenter', { bubbles: true, cancelable: true, dataTransfer: transfer })); nested.dispatchEvent(new DragEvent('dragenter', { bubbles: true, cancelable: true, dataTransfer: transfer })); c.drop.dispatchEvent(new DragEvent('dragleave', { bubbles: true, relatedTarget: nested })); assert(c.drop.classList.contains('my-dragging'), '移入子元素就丢失高亮'); nested.dispatchEvent(new DragEvent('dragleave', { bubbles: true })); assert(!c.drop.classList.contains('my-dragging'), '离开后仍有高亮')
+  })
+  await check('自动上传上报进度和结果，成功只发送一次', async () => {
+    const task = deferred(); let context, success = 0; const c = add('Upload', { request: (_, ctx) => { context = ctx; return task.promise }, onSuccess: () => success++ }); c.exposed.addFiles([file()]); await tick(); equal(c.p.value[0].status, 'uploading'); context.onProgress(40); equal(c.p.value[0].percentage, 40); equal(c.element.querySelector('[role="progressbar"]').getAttribute('aria-valuenow'), '40'); context.onProgress(150); equal(c.p.value[0].percentage, 100); task.resolve({ key: 'saved' }); await tick(); equal(c.p.value[0].status, 'success'); equal(c.p.value[0].response, { key: 'saved' }); equal(success, 1)
+  })
+  await check('进度更新保留操作焦点和现有 DOM', async () => {
+    const task = deferred(); let context; const c = add('Upload', { request: (_, ctx) => { context = ctx; return task.promise } }); c.exposed.addFiles([file()]); await tick(); const button = c.element.querySelector('[data-upload-action="cancel"]'), row = c.element.querySelector('.my-upload-file'); button.focus(); context.onProgress(20); context.onProgress(40); assert(document.activeElement === button && row === c.element.querySelector('.my-upload-file'), '更新进度导致焦点或列表节点丢失'); c.exposed.abort()
+  })
+  await check('取消保留文件，旧请求兑现及迟到进度都不能覆盖重试', async () => {
+    const first = deferred(), second = deferred(); let count = 0, contexts = []; const c = add('Upload', { request: (_, ctx) => { contexts.push(ctx); return (++count === 1 ? first : second).promise } }); c.exposed.addFiles([file()]); await tick(); const id = c.p.value[0].id; c.exposed.abort(id); equal(c.p.value[0].status, 'canceled'); assert(contexts[0].signal.aborted, '信号未中止'); c.exposed.retry(id); await tick(); contexts[1].onProgress(35); first.resolve('old'); contexts[0].onProgress(99); await tick(); equal(c.p.value[0].percentage, 35); second.resolve('new'); await tick(); equal(c.p.value[0].response, 'new')
+  })
+  await check('失败保留错误并能手动重试，autoUpload=false 不自动请求', async () => {
+    let attempts = 0; const c = add('Upload', { autoUpload: false, request: async () => { if (++attempts === 1) throw Error('连接中断'); return 'saved' } }); c.exposed.addFiles([file()]); await tick(); equal(attempts, 0); await c.exposed.submit(); equal(c.p.value[0].status, 'error'); equal(c.p.value[0].error, '连接中断'); await c.exposed.retry(c.p.value[0].id); equal(c.p.value[0].status, 'success'); equal(attempts, 2)
+  })
+  await check('移除、外部删除和更换原文件都会中止请求，旧结果不回写', async () => {
+    const pending = [], signals = []; let changes = 0; const c = add('Upload', { multiple: true, request: (_, ctx) => { const task = deferred(); pending.push(task); signals.push(ctx.signal); return task.promise }, onChange: () => changes++ }); c.exposed.addFiles([file()]); await tick(); c.exposed.remove(c.p.value[0].id); assert(signals[0].aborted, '移除没有取消'); pending[0].resolve('late'); await tick(); equal(c.p.value.length, 0)
+    c.exposed.addFiles([file('另一个.txt')]); await tick(); const item = c.p.value[0]; c.update({ value: [{ ...item, file: file('替换.txt'), status: 'ready' }], autoUpload: false }); assert(signals[1].aborted, '替换原文件没有取消'); c.update({ value: [] }); const before = changes; pending[1].resolve('late'); await tick(); equal(changes, before); equal(c.p.value.length, 0)
+  })
+  await check('禁用操作不添加、移除或启动文件，已启动请求仍可完成', async () => {
+    let calls = 0; const task = deferred(), c = add('Upload', { disabled: true, request: () => { calls++; return task.promise } }); c.exposed.addFiles([file()]); equal(c.p.value.length, 0); c.update({ disabled: false }); c.exposed.addFiles([file()]); await tick(); c.update({ disabled: true }); c.exposed.remove(c.p.value[0].id); equal(c.p.value.length, 1); equal(calls, 1); task.resolve('ok'); await tick(); equal(c.p.value[0].status, 'success')
+  })
+  await check('图片对象地址在移除和销毁时释放，预览失败退回文件图标', async () => {
+    const originalCreate = URL.createObjectURL, originalRevoke = URL.revokeObjectURL, created = [], revoked = []; URL.createObjectURL = file => { const url = originalCreate(file); created.push(url); return url }; URL.revokeObjectURL = url => { revoked.push(url); originalRevoke(url) }
+    try { const c = add('Upload', { multiple: true }); c.exposed.addFiles([image()]); await tick(); equal(created.length, 1); c.element.querySelector('img').dispatchEvent(new Event('error')); assert(c.element.querySelector('img').hidden && !c.element.querySelector('.my-upload-thumb svg').hasAttribute('hidden'), '失败预览没有回退'); c.exposed.remove(c.p.value[0].id); equal(revoked, created); c.exposed.addFiles([image()]); c.destroy(); equal(revoked, created) } finally { URL.createObjectURL = originalCreate; URL.revokeObjectURL = originalRevoke }
+  })
+  await check('全部取消、删除后重新选择相同文件、回调中卸载都保持安全', async () => {
+    const signals = []; const c = add('Upload', { multiple: true, request: (_, ctx) => { signals.push(ctx.signal); return new Promise(() => {}) } }); const a = file(); c.exposed.addFiles([a, file('第二份.txt')]); await tick(); c.exposed.abort(); assert(signals.every(signal => signal.aborted) && c.p.value.every(item => item.status === 'canceled'), '没有全部取消'); c.exposed.remove(c.p.value[0].id); c.exposed.addFiles([a]); equal(c.p.value.length, 2)
+    let requests = 0, next; next = add('Upload', { request: async () => { requests++ }, onChange: () => next.destroy() }); next.exposed.addFiles([file()]); await tick(); equal(requests, 0)
+  })
+  await check('AppBar 返回事件、默认标题、动态右侧插槽与几何居中', async () => {
+    let back = 0; const action = document.createElement('button'); action.textContent = '保存'; action.style.width = '96px'; const c = add('AppBar', { title: '标题', back: true, onBack: () => back++ }, { attributes: { style: 'width:310px' }, slots: { actions: action } }); await tick(); await tick(); const root = c.element.getBoundingClientRect(), body = c.element.querySelector('.my-app-bar-body').getBoundingClientRect(); assert(Math.abs(root.left + root.width / 2 - body.left - body.width / 2) < 1, '标题没有保持几何居中'); c.element.querySelector('[aria-label="返回"]').click(); equal(back, 1); action.style.width = '50px'; await tick(); await tick(); const next = c.element.querySelector('.my-app-bar-body').getBoundingClientRect(); assert(next.width > body.width, '操作区变窄后没有收回留白')
+  })
+  await check('AppBar leading 覆盖返回，长标题省略，sticky 不抢占页面固定定位', async () => {
+    const leading = document.createElement('button'); leading.textContent = '菜单'; const c = add('AppBar', { title: '一个非常非常非常长的标题', back: true, sticky: true }, { attributes: { style: 'width:260px' }, slots: { leading } }); await tick(); assert(c.element.querySelector('.my-app-bar-back').hidden, '重复出现返回按钮'); equal(getComputedStyle(c.element).position, 'sticky'); const title = c.element.querySelector('.my-app-bar-title'); assert(title.scrollWidth > title.clientWidth && getComputedStyle(title).textOverflow === 'ellipsis', '长标题没有省略'); c.exposed.focus(); equal(document.activeElement, leading)
+  })
+  await check('Notice 状态、图标、纯文本正文与辅助语义', async () => {
+    const c = add('Notice', { type: 'error', title: '失败', message: '<b>按文本展示</b>' }); equal(c.element.getAttribute('role'), 'alert'); equal(c.element.querySelector('.my-notice-message').textContent, '<b>按文本展示</b>'); c.update({ type: 'success', icon: false }); equal(c.element.getAttribute('role'), 'status'); assert(c.element.querySelector('.my-notice-icon').hidden && !c.element.querySelector('b'), '图标或文本处理错误')
+  })
+  await check('Notice 关闭立即隔离焦点，淡出后隐藏，重新展开可交互', async () => {
+    let closed = 0; const c = add('Notice', { message: '可关闭', closable: true, onClose: () => closed++ }); const button = c.element.querySelector('button'); button.focus(); button.click(); equal(c.p.value, false); equal(closed, 1); assert(c.element.inert && c.element.getAttribute('aria-hidden') === 'true' && !c.element.contains(document.activeElement), '关闭后仍保留可操作焦点'); if (!matchMedia('(prefers-reduced-motion:reduce)').matches) assert(!c.element.hidden, '缺少淡出阶段'); await pause(220); assert(c.element.hidden, '离场后没有隐藏'); c.update({ value: true }); await tick(); await tick(); assert(!c.element.hidden && !c.element.inert, '不能重新展开')
+  })
+  await check('Notice 快速关闭后重新打开，不会被旧计时器隐藏', async () => {
+    const c = add('Notice', { message: '通知' }); c.update({ value: false }); c.update({ value: true }); await pause(230); assert(!c.element.hidden && !c.element.classList.contains('my-closed'), '旧关闭任务覆盖了新状态')
+  })
+  await check('Steps 默认只展示，索引与错误状态和全部完成正确', async () => {
+    const c = add('Steps', { options, value: 1, status: 'error' }); equal(c.element.querySelectorAll('button').length, 0); equal(c.element.querySelectorAll('.my-finish').length, 1); equal(c.element.querySelectorAll('.my-error').length, 1); equal(c.element.querySelector('[aria-current="step"]').querySelector('.my-step-label').textContent, '确认内容'); assert(c.element.textContent.includes('发生错误'), '缺少可访问状态'); c.update({ value: 4 }); equal(c.element.querySelectorAll('.my-finish').length, 4); assert(!c.element.querySelector('[aria-current]'), '全部完成仍标记某一步进行中')
+  })
+  await check('Steps 状态保留给辅助技术，不额外占据可见文字布局', async () => {
+    const c = add('Steps', { options, value: 1 }), status = c.element.querySelector('.my-sr-only'), rect = status.getBoundingClientRect(); assert(rect.width <= 1.1 && rect.height <= 1.1 && getComputedStyle(status).position === 'absolute', '辅助状态泄漏到可见布局'); assert(status.textContent === '已完成' && !status.hidden && !status.hasAttribute('aria-hidden'), '辅助技术无法读取状态')
+  })
+  await check('Steps 点击、左右键、Home/End 跳过禁用项，只有一个 Tab 入口', async () => {
+    let value; const c = add('Steps', { options, value: 0, interactive: true, onChange: next => value = next }); c.exposed.focus(); key(document.activeElement, 'ArrowRight'); equal(value, 1); key(document.activeElement, 'ArrowRight'); equal(value, 3); key(document.activeElement, 'Home'); equal(value, 0); key(document.activeElement, 'End'); equal(value, 3); equal(c.element.querySelectorAll('[tabindex="0"]').length, 1); assert(!key(document.activeElement, 'Tab').defaultPrevented, '步骤条锁住 Tab'); c.update({ disabled: true }); c.element.querySelector('button').click(); equal(value, 3)
+  })
+  await check('Steps 纵向键盘使用上下键，动态数量和空列表安全', async () => {
+    let value; const c = add('Steps', { options, interactive: true, vertical: true, onChange: next => value = next }); c.exposed.focus(); key(document.activeElement, 'ArrowDown'); equal(value, 1); key(document.activeElement, 'ArrowUp'); equal(value, 0); c.update({ options: [] }); equal(c.element.children.length, 0); c.exposed.focus()
+  })
+  await check('Steps 删除或禁用当前焦点项，焦点回到仍可用的步骤', async () => {
+    const c = add('Steps', { options, interactive: true, value: 3 }); c.exposed.focus(); c.update({ options: options.slice(0, 2) }); assert(c.element.contains(document.activeElement), '删除当前项后焦点离开步骤条'); c.update({ value: 1 }); c.exposed.focus(); c.update({ options: [{ label: '可用' }, { label: '停用', disabled: true }] }); assert(document.activeElement === c.entries[0].body, '禁用当前项后没有聚焦可用项')
+  })
+  await check('Vue Upload 受控值、取消、重试与组件卸载共用原生任务', async () => {
+    const files = ref([]), upload = ref(), task = deferred(); let context; app = createApp({ render: () => h(Upload, { ref: upload, modelValue: files.value, request: (_, ctx) => { context = ctx; return task.promise }, 'onUpdate:modelValue': value => files.value = value }) }); app.mount(fixture); await tick(); upload.value.addFiles([file()]); await tick(); equal(files.value[0].status, 'uploading'); context.onProgress(42); await tick(); equal(files.value[0].percentage, 42); upload.value.abort(); await tick(); equal(files.value[0].status, 'canceled'); upload.value.retry(files.value[0].id); await tick(); app.unmount(); app = undefined; assert(context.signal.aborted, 'Vue 卸载没有中止请求'); task.resolve('late'); await tick(); equal(files.value[0].status, 'uploading')
+  })
+  await check('Vue 三种结构组件传递插槽、状态和事件', async () => {
+    const visible = ref(true), step = ref(0), centered = ref(true); let back = 0; app = createApp({ render: () => [h(AppBar, { title: '页面标题', back: true, center: centered.value, onBack: () => back++ }, { actions: () => h(Button, { variant: 'text' }, () => '保存') }), h(Notice, { modelValue: visible.value, closable: true, 'onUpdate:modelValue': value => visible.value = value }, () => '插槽通知'), h(Steps, { options, modelValue: step.value, interactive: true, 'onUpdate:modelValue': value => step.value = value })] }); app.mount(fixture); await tick(); fixture.querySelector('.my-app-bar-back').click(); equal(back, 1); assert(fixture.querySelector('.my-app-bar-actions').textContent.includes('保存'), '操作插槽丢失'); fixture.querySelector('.my-notice-close').click(); await tick(); equal(visible.value, false); fixture.querySelectorAll('.my-step-body')[1].click(); await tick(); equal(step.value, 1); centered.value = false; await tick(); assert(!fixture.querySelector('.my-app-bar').classList.contains('my-centered'), '属性没有更新')
+  })
+  await check('Vue Notice 默认状态图标可见，显式 false 才隐藏', async () => {
+    const icon = ref(undefined); app = createApp({ render: () => h(Notice, { message: '默认提示', icon: icon.value }) }); app.mount(fixture); await tick(); assert(!fixture.querySelector('.my-notice-icon').hidden && fixture.querySelector('.my-notice-icon svg'), 'Vue 布尔转换把默认图标隐藏了'); icon.value = false; await tick(); assert(fixture.querySelector('.my-notice-icon').hidden, '显式 false 没有隐藏')
+  })
+  await check('四种组件的 data-my 原生入口可使用', async () => {
+    fixture.innerHTML = '<div data-my="Upload"></div><header data-my="AppBar" data-options=\'{"title":"原生标题","back":true}\'></header><div data-my="Notice" data-options=\'{"message":"原生通知"}\'></div><ol data-my="Steps" data-options=\'{"value":1,"options":[{"label":"一"},{"label":"二"}]}\'></ol>'; owned.push(...MyUI.init(fixture)); await tick(); equal(owned.length, 4); assert(fixture.textContent.includes('原生标题') && fixture.textContent.includes('原生通知'), '原生入口内容丢失')
+  })
+  await check('窄布局中图标有明确尺寸、无横向溢出、文件名安全截断', async () => {
+    const c = add('Upload', { value: [{ id: 'a', name: '很长的文件名'.repeat(20) + '.pdf', size: 200, status: 'success' }] }, { attributes: { style: 'width:260px' } }); const svg = c.element.querySelector('.my-upload-thumb svg').getBoundingClientRect(); assert(Math.abs(svg.width - 22) < .1, '图标尺寸错误'); assert(c.element.scrollWidth <= c.element.clientWidth + 1, '上传横向溢出'); const notice = add('Notice', { title: '说明', message: '内容'.repeat(60), closable: true }, { attributes: { style: 'width:260px' } }); assert(notice.element.scrollWidth <= notice.element.clientWidth + 1, '通知横向溢出'); const steps = add('Steps', { options }, { attributes: { style: 'width:260px' } }); assert(steps.element.scrollWidth <= steps.element.clientWidth + 1, '步骤条横向溢出')
+  })
+  await check('销毁后无迟到请求事件、通知计时器和按钮回调', async () => {
+    let changes = 0, back = 0; const task = deferred(); let context; const upload = add('Upload', { request: (_, ctx) => { context = ctx; return task.promise }, onChange: () => changes++ }); upload.exposed.addFiles([file()]); await tick(); upload.destroy(); const before = changes; task.resolve('late'); context.onProgress(80); await tick(); equal(changes, before); assert(context.signal.aborted, '销毁未中止'); const bar = add('AppBar', { back: true, onBack: () => back++ }), button = bar.back; bar.destroy(); button.click(); equal(back, 0); const notice = add('Notice', { message: '关闭中' }); notice.update({ value: false }); notice.destroy(); await pause(220); assert(!fixture.contains(notice.element), '销毁后通知残留')
+  })
+  result.textContent = JSON.stringify({ pass: reports.filter(report => report.pass).length, total: reports.length, reports }, null, 2); run.disabled = false
+}
+run.disabled = false
+</script>

@@ -13,6 +13,9 @@ import TouchShowcase from './demo/TouchShowcase.vue'
 import ComboboxShowcase from './demo/ComboboxShowcase.vue'
 import PickerShowcase from './demo/PickerShowcase.vue'
 import DateTimeShowcase from './demo/DateTimeShowcase.vue'
+import UploadShowcase from './demo/UploadShowcase.vue'
+import AppBarShowcase from './demo/AppBarShowcase.vue'
+import NoticeStepsShowcase from './demo/NoticeStepsShowcase.vue'
 import SharePanel from './demo/SharePanel.vue'
 import {
   Button, Card, CellGroup, TagGroup, Choices, Icon, Input,
@@ -231,6 +234,7 @@ onBeforeUnmount(() => {
         <div class="secondary-pair"><ComboboxShowcase /></div>
         <div class="secondary-pair"><PickerShowcase /></div>
         <div class="secondary-pair"><DateTimeShowcase /></div>
+        <div class="secondary-pair"><UploadShowcase /></div>
       </section>
 
       <section id="surfaces" class="section-gap">
@@ -248,6 +252,7 @@ onBeforeUnmount(() => {
         <div class="secondary-pair"><ShadowShowcase @notify="notify" /></div>
         <div class="secondary-pair"><IdentityShowcase /></div>
         <div class="secondary-pair"><ImageShowcase /></div>
+        <div class="secondary-pair"><AppBarShowcase @notify="notify" /></div>
         <Card class="navigation-panel"><div class="nav-descrip"><h3>底部导航</h3><p>轻量导航示例，仅演示图标与选中状态，不构成完整 App 页面。</p></div><Navigation v-model="navigation" :options="navOptions" /></Card>
         <div class="list-grid" aria-label="列表示例">
           <Card class="list-panel" title="选择列表" description="传统单选与复选，左侧选择框，右侧标题" sample="SELECTABLE LIST">
@@ -275,6 +280,7 @@ onBeforeUnmount(() => {
           <Card class="feedback-panel" title="底部操作单" description="符合移动端习惯的选择方式" sample="BOTTOM SHEET"><div class="sheet-sample"><div class="handle"></div><div class="sheet-line"></div><div class="sheet-line"></div></div><Button variant="link" @click="openSheet">展开操作面板 <Icon name="arrow-right" /></Button></Card>
         </div>
         <FeedbackPrimitives @notify="notify" />
+        <NoticeStepsShowcase @notify="notify" />
         <PopupShowcase @notify="notify" />
         <TouchShowcase @notify="notify" />
         <MenuShowcase @notify="notify" />
