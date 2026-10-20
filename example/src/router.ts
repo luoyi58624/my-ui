@@ -1,7 +1,7 @@
-import { createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHashHistory, type Router } from 'vue-router'
 
 /** 各平台共用路由，旧的 HTML 子页入口继续可用。 */
-export const router = createRouter({
+export const router: Router = import.meta.hot?.data.router ?? createRouter({
   history: createWebHashHistory(),
   routes: [
     { path: '/', redirect: () => location.pathname.endsWith('/native-page.html') ? '/shared-state' : '/home' },
@@ -18,3 +18,6 @@ export const router = createRouter({
     { path: '/:pathMatch(.*)*', name: 'demo', component: () => import('./App.vue') },
   ],
 })
+
+// 依赖热更新时复用已安装的路由，避免导航改了地址而页面仍绑定旧实例。
+if (import.meta.hot) import.meta.hot.data.router = router
