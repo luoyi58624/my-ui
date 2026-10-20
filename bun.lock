@@ -18,6 +18,7 @@
       "dependencies": {
         "@my-ui/vue": "workspace:*",
         "@tauri-apps/plugin-store": "2.5.0",
+        "android-system-font-weight": "file:../../../tauri/plugins/android-system-font-weight",
         "pinia": "4.1.0",
         "vue": "3.5.43",
       },
@@ -234,5 +235,7 @@
     "vue": ["vue@3.5.43", "", { "dependencies": { "@vue/compiler-dom": "3.5.43", "@vue/compiler-sfc": "3.5.43", "@vue/runtime-dom": "3.5.43", "@vue/server-renderer": "3.5.43", "@vue/shared": "3.5.43" }, "peerDependencies": { "typescript": "*" }, "optionalPeers": ["typescript"] }, "sha512-o5qZoksdnjIKvW1srZ3ab7pcDNYAerBjRe54D0LBLfRdCYFrSgBHVXokMas35czQc0//lmx4/tuY4ZNQ+Rf2Ng=="],
 
     "vue-tsc": ["vue-tsc@3.3.13", "", { "dependencies": { "@volar/typescript": "2.4.28", "@vue/language-core": "3.3.13" }, "peerDependencies": { "typescript": ">=5.0.0" }, "bin": { "vue-tsc": "bin/vue-tsc.js" } }, "sha512-jE4/bXdOMSHVxEGgQCqNllJy+9N3Gx6tfSAsg0yhFK/MAN6eXqISihupnDEKSCt12VVnjN2gI3AqLYcqoh5x/A=="],
+
+    "@my-ui/example/android-system-font-weight": ["android-system-font-weight@file:../../tauri/plugins/android-system-font-weight", {}],
   }
 }

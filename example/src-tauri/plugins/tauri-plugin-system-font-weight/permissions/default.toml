@@ -1,4 +1,0 @@
-# default 是权限集合，不能声明为 identifier="default" 的单条权限。
-[default]
-description = "允许读取系统字体字重与用于诊断的原始采集数据。"
-permissions = ["allow-getRawData", "allow-getWght"]

@@ -5,6 +5,6 @@
   "platforms": ["android"],
   "windows": ["main", "native-page-*"],
   "permissions": [
-    "system-font-weight:default"
+    "android-system-font-weight:default"
   ]
 }

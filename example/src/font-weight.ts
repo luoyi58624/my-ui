@@ -9,7 +9,7 @@ declare global {
   }
 }
 
-const PLUGIN_PREFIX = 'plugin:system-font-weight|'
+const PLUGIN_PREFIX = 'plugin:android-system-font-weight|'
 const CUSTOM_KEY = 'my-ui:font-weight-customized'
 
 /** 当前页面是否运行在带有系统字重插件的 Android 壳内。 */

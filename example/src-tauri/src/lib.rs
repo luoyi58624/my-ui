@@ -14,7 +14,7 @@ pub fn run() {
         ])
         .plugin(tauri_plugin_store::Builder::default().build())
         // Android 读取系统字体字重；桌面端为空插件，不影响现有桌面壳。
-        .plugin(tauri_plugin_system_font_weight::init())
+        .plugin(tauri_plugin_android_system_font_weight::init())
         .run(tauri::generate_context!())
         .expect("启动 my-ui 示例失败");
 }

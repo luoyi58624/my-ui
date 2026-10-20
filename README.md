@@ -387,7 +387,9 @@ bun run build:android    # 构建自包含 arm64 优化 APK
 
 `build:android` 实际执行 `tauri android build --apk --target aarch64`，产物为 `example/src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk`，用 `adb install -r <apk>` 安装。本地示例的 release 构建使用调试证书，便于和开发包相互覆盖安装；正式分发需要配置自己的签名。调试原生桥接时，可在 `example/` 下执行 `bun run tauri android build --apk --debug --target aarch64`。
 
-**系统字重插件**：`example/src-tauri/plugins/tauri-plugin-system-font-weight/` 移植自 `android_system_font_weight`，采集和探针算法保持一致。Rust 只注册桥接，Kotlin 在后台线程采集、解析，前端启动只调用一次 `getWght`，`getRawData` 留作诊断。OPPO 系采用通过校验的探针，其他厂商的支持边界与原插件相同，不把 `fontWeightAdjustment` 或厂商滑杆编码当作绝对字重。
+**系统字重插件**：`android-system-font-weight` 源码已独立到 `D:/project/tauri/plugins/android-system-font-weight/`，由 `example/package.json` 的本地 `file:` 依赖安装，Cargo 引用 `example/node_modules/android-system-font-weight` 中的同一份源码。尚未创建或发布 GitHub 仓库；将来可将 package.json 中的来源替换为实际 `github:OWNER/REPOSITORY#COMMIT`，Cargo 路径保持不变。插件自己的说明包含接入方式。
+
+插件移植自 `android_system_font_weight`，此次迁移保持采集和探针算法不变。Rust 只注册桥接，Kotlin 在后台线程采集、解析，前端启动只调用一次 `getWght`，`getRawData` 留作诊断。OPPO 系采用通过校验的探针，其他厂商的支持边界与原插件相同，不把 `fontWeightAdjustment` 或厂商滑杆编码当作绝对字重。
 
 `example/src/font-weight.ts` 管理缓存及系统跟随：启动与返回前台时自动同步，只有实际修改滑块数值才进入手动模式，点「恢复字重」重新采集。异步结果不会覆盖较新的手动设置；读取失败保留当前值，不伪装成成功读取到 400。主题设置统一应用 `settings.fontWeight`，正文、操作文字、次标题和标题保留原有层级。Tauri 权限使用 `[default]` 集合，仅向 Android 首页与原生示例子页授权；编译缓存、Tauri API 副本与自动生成的权限文件均不提交。
 

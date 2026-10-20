@@ -141,6 +141,6 @@ test('主窗口与所有子窗口仍拥有核心、共享状态和 Android 字�
   for (const file of ['default.json', 'mobile.json']) {
     const config = JSON.parse(readFileSync(new URL('../example/src-tauri/capabilities/' + file, import.meta.url), 'utf8'))
     assert.ok(config.windows.includes('main') && config.windows.includes('native-page-*'))
-    assert.ok(config.permissions.includes(file === 'default.json' ? 'store:default' : 'system-font-weight:default'))
+    assert.ok(config.permissions.includes(file === 'default.json' ? 'store:default' : 'android-system-font-weight:default'))
   }
 })
