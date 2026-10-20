@@ -342,9 +342,11 @@ bun run build
 
 页面头部的普通脚本 `public/theme-init.js` 在样式和主模块加载前恢复模式与已解析的主题变量；新原生窗口同时继承父页的背景和实际模式。Android 的 Activity、WebView 和网页使用一致的加载背景，避免新页先亮后暗。
 
-Android 同步应用级夜间配置；选择“跟随系统”时解除应用覆盖，页面通过系统媒体查询更新明暗主题，系统栏同步实际配色。Activity 已声明处理 `uiMode`，切换时保留当前页面和状态。WebView 生命周期与返回动画沿用平台默认行为。
+Android 同步应用级夜间配置；选择“跟随系统”时解除应用覆盖，页面通过系统媒体查询更新明暗主题，系统栏同步实际配色。Activity 已声明处理 `uiMode`，切换时保留当前页面和状态。系统返回动画沿用平台默认行为。
 
-Android 子页长期停留后，后台 WebView 可能在系统侧滑预览阶段只绘制背景。`BackPreview.kt` 在窗口暂停前通过 PixelCopy 将当前画面保留为原生预览，恢复后等 WebView 的视觉状态回调就绪再移除，保留系统跟手转场。预览只存内存，恢复或销毁时释放；安全窗口、Android 8 以下、复制失败或内存不足时跳过，不阻断页面跳转。预览展示的是离开页面时的画面，暂停期间的新状态在实时页面恢复后显示。
+Android 的预测性返回会先让上页进入 `onStart` 并可见，手势提交后才调用 `onResume`。如果 WebView 一直等到 `onResume` 才解除暂停，静置后的侧滑预览可能只显示背景；普通原生 Activity + WebView 在本机也能复现。`OverlayActivity` 在 `onStart` 恢复 WebView，在 `onStop` 暂停，补齐取消返回时可能出现的 `Start → Stop` 路径；Wry 原有的 `onPause/onResume` 调用继续保留。不使用截图覆盖、定时刷新或页面重载。
+
+该时序已通过 OPPO PLJ110（Android 17 / System WebView 151.0.7922.199）的原生对照验证，不代表所有厂商和 WebView 版本均已验证。后台绘制资源的具体回收阈值尚未确认，不能将约 20 秒视为平台保证。此前的 `BackPreview` 截图方案已移除，避免截图遮挡实时页面。[Android 生命周期说明](https://developer.android.com/guide/components/activities/activity-lifecycle)；[相似问题报告（不是本项目根因的证明）](https://github.com/react-native-webview/react-native-webview/issues/3427)。
 
 `tests/demo-layout.browser.html` 使用真实示例入口检查全部目录跳转、详情返回与前进、滚动和输入保留、旧链接、弹层返回、键盘、320px 窄屏与桌面布局。
 

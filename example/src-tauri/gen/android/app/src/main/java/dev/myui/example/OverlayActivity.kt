@@ -19,7 +19,6 @@ abstract class OverlayActivity : TauriActivity() {
         var appNightMode: Int? = null
     }
     private var overlayWebView: WebView? = null
-    private val backPreview = BackPreview(this)
     private val overlayBack = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() {
             val webView = overlayWebView
@@ -45,15 +44,21 @@ abstract class OverlayActivity : TauriActivity() {
         appDarkMode?.let(::applySystemBars)
     }
 
+    override fun onStart() {
+        super.onStart()
+        // 预测性返回在上页 Resume 前就展示它；可见时恢复 WebView，才能绘制实时画面。
+        overlayWebView?.onResume()
+    }
+
     override fun onResume() {
         super.onResume()
         appDarkMode?.let(::applySystemBars)
-        backPreview.resume(overlayWebView)
     }
 
-    override fun onPause() {
-        backPreview.capture()
-        super.onPause()
+    override fun onStop() {
+        // 取消侧滑可能直接 Start -> Stop，没有 Pause 回调，仍须暂停已不可见的 WebView。
+        overlayWebView?.onPause()
+        super.onStop()
     }
 
     /** 同步应用夜间模式、窗口背景以及系统栏的文字和图标。 */
@@ -108,7 +113,6 @@ abstract class OverlayActivity : TauriActivity() {
     }
 
     override fun onDestroy() {
-        backPreview.destroy()
         overlayBack.remove()
         overlayWebView = null
         super.onDestroy()
