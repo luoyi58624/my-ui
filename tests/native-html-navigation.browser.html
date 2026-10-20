@@ -1,0 +1,58 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>原生 HTML 标题栏返回检查</title>
+<style>body{font:14px system-ui;margin:20px}iframe{width:390px;height:844px;border:1px solid #ddd}pre{white-space:pre-wrap}</style>
+<h1>原生 HTML 标题栏返回</h1><button id="run">运行检查</button><pre id="result">尚未运行</pre><div id="fixture"></div>
+<script type="module">
+const params=new URLSearchParams(location.search);
+if(params.has('frame')){
+  document.body.innerHTML='<div id="app"></div>';
+  const base=document.createElement('base');base.href='/example/';document.head.append(base);
+  await import('/example/src/main.ts');
+}else if(params.has('previous')){
+  document.body.innerHTML='<a id="previous" href="/example/native.html">打开 HTML 示例</a>';
+}else{
+  const reports=[],pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+  const assert=(value,message)=>{if(!value)throw Error(message)};
+  const until=async(check,message)=>{const start=performance.now();while(!check()){if(performance.now()-start>15000)throw Error(message);await pause(30)}};
+  const check=async(name,run)=>{await run();reports.push({name,passed:true})};
+  const header=win=>win.document.querySelector('#native-app-bar button[aria-label="返回"]');
+  let popup,frame;
+  async function openPopup(url){popup=window.open(url,'_blank');assert(popup,'浏览器未打开测试窗口');return popup}
+  async function loadFrame(route){
+    document.querySelector('#fixture').replaceChildren();frame=document.createElement('iframe');
+    frame.src='/tests/native-html-navigation.browser.html?frame=1#'+route;document.querySelector('#fixture').append(frame);
+    await until(()=>frame.contentDocument?.querySelector('.nc-leading button'),'Vue 示例未加载');return frame.contentWindow;
+  }
+  document.querySelector('#run').onclick=async()=>{
+    document.querySelector('#run').disabled=true;reports.length=0;
+    try{
+      await check('独立 HTML 的标题栏返回实际上一页',async()=>{
+        const win=await openPopup('/tests/native-html-navigation.browser.html?previous=1');
+        await until(()=>win.document.querySelector('#previous'),'前页未加载');win.document.querySelector('#previous').click();
+        await until(()=>header(win),'HTML 顶栏未加载');header(win).click();
+        await until(()=>win.document.querySelector('#previous'),'标题栏未返回前页');win.close();
+      });
+      await check('新窗口直接打开 HTML 时回到组件目录',async()=>{
+        const win=await openPopup('/example/native.html');await until(()=>header(win),'HTML 顶栏未加载');
+        assert(win.history.length===1,'测试窗口包含额外历史');header(win).click();
+        await until(()=>win.document.querySelector('[data-demo-page="home"]:not([inert])'),'直接打开时没有回退目录');
+        assert(win.location.hash==='#/home','回退地址不正确');win.close();
+      });
+      await check('嵌入 HTML 的返回交给 Vue 宿主，恢复原示例',async()=>{
+        const win=await loadFrame('/example/native-html');win.document.querySelector('.native-example-link').click();
+        await until(()=>win.document.querySelector('.html-page iframe')?.contentDocument?.querySelector('#native-app-bar button'),'嵌入 HTML 未加载');
+        header(win.document.querySelector('.html-page iframe').contentWindow).click();
+        await until(()=>win.location.hash==='#/example/native-html'&&win.document.querySelector('.demo-detail:not([inert])'),'嵌入页返回未交给宿主');
+      });
+      await check('直接打开承载页时，内层标题栏仍可返回宿主目录',async()=>{
+        const win=await loadFrame('/html');
+        await until(()=>win.document.querySelector('.html-page iframe')?.contentDocument?.querySelector('#native-app-bar button'),'嵌入 HTML 未加载');
+        header(win.document.querySelector('.html-page iframe').contentWindow).click();
+        await until(()=>win.location.hash==='#/home'&&win.document.querySelector('[data-demo-page="home"]:not([inert])'),'直接承载页没有回到宿主目录');
+      });
+      document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,total:4,reports},null,2);
+    }catch(error){document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,error:String(error.stack||error),reports},null,2)}
+    finally{popup?.close();document.querySelector('#run').disabled=false}
+  };
+}
+</script></html>

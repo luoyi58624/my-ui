@@ -11,6 +11,8 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: [
       { find: '/packages', replacement: projectRoot + 'packages' },
+      // 浏览器测试以仓库为根目录，真实 HTML 入口仍需加载示例的绝对模块地址。
+      ...(mode === 'test' ? [{ find: '/src', replacement: exampleRoot + 'src' }] : []),
       { find: 'tauri-plugin-native-components', replacement: exampleRoot + 'node_modules/tauri-plugin-native-components' },
       // 使用库自带的常用语言集合，避免代码示例加载全部语法。
       { find: /^highlight\.js$/, replacement: 'highlight.js/lib/common' },

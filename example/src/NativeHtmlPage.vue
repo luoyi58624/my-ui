@@ -16,7 +16,7 @@ function showCode() { void openPage('/code/native-html').catch(reason => { error
   <div class="html-page">
     <AppBar title="原生 HTML 示例" back :actions="[codeAction]" @back="back" @action="showCode" @error="console.error" />
     <p v-if="error" role="alert">{{ error }}</p>
-    <iframe :src="source" title="直接使用 CSS 与 JavaScript 的组件示例" />
+    <iframe :src="source" title="直接使用 CSS 与 JavaScript 的组件示例" @my:back.prevent="back" />
   </div>
 </template>
 
