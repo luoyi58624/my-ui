@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>移动端启动与文档显示回归</title>
+  <style>
+    body { margin: 20px; font: 14px system-ui; }
+    iframe { display: block; width: 390px; height: 844px; border: 1px solid #ddd; margin-top: 20px; }
+    pre { white-space: pre-wrap; }
+  </style>
+  <button id="run">运行移动端启动回归</button>
+  <pre id="result">尚未运行</pre>
+  <div id="fixture"></div>
+  <script type="module">
+    if (new URLSearchParams(location.search).has('frame')) {
+      // 在桌面测试浏览器中启用真机使用的样式分支，防止 scoped 全局选择器隐藏根节点。
+      document.documentElement.classList.add('my-mobile-native')
+      document.body.innerHTML = '<div id="app"></div>'
+      const base = document.createElement('base')
+      base.href = '/example/'
+      document.head.append(base)
+      await import('/example/src/main.ts')
+    } else {
+      const reports = [], pause = ms => new Promise(resolve => setTimeout(resolve, ms))
+      const assert = (value, message) => { if (!value) throw Error(message) }
+      const until = async (check, message) => {
+        const started = performance.now()
+        while (!check()) {
+          if (performance.now() - started > 12000) throw Error(message)
+          await pause(20)
+        }
+      }
+      document.querySelector('#run').onclick = async () => {
+        document.querySelector('#run').disabled = true
+        let frame
+        try {
+          frame = document.createElement('iframe')
+          frame.src = '/tests/mobile-startup.browser.html?frame=1#/home'
+          document.querySelector('#fixture').replaceChildren(frame)
+          await until(() => frame.contentDocument?.querySelector('.demo-app'), '首页未挂载')
+          const doc = frame.contentDocument, win = frame.contentWindow
+          const visible = element => !!element && element.getBoundingClientRect().width > 0 && element.getBoundingClientRect().height > 0
+          const rootVisible = () => {
+            assert(win.getComputedStyle(doc.documentElement).display !== 'none', '移动端样式误隐藏整个 html')
+            assert(win.getComputedStyle(doc.documentElement).padding === '0px', '页面根节点误继承组件的移动端间距')
+            assert(visible(doc.querySelector('#app')), '移动端应用没有可见布局')
+          }
+          rootVisible()
+          reports.push({ name: '移动端首页在完整样式加载后仍可见', passed: true })
+
+          win.location.hash = '/example/button'
+          await until(() => doc.querySelector('[data-example="button-basic"]'), '按钮文档未加载')
+          rootVisible()
+          const example = doc.querySelector('[data-example="button-basic"]')
+          assert(visible(example.querySelector('.doc-example-preview')), '组件预览没有可见布局')
+          const summary = example.querySelector('.demo-code-files summary')
+          for (const expanded of [true, false, true]) {
+            if (summary.getAttribute('aria-expanded') !== String(expanded)) summary.click()
+            await until(() => expanded
+              ? visible(example.querySelector('.demo-code pre'))
+              : !example.querySelector('.demo-code-files[open]'), '代码展开折叠未完成')
+            rootVisible()
+          }
+          reports.push({ name: '移动端文档、组件预览及代码展开折叠正常', passed: true })
+
+          win.location.hash = '/guide/quick-start'
+          await until(() => doc.querySelector('.guide-content'), '快速开始未加载')
+          frame.style.width = '1280px'
+          await pause(100)
+          rootVisible()
+          assert(visible(doc.querySelector('.guide-content')), '指南内容没有可见布局')
+          assert([...doc.querySelectorAll('.doc-outline')].every(element => win.getComputedStyle(element).display === 'none'), '移动端目录没有按预期隐藏')
+          reports.push({ name: '指南与宽屏移动端仅隐藏目录，页面保持可见', passed: true })
+          document.querySelector('#result').textContent = JSON.stringify({ passed: true, total: 3, reports }, null, 2)
+        } catch (error) {
+          document.querySelector('#result').textContent = JSON.stringify({ error: String(error), reports }, null, 2)
+        } finally {
+          document.querySelector('#run').disabled = false
+        }
+      }
+    }
+  </script>
+</html>

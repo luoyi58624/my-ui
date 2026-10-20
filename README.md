@@ -328,7 +328,7 @@ await storage.flush?.()
 
 ## 本地展示与验证
 
-首页的“完整交互示例”入口打开 `#/showcase`，按需加载旧版整页展示。`ShowcaseLayout.vue` 保留原来的头图、分类导航和连续布局，与独立示例共用 `App.vue` 的组件插槽及交互；返回目录保留滚动与入口焦点，离开整页时暂停播放和模拟上传。桌面目录按分类逐行排列、条目在组内分列，手机使用单列列表。
+首页的“完整交互示例”入口打开 `#/showcase`，按需加载旧版整页展示。`ShowcaseLayout.vue` 保留原来的头图、分类导航和连续布局，与独立示例共用 `App.vue` 的组件插槽及交互；返回目录保留滚动与入口焦点，离开整页时暂停播放和模拟上传。目录在桌面与手机上统一使用移动端单列布局。
 
 ```powershell
 bun install
@@ -374,7 +374,7 @@ bun install
 bun run dev:desktop
 ```
 
-这条命令自动启动现有 Vite 示例并打开桌面窗口，组件与示例修改继续热更新。5178 端口由它管理，运行前先结束单独启动的 `bun run dev`。
+这条命令复用或启动当前项目的 Vite 示例并打开桌面窗口，组件与示例修改继续热更新。已经运行 `bun run dev` 时也可直接启动，复用的服务继续由原会话管理。
 
 ```powershell
 bun run build:desktop
@@ -390,11 +390,18 @@ bun run build:desktop
 
 Android 端复用同一个 Tauri 2 壳与同一份 Vue 示例，原生工程由 `tauri android init` 生成在 `example/src-tauri/gen/android/`。前端打包后嵌入 APK，安装后不依赖开发服务器，拔掉数据线也能离线打开。
 
-前置环境：Rust 的 `aarch64-linux-android` target、JDK 17、Android SDK（platform 与 build-tools）与 NDK，构建前指定 `NDK_HOME` 指向本机 NDK 目录。手机开启开发者选项与 USB 调试（OPPO/小米/vivo 等还需允许「USB 安装」），`adb devices` 能看到 `device` 状态即可。
+前置环境：Rust 的 `aarch64-linux-android` target、JDK 17、Android SDK（platform 与 build-tools）与 NDK，`ANDROID_HOME` 或 `ANDROID_SDK_ROOT` 指向本机 SDK。手机开启开发者选项与 USB 调试（OPPO/小米/vivo 等还需允许「USB 安装」），`adb devices` 能看到 `device` 状态即可。
+
+```powershell
+bun run dev:android      # 自动复用或启动 Vite，通过 USB 编译、安装并启动手机应用
+```
+
+开发命令默认连接 `127.0.0.1:5178`，由 Tauri 自动设置 USB 端口转发，无需手动运行 `adb reverse`。已运行的服务必须确认属于当前项目才会复用；启动失败不会关闭已有服务。未设置 `NDK_HOME` 时自动选择 SDK 中最新的稳定 NDK，显式设置时保留原值；额外设备参数与 `--host` 仍可传入。
+
+构建 APK 前需显式指定本机 NDK：
 
 ```powershell
 $env:NDK_HOME='D:\app\AndroidStudio\Android\SDK\ndk\28.2.13676358'
-bun run dev:android      # 真机热更开发：自动起 Vite、交叉编译、adb reverse 并安装启动
 bun run build:android    # 构建自包含 arm64 优化 APK
 ```
 

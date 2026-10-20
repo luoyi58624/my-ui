@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 5178 --strictPort",
     "dev:desktop": "tauri dev",
-    "dev:android": "tauri android dev",
+    "dev:android": "node ../scripts/dev-android.mjs",
     "dev:test": "vite --mode test --host 127.0.0.1 --port 5179 --strictPort",
     "build": "vite build",
     "build:desktop": "tauri build --no-bundle",

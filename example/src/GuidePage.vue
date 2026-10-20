@@ -67,4 +67,11 @@ function jumpTo(id: string) {
 .guide-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border); color: var(--text-secondary); font-size: 14px; }
 .guide-error { color: var(--danger); }
 @media (max-width: 600px) { .guide-content { padding: 28px 16px 40px; } .guide-intro h1 { font-size: 28px; } .guide-section h2 { font-size: 18px; } }
+:global(html.my-mobile-native .guide-body) {
+  max-width: 800px;
+  padding-right: 0;
+}
+:global(html.my-mobile-native .guide-content) {
+  padding: 28px 16px 40px;
+}
 </style>

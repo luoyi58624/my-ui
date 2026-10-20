@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
 const exampleRoot = decodeURIComponent(new URL('.', import.meta.url).pathname).replace(/^\/(\w:)/, '$1')
@@ -23,6 +23,8 @@ export default defineConfig(({ mode }) => ({
   optimizeDeps: { exclude: ['tauri-plugin-native-components'] },
   server: {
     fs: { allow: [projectRoot] },
+    // Android 页面使用 Tauri 虚拟域名，热更新连接直接走 USB 转发的开发地址。
+    hmr: mode === 'test' ? undefined : { host: loadEnv(mode, projectRoot, 'TAURI_').TAURI_DEV_HOST || '127.0.0.1', clientPort: 5178 },
     // Rust 编译与生成文件交给 Tauri 监听，避免反复刷新示例。
     watch: { ignored: ['**/src-tauri/**'] },
   },
@@ -36,6 +38,17 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     vue(),
+    {
+      name: 'my-ui-dev-server-identity',
+      configureServer(server) {
+        // 仅在开发环境确认项目身份，避免误用同端口的其他应用。
+        server.middlewares.use('/__my-ui/dev-server', (_request, response) => {
+          response.setHeader('Content-Type', 'application/json; charset=utf-8')
+          response.setHeader('Cache-Control', 'no-store')
+          response.end(JSON.stringify({ app: 'my-ui', root: projectRoot }))
+        })
+      },
+    },
     {
       name: 'my-ui-core-reload',
       handleHotUpdate(context) {

@@ -287,4 +287,7 @@ onBeforeUnmount(() => {
     margin-bottom: 14px;
   }
 }
+:global(html.my-mobile-native .demo-document) {
+  padding-right: 0;
+}
 </style>

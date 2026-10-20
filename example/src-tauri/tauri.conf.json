@@ -6,7 +6,7 @@
   "build": {
     "frontendDist": "../../dist",
     "devUrl": "http://127.0.0.1:5178",
-    "beforeDevCommand": "bun run dev",
+    "beforeDevCommand": "node ../scripts/dev-server.mjs",
     "beforeBuildCommand": "bun run --cwd .. build"
   },
   "app": {
