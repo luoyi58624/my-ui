@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-CN" class="my-no-zoom">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>my-ui · 原生卡片示例</title>
+  <link rel="stylesheet" href="../packages/core/my-ui.css">
+  <script src="../packages/core/my-ui.js" defer></script>
+  <script>
+    document.documentElement.dataset.theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  </script>
+  <style>
+    /* 这里只排布示例内容；卡片外观、按压、动画全部来自 my-ui.css / my-ui.js。 */
+    main { width: min(100%, 960px); margin: auto; padding: 30px 24px 48px; }
+    .page-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 30px; }
+    .page-heading h1 { margin: 0; font-size: 27px; letter-spacing: -.8px; }
+    .page-heading p { margin: 7px 0 0; color: var(--text-secondary); font-size: 13px; }
+    .card-showcase { display: grid; gap: 30px; }
+    .section-heading { margin: 0 3px 14px; }
+    .section-heading h2 { margin: 0; font-size: 18px; }
+    .section-heading p { margin: 6px 0 0; color: var(--text-secondary); font-size: 13px; }
+    .card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .shortcut-card { --card-radius: 22px; --card-padding: 17px 16px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; min-height: 138px; border: 0; }
+    .shortcut-card .shortcut-icon { width: 26px; height: 26px; color: var(--text); }
+    .shortcut-copy { min-width: 0; padding-top: 24px; }
+    .shortcut-copy h3 { margin: 0; font-size: 17px; line-height: 1.4; }
+    .shortcut-copy p { margin: 5px 0 0; color: var(--text-secondary); font-size: 12px; line-height: 1.5; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    .large-card-list { display: grid; gap: 16px; }
+    .large-card { --card-press-scale: .985; --card-radius: 24px; --card-padding: 24px; overflow: hidden; border: 0; }
+    .cloud-card { display: flex; flex-direction: column; gap: 24px; min-height: 270px; }
+    .large-card-top, .large-card-bottom { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .large-card-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: var(--fill); color: var(--primary); }
+    .large-card .large-card-icon svg { width: 24px; height: 24px; }
+    .card-status { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 12px; }
+    .card-status i { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+    .card-eyebrow { color: var(--text-secondary); font-size: 12px; }
+    .large-card-copy h3 { margin: 10px 0; color: var(--text); font-size: 26px; line-height: 1.4; letter-spacing: -.5px; }
+    .large-card-copy p { margin: 0; color: var(--text-secondary); font-size: 13px; line-height: 1.7; }
+    .large-card-bottom { margin-top: auto; color: var(--text-secondary); font-size: 12px; }
+    .large-card .large-card-bottom svg { width: 18px; height: 18px; color: var(--text); }
+    .photo-card { --card-padding: 0; }
+    .card-cover { display: block; width: 100%; aspect-ratio: 16 / 7; max-height: 300px; object-fit: cover; pointer-events: none; }
+    .photo-card-content { display: grid; gap: 24px; padding: 24px; }
+    .photo-card .large-card-copy h3 { font-size: 23px; }
+    output { display: block; min-height: 24px; margin: 24px 3px 0; color: var(--text-secondary); font-size: 12px; }
+    @media (min-width: 900px) { .card-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; } .shortcut-card { min-height: 160px; --card-padding: 22px; } .cloud-card { min-height: 300px; } }
+    @media (max-width: 760px) { main { padding: max(24px, env(safe-area-inset-top)) 14px max(32px, env(safe-area-inset-bottom)); } }
+    @media (max-width: 360px) { .shortcut-card { --card-padding: 16px 14px; } .shortcut-copy h3 { font-size: 16px; } .shortcut-copy p { font-size: 11px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header class="page-heading">
+      <div><h1>卡片</h1><p>按住、松开，或顺势滑动。</p></div>
+      <button id="theme" data-my="Button" data-options='{"variant":"bare","icon":"moon"}' aria-label="切换明暗外观"></button>
+    </header>
+    <div class="card-showcase">
+      <section aria-labelledby="shortcut-title">
+        <header class="section-heading"><h2 id="shortcut-title">快捷卡片</h2><p>按住回应，移开取消。</p></header>
+        <div class="card-grid" aria-label="快捷功能">
+          <article class="shortcut-card" data-card="清理存储">
+            <svg class="shortcut-icon" data-my="Icon" data-options='{"name":"inbox"}'></svg>
+            <div class="shortcut-copy"><h3>清理存储</h3><p>36.8 GB / 128 GB</p></div>
+          </article>
+          <article class="shortcut-card" data-card="安全检查">
+            <svg class="shortcut-icon" data-my="Icon" data-options='{"name":"shield"}'></svg>
+            <div class="shortcut-copy"><h3>安全检查</h3><p>设备状态良好</p></div>
+          </article>
+          <article class="shortcut-card" data-card="运行状态">
+            <svg class="shortcut-icon" data-my="Icon" data-options='{"name":"spark"}'></svg>
+            <div class="shortcut-copy"><h3>运行状态</h3><p>让日常使用更轻快</p></div>
+          </article>
+          <article class="shortcut-card" data-card="应用管理">
+            <svg class="shortcut-icon" data-my="Icon" data-options='{"name":"grid"}'></svg>
+            <div class="shortcut-copy"><h3>应用管理</h3><p>查看全部应用</p></div>
+          </article>
+        </div>
+      </section>
+      <section aria-labelledby="content-title">
+        <header class="section-heading"><h2 id="content-title">内容卡片</h2><p>留出空间，承载更多内容。</p></header>
+        <div class="large-card-list" aria-label="大卡片列表">
+          <article class="large-card cloud-card" data-card="云端同步">
+            <div class="large-card-top"><span class="large-card-icon"><svg data-my="Icon" data-options='{"name":"cloud"}'></svg></span><span class="card-status"><i></i>同步正常</span></div>
+            <div class="large-card-copy"><span class="card-eyebrow">随时随地，保持连接</span><h3>重要的内容，<br>始终在你身边。</h3><p>照片、文档与收藏，在每一台设备上保持同步。</p></div>
+            <div class="large-card-bottom"><span>最近同步于 2 分钟前</span><svg data-my="Icon" data-options='{"name":"arrow-right"}'></svg></div>
+          </article>
+          <article class="large-card photo-card" data-card="周末，去湖边走走">
+            <img class="card-cover" src="./public/images/lake.svg" alt="平静的湖面与远山" loading="lazy" draggable="false">
+            <div class="photo-card-content">
+              <div class="large-card-copy"><span class="card-eyebrow">周末灵感</span><h3>去湖边走走</h3><p>放慢一点，把时间留给风景。</p></div>
+              <div class="large-card-bottom"><span>一份轻松出发的小计划</span><svg data-my="Icon" data-options='{"name":"arrow-right"}'></svg></div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </div>
+    <output id="feedback" aria-live="polite">原生 HTML · 共用 my-ui 的 CSS 与 JS</output>
+  </main>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 挂载到现有节点，保留内容；按压时序、键盘与取消行为全部由核心处理。
+      for (const element of document.querySelectorAll('[data-card]')) {
+        MyUI.mount(element, 'Card', {
+          title: element.dataset.card,
+          interactive: true,
+          onActivate: () => { document.querySelector('#feedback').textContent = '已点击：' + element.dataset.card; },
+        });
+      }
+      MyUI.init();
+      document.querySelector('#theme').addEventListener('click', () => {
+        const dark = document.documentElement.dataset.theme !== 'dark';
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        MyUI.mount('#theme', 'Button', { icon: dark ? 'sun' : 'moon' });
+      });
+    });
+  </script>
+</body>
+</html>

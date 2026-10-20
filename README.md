@@ -17,6 +17,7 @@ example/                @my-ui/example：展示与使用示例
   public/               示例静态资源
   index.html            Vue 入口
   native.html           不加载 Vue 的原生 HTML 示例
+  card.html             直接引用公共 CSS/JS 的原生卡片示例
   vite.config.ts        示例的开发与构建配置
   src-tauri/            桌面应用壳，直接加载同一个示例
     src/                Rust 启动入口
@@ -34,7 +35,7 @@ bun.lock                唯一依赖锁文件
 
 ## 普通 HTML
 
-复制 `packages/core/my-ui.css` 与 `packages/core/my-ui.js`，直接引用。可离线运行，不需要 Vue、包管理器或构建工具。项目中的 `example/native.html` 就是完整示例。
+复制 `packages/core/my-ui.css` 与 `packages/core/my-ui.js`，直接引用。可离线运行，不需要 Vue、包管理器或构建工具。项目中的 `example/native.html` 是完整示例，`example/card.html` 单独展示交互卡片，两者与 Vue 示例共用核心，没有第二套按压逻辑。构建后 `dist/card.html` 引用旁边的 `lib/my-ui.css`、`lib/my-ui.js`，可以直接打开。
 
 ```html
 <link rel="stylesheet" href="./my-ui.css">
@@ -116,7 +117,7 @@ const actions = [
 <Button :delay-touch-up="0" @click="save">保存</Button>
 ```
 
-Card 的 `interactive` 默认关闭；开启后整张卡片缩小并平滑改变背景色，使用 `200ms ease-out`，支持 Enter 与空格。内部按钮、链接和输入控件独立操作。`--card-press-scale` 默认 `.96`，大卡片示例使用 `.985`；`--card-press-background` 可覆盖按压背景，未设置时自动根据 CSS 明暗配色混合。
+Card 的 `interactive` 默认关闭；开启后整张卡片缩小并平滑改变背景色，按下与恢复均使用 `150ms ease-out`，支持 Enter 与空格。内部按钮、链接和输入控件独立操作。`--card-press-scale` 默认 `.96`，大卡片示例使用 `.985`；`--card-press-background` 可覆盖按压背景，未设置时自动根据 CSS 明暗配色混合。
 
 原生接口使用同名属性：`MyUI.create('Card', { interactive: true, delayTouchDown: 0, delayTouchUp: 100 })`。声明式组件通过 `data-options` 配置；普通 `<button class="my-button" data-delay-touch-down="0" data-delay-touch-up="100">保存</button>` 也支持反馈配置。需要滚动观察窗口时可单独设置 `delayTouchDown: 50`。
 

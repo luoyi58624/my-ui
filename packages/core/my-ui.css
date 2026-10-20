@@ -3538,8 +3538,8 @@ img[data-my-avatar] {
   transform: scale(1);
   transform-origin: center;
   transition:
-    transform 200ms ease-out,
-    background-color 200ms ease-out;
+    transform 150ms ease-out,
+    background-color 150ms ease-out;
 }
 .my-tappable-card[data-my-card]:is(:active:not([data-my-press-input]), [data-my-pressed]) {
   transform: scale(var(--card-press-scale, 0.96));

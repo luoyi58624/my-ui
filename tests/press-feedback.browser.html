@@ -109,7 +109,7 @@
       pointer(c.element, 'pointerdown'); await pause(240)
       const style = getComputedStyle(c.element)
       assert(Math.abs(new DOMMatrix(style.transform).a - .96) < .005, '卡片没有整体缩小到参考幅度')
-      assert(style.transitionDuration === '0.2s, 0.2s' && style.transitionTimingFunction === 'ease-out, ease-out', '卡片没有使用 200ms ease-out')
+      assert(style.transitionDuration === '0.15s, 0.15s' && style.transitionTimingFunction === 'ease-out, ease-out', '卡片没有使用统一的 150ms ease-out')
       assert(style.backgroundColor !== before && style.transitionProperty.includes('background-color'), '颜色仍是瞬切或没有变化')
       pointer(document, 'pointerup'); await pause(260)
       assert(Math.abs(new DOMMatrix(getComputedStyle(c.element).transform).a - 1) < .001, '恢复后尺寸不正确')
