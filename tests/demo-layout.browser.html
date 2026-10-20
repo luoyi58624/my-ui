@@ -5,6 +5,7 @@
 const params=new URLSearchParams(location.search);
 if(params.has('frame')){
   document.body.innerHTML='<div id="app"></div>';
+  const base=document.createElement('base');base.href='/example/';document.head.append(base);
   // 使用正式入口验证目录、真实组件、持久状态与弹层返回。
   await import('/example/src/main.ts');
 }else{
@@ -33,7 +34,7 @@ if(params.has('frame')){
         await pick(0);
       });
       await check('整行点击进入独立示例，详情隐藏底栏，顶栏显示返回按钮',async()=>{
-        const length=win.history.length;await open('button');assert(win.location.hash==='#example/button'&&win.history.length===length+1,'未建立详情返回历史');
+        const position=win.history.state.position;await open('button');assert(win.location.hash==='#/example/button'&&win.history.state.position===position+1,'未建立详情返回历史');
         assert(doc.querySelector('.demo-top .demo-title').textContent==='Button 按钮'&&page().textContent.includes('主要按钮'),'示例或标题错误');
         assert(win.getComputedStyle(doc.querySelector('.demo-bottom')).display==='none'&&doc.querySelector('.demo-bottom').inert,'详情仍可操作底栏');
         assert(doc.activeElement===doc.querySelector('.demo-top .demo-title'),'进入详情未转移焦点');assert(doc.querySelector('[data-demo-page="home"]').inert,'列表仍可交互');await back();
@@ -73,9 +74,22 @@ if(params.has('frame')){
         await route('not-a-demo');assert(page().dataset.demoPage==='home','未知链接没有回目录');await route('%E0%A4%A');assert(page().dataset.demoPage==='home','非法编码没有回目录');await route('home');
       });
       await check('直接访问详情时，顶栏返回也能回到列表',async()=>{
-        frame.src='/tests/demo-layout.browser.html?frame=1&direct=1#example/image';await until(()=>frame.contentDocument!==doc&&frame.contentDocument?.querySelector('.demo-detail:not([inert])'),'直接访问详情失败');doc=frame.contentDocument;win=frame.contentWindow;await back();assert(win.location.hash==='#home','直接进入的详情无法回首页');
+        frame.src='/tests/demo-layout.browser.html?frame=1&direct=1#/example/image';await until(()=>frame.contentDocument!==doc&&frame.contentDocument?.querySelector('.demo-detail:not([inert])'),'直接访问详情失败');doc=frame.contentDocument;win=frame.contentWindow;await back();assert(win.location.hash==='#/home','直接进入的详情无法回首页');
       });
-      document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,total:10,reports},null,2);
+      await check('共享状态通过 Vue Router 在当前窗口打开，返回保留父页实例和滚动',async()=>{
+        await open('native-navigation');const parent=page(),input=parent.querySelector('input');parent.scrollTop=80;const top=parent.scrollTop;
+        [...parent.querySelectorAll('button')].find(node=>node.textContent.includes('打开另一页')).click();await until(()=>doc.querySelector('.native-page'),'没有进入共享页');
+        assert(win.location.hash==='#/shared-state'&&doc.documentElement.classList.contains('my-native-page'),'共享页未通过路由打开或页面布局错误');
+        const note=doc.querySelector('.native-page input');note.value='路由返回保留共享内容';note.dispatchEvent(new win.Event('input',{bubbles:true}));await pause(60);
+        doc.querySelector('.native-page .my-app-bar button').click();await until(()=>page()?.dataset.demoPage==='example/native-navigation','共享页返回失败');await pause(80);
+        assert(page()===parent&&page().querySelector('input')===input&&input.value==='路由返回保留共享内容','父页实例丢失或数据未同步');assert(page().scrollTop===top,'返回丢失滚动位置');await back();
+      });
+      await check('原生 HTML 示例在当前窗口承载且可以返回目录示例',async()=>{
+        await open('native-html');page().querySelector('.native-example-link').click();await until(()=>doc.querySelector('.html-page iframe'),'HTML 页面未打开');
+        const html=doc.querySelector('.html-page iframe');await until(()=>html.contentDocument?.querySelector('.my-button'),'纯 HTML 组件没有加载');
+        assert(win.location.hash==='#/html','HTML 示例没有使用 Vue Router');doc.querySelector('.html-page .my-app-bar button').click();await until(()=>page()?.dataset.demoPage==='example/native-html','HTML 示例返回失败');await back();
+      });
+      document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,total:12,reports},null,2);
     }catch(error){document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,error:String(error.stack||error),reports},null,2)}
     finally{document.querySelector('#run').disabled=false;window.__demoLayoutReports=reports}
   };

@@ -1,10 +1,11 @@
 {
   "$schema": "../gen/schemas/mobile-schema.json",
   "identifier": "mobile",
-  "description": "Android 首页与原生子页均可读取系统字体字重。",
+  "description": "Android 首页与原生子页可导航和读取系统字体字重。",
   "platforms": ["android"],
   "windows": ["main", "native-page-*"],
   "permissions": [
-    "android-system-font-weight:default"
+    "android-system-font-weight:default",
+    "native-router:default"
   ]
 }

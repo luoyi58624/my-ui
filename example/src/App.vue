@@ -22,14 +22,14 @@ import NoticeStepsShowcase from './demo/NoticeStepsShowcase.vue'
 import SharePanel from './demo/SharePanel.vue'
 import {
   Button, Card, CellGroup, TagGroup, Choices, Icon, Input,
-  ListRow, Menu, Navigation, Popover, Popup, Segmented, Select, popup,
+  ListRow, Menu, Navigation, Popover, Segmented, Select, popup,
   Slider, Stepper, Tag, Toast, type Option, type IconName,
 } from '@my-ui/vue'
 
 const toast = ref<InstanceType<typeof Toast>>()
 function notify(message: string) { toast.value?.show(message) }
 function openHtmlExample() {
-  void openPage('./native.html', { title: '原生 HTML 示例' })
+  void openPage('/html', { title: '原生 HTML 示例' })
     .catch(error => notify(error instanceof Error ? error.message : String(error)))
 }
 function readSaved(key: string) {
@@ -275,7 +275,6 @@ async function selectAction(action: Option) {
     </template>
   </DemoLayout>
   <Toast ref="toast" />
-  <Popup />
 </template>
 
 <style scoped>

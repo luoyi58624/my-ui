@@ -13,8 +13,8 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2.7.3", features = [] }
 
 [dependencies]
-serde = { version = "1", features = ["derive"] }
 tauri = { version = "2.12.4", features = [] }
 tauri-plugin-store = "2.5.0"
 # Bun 安装完整插件源码，换用 GitHub 依赖时无需改 Cargo 路径。
 tauri-plugin-android-system-font-weight = { path = "../node_modules/android-system-font-weight" }
+tauri-plugin-native-router = { path = "../node_modules/native-router" }

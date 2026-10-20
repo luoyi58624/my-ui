@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { h, ref } from 'vue'
-import { AppBar, Button, Card, CellGroup, Icon, Input, ListRow, Menu, Popup, Stepper, popup } from '@my-ui/vue'
+import { AppBar, Button, Card, CellGroup, Icon, Input, ListRow, Menu, Stepper, popup } from '@my-ui/vue'
 import ThemeSettings from './demo/ThemeSettings.vue'
-import { closePage, isNativeApp } from './navigation'
+import { closePage, isAndroidNative } from './navigation'
 import { updateDemoCache, useSharedDemoStore } from './stores/shared'
 
-const available = isNativeApp()
-const android = /android/i.test(navigator.userAgent)
+const available = isAndroidNative()
 const shared = useSharedDemoStore()
 const error = ref('')
 const openedAt = new Date().toLocaleTimeString('zh-CN', { hour12: false })
@@ -14,7 +13,7 @@ const openedAt = new Date().toLocaleTimeString('zh-CN', { hour12: false })
 async function back() {
   try {
     await shared.$shared?.flush()
-    await closePage('./index.html#native-navigation')
+    await closePage('/example/native-navigation')
   }
   catch (reason) { error.value = reason instanceof Error ? reason.message : String(reason) }
 }
@@ -45,16 +44,16 @@ function openOverlay(kind: 'sheet' | 'drawer') {
 
 <template>
   <div class="native-page">
-    <AppBar title="原生新页面" back sticky @back="back">
+    <AppBar title="跨页共享状态" back sticky @back="back">
       <template #actions><ThemeSettings /></template>
     </AppBar>
     <main class="native-page-content">
-      <div class="native-page-intro"><span class="native-page-symbol"><Icon name="layer" /></span><h1>来到另一页</h1><p>{{ available ? android ? '从屏幕边缘向内滑动，试试系统的返回效果。' : '当前内容在独立窗口中，关闭后回到原窗口。' : '在这里修改备注和计数，另一标签页也会更新。' }}</p></div>
+      <div class="native-page-intro"><span class="native-page-symbol"><Icon name="layer" /></span><h1>来到另一页</h1><p>{{ available ? '从屏幕边缘向内滑动，试试系统的返回效果。' : '在这里修改备注和计数，返回后上一页也会更新。' }}</p></div>
       <Card title="共享的内容" description="两页修改即时同步，重新打开也会恢复">
         <Input v-model="shared.note" label="共享备注" clearable />
         <div class="native-page-counter"><span>共享计数</span><Stepper v-model="shared.count" label="共享计数" /></div>
         <div class="native-page-meta"><span>本次打开</span><span>{{ openedAt }}</span></div>
-        <div class="native-page-actions"><Button @click="back">{{ available ? '返回上一页' : '回到示例首页' }}</Button><Button variant="text" @click="updateCache">从本地更新</Button></div>
+        <div class="native-page-actions"><Button @click="back">返回上一页</Button><Button variant="text" @click="updateCache">从本地更新</Button></div>
         <p v-if="error || shared.$shared?.error" class="native-page-error" role="alert">{{ error || shared.$shared?.error?.message }}</p>
       </Card>
       <Card title="弹层优先返回" description="先关闭最上层弹窗，再返回当前页面">
@@ -65,7 +64,6 @@ function openOverlay(kind: 'sheet' | 'drawer') {
       </Card>
       <p class="native-page-footnote">备注和计数由两页共用，滚动位置与打开时间各自保留。</p>
     </main>
-    <Popup />
   </div>
 </template>
 

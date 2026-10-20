@@ -1,22 +1,22 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Button, Card, Icon, Input } from '@my-ui/vue'
-import { isNativeApp, openPage } from '../navigation'
+import { isAndroidNative, openPage } from '../navigation'
 import { updateDemoCache, useSharedDemoStore } from '../stores/shared'
 
 const emit = defineEmits<{ notify: [message: string] }>()
-const available = isNativeApp()
+const available = isAndroidNative()
 const opening = ref(false)
 const shared = useSharedDemoStore()
 
 async function open() {
   if (!available) {
-    void openPage('native-page.html', { title: '跨页共享状态' }).catch(error => emit('notify', String(error)))
+    void openPage('/shared-state', { title: '跨页共享状态' }).catch(error => emit('notify', String(error)))
     return
   }
   if (opening.value) return
   opening.value = true
-  try { await shared.$shared?.flush(); await openPage('native-page.html', { title: '跨页共享状态' }) }
+  try { await shared.$shared?.flush(); await openPage('/shared-state', { title: '跨页共享状态' }) }
   catch (error) { emit('notify', error instanceof Error ? error.message : String(error)) }
   finally { opening.value = false }
 }
@@ -36,7 +36,7 @@ async function updateCache() {
       <Button variant="text" @click="updateCache">从本地更新</Button>
       <Button variant="text" @click="shared.$reset()">重置数据</Button>
     </div>
-    <p class="native-navigation-note">{{ available ? '在新页面修改后返回，这里也会更新。系统返回保留首页的滚动位置。' : '打开另一标签页，试试两边修改；刷新页面后，已保存的内容仍在。' }}</p>
+    <p class="native-navigation-note">{{ available ? '在新页面修改后返回，这里也会更新。系统返回保留首页的滚动位置。' : '在当前窗口进入另一页；返回后保留原来的输入与滚动位置。' }}</p>
     <p v-if="shared.$shared?.error" class="native-navigation-error" role="alert">本地同步失败：{{ shared.$shared.error.message }}</p>
   </Card>
 </template>

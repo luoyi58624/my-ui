@@ -19,6 +19,8 @@
     "@tauri-apps/plugin-store": "2.5.0",
     "pinia": "4.1.0",
     "android-system-font-weight": "file:../../../tauri/plugins/android-system-font-weight",
+    "native-router": "file:../../../tauri/plugins/native-router",
+    "vue-router": "4.6.4",
     "vue": "3.5.43"
   },
   "devDependencies": {

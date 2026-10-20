@@ -8,7 +8,7 @@ const bootstrap = readFileSync(new URL('../example/public/theme-init.js', import
 function start({ settings, cached, inherited, systemDark = false, storageBlocked = false } = {}) {
   const values = new Map(), root = { dataset: {}, style: { setProperty: (key, value) => values.set(key, value), getPropertyValue: key => values.get(key) || '' } }
   const storage = new Map([['my-ui:theme', settings && JSON.stringify(settings)], ['my-ui:theme-render', cached && JSON.stringify(cached)]])
-  runInNewContext(bootstrap, { document: { documentElement: root }, window: { __MY_UI_INITIAL_APPEARANCE__: inherited }, matchMedia: () => ({ matches: systemDark }), localStorage: { getItem(key) { if (storageBlocked) throw Error('blocked'); return storage.get(key) || null } } })
+  runInNewContext(bootstrap, { document: { documentElement: root }, window: { __NATIVE_ROUTER_APPEARANCE__: inherited }, matchMedia: () => ({ matches: systemDark }), localStorage: { getItem(key) { if (storageBlocked) throw Error('blocked'); return storage.get(key) || null } } })
   return { root, values }
 }
 

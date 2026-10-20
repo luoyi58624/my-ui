@@ -1,4 +1,4 @@
-import { isNativeApp, readPageAppearance } from './navigation'
+import { isNativeApp, readPageAppearance } from './native-context'
 
 /** 将当前窗口的实际主题同步给原生系统栏或桌面窗口装饰。 */
 export function installNativeAppearance(): () => void {

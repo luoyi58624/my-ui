@@ -1,23 +1,5 @@
 use tauri::window::Color;
 
-/// 父页传入已经渲染的外观，让原生背景与文档首帧保持一致。
-#[derive(serde::Deserialize)]
-pub struct PageAppearance {
-    pub dark: bool,
-    pub background: Color,
-}
-
-impl PageAppearance {
-    /// 在页面解析前传递实际模式，避免依赖异步共享存储恢复。
-    pub fn initialization_script(&self) -> String {
-        let Color(red, green, blue, _) = self.background;
-        format!(
-            "window.__MY_UI_INITIAL_APPEARANCE__={{dark:{},background:'#{red:02x}{green:02x}{blue:02x}'}};",
-            self.dark
-        )
-    }
-}
-
 /// 同步当前窗口的系统外观和加载背景，避免新页面出现默认白底。
 #[tauri::command]
 pub async fn set_app_theme(

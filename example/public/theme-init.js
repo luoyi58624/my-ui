@@ -1,7 +1,7 @@
 // 在样式和主脚本加载前恢复主题；此文件保持普通脚本，不能改为延后执行的 module。
 (() => {
   const root = document.documentElement;
-  const inherited = window.__MY_UI_INITIAL_APPEARANCE__;
+  const inherited = window.__NATIVE_ROUTER_APPEARANCE__;
   let settings, cached;
   try { settings = JSON.parse(localStorage.getItem('my-ui:theme') || localStorage.getItem('chenglan:theme') || 'null'); } catch {}
   try { cached = JSON.parse(localStorage.getItem('my-ui:theme-render') || 'null'); } catch {}

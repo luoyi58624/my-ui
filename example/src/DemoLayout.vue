@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, type ComponentPublicInstance } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch, type ComponentPublicInstance } from 'vue'
+import { useRoute } from 'vue-router'
 import { AppBar, Button, CellGroup, Icon, ListRow, Navigation, type Option } from '@my-ui/vue'
 import ThemeSettings from './demo/ThemeSettings.vue'
 import { demoExamples, demoGroups } from './demo/catalog'
-import { closePage, isChildPage, isNativeApp, openPage } from './navigation'
+import { closePage, isChildPage, navigation, openPage } from './navigation'
 
 const emit = defineEmits<{
   /** 跳转或关闭失败时交给应用展示错误。 */
@@ -22,7 +23,8 @@ const title = computed(() => example.value?.title ?? pages.find(page => page.val
 const openedExamples = computed(() => demoExamples.filter(item => visited.value.has(item.id)))
 const titleElement = ref<HTMLElement>()
 const elements = new Map<string, HTMLElement>(), positions = new Map<string, number>()
-let navigationVersion = 0, returning = false, handledHash: string | undefined
+const route = useRoute()
+let navigationVersion = 0, returning = false
 
 function setPageElement(value: string, element: Element | ComponentPublicInstance | null) {
   if (element instanceof HTMLElement) elements.set(value, element)
@@ -56,15 +58,14 @@ async function selectPage(value: string, reset = false, anchor?: string) {
 function navigate(value: string) {
   if (!pages.some(page => page.value === value)) return
   // 底部同级切换留在当前主页面，只有组件入口调用跨页导航。
-  history.replaceState({ ...history.state, myUiPageParent: undefined }, '', '#' + value)
-  handledHash = location.hash
-  void selectPage(value, active.value === value)
+  if (active.value === value) void selectPage(value, true)
+  void navigation.replace('/' + value).catch(reportError)
 }
 
 function openExample(id: string) {
   const item = demoExamples.find(item => item.id === id)
   if (!item) return
-  void openPage('#example/' + id, { title: item.title }).catch(reportError)
+  void openPage('/example/' + id, { title: item.title }).catch(reportError)
 }
 
 function reportError(error: unknown) {
@@ -74,38 +75,27 @@ function reportError(error: unknown) {
 
 function goBack() {
   if (returning) return
-  if (isNativeApp() && !isChildPage()) {
-    // 主窗口直接打开旧链接时回到目录，不能误关主窗口。
-    navigate('home')
-    return
-  }
   returning = true
   void closePage().catch(reportError)
 }
 
-function followHash() {
+function followRoute() {
+  if (route.name !== 'demo') {
+    const previous = elements.get(active.value)
+    if (previous) positions.set(active.value, previous.scrollTop)
+    return
+  }
   returning = false
-  // 同一次返回会同时发出 popstate 与 hashchange，只恢复一次滚动和焦点。
-  if (handledHash === location.hash) return
-  handledHash = location.hash
   let anchor = ''
-  try { anchor = decodeURIComponent(location.hash.slice(1)) } catch { /* 非法片段回到首页。 */ }
+  try { anchor = decodeURIComponent(route.path.replace(/^\//, '')) } catch { /* 非法片段回到首页。 */ }
   const item = demoExamples.find(item => anchor === 'example/' + item.id || anchor === item.id || item.anchors?.includes(anchor))
   const value = item ? 'example/' + item.id : pages.find(page => page.value === anchor)?.value ?? 'home'
   void selectPage(value, false, item && !anchor.startsWith('example/') ? anchor : undefined)
 }
 
-onMounted(() => {
-  document.documentElement.classList.add('my-demo-app')
-  window.addEventListener('hashchange', followHash)
-  window.addEventListener('popstate', followHash)
-  followHash()
-})
+watch(() => route.fullPath, followRoute, { immediate: true })
 onBeforeUnmount(() => {
   navigationVersion++
-  document.documentElement.classList.remove('my-demo-app')
-  window.removeEventListener('hashchange', followHash)
-  window.removeEventListener('popstate', followHash)
 })
 </script>
 
