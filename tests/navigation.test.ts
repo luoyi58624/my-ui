@@ -70,6 +70,12 @@ test('不同页面可以并行创建，不会因另一个窗口正在打开而�
   await Promise.all([first, second])
 }))
 
+test('原生新页面从创建时继承当前实际模式和背景，主题仍由共享状态管理', () => withRuntime(async api => {
+  Object.assign(document, { documentElement: { dataset: { theme: 'dark' }, style: { getPropertyValue: () => '#0d1015' } } })
+  await api.openPage('#example/button')
+  assert.deepEqual(api.calls[0].args.appearance, { dark: true, background: '#0d1015' })
+}))
+
 test('创建失败保留错误并释放进行中请求，下次能够重试', () => withRuntime(async api => {
   api.respond(() => { throw new Error('创建窗口失败') })
   await assert.rejects(api.openPage('#example/image'), /创建窗口失败/)

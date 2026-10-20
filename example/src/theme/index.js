@@ -329,13 +329,15 @@ export function applyTheme(options = {}) {
   stopPrevious?.();
   const render = (theme) => {
     const root = document.documentElement;
+    const variables = {};
+    const set = (name, value) => { root.style.setProperty(name, value); variables[name] = value; };
     for (const field of Object.keys(properties))
-      root.style.setProperty(properties[field], theme.colors[field]);
-    root.style.setProperty(
+      set(properties[field], theme.colors[field]);
+    set(
       "--overlay-backdrop-filter",
       theme.backdropBlur ? "blur(4px)" : "none",
     );
-    root.style.setProperty("--font-weight", String(theme.fontWeight));
+    set("--font-weight", String(theme.fontWeight));
     // 变细时四档同步平移，增粗时保留原本更粗的标题，不增加用户配置项。
     for (const [role, base] of [
       ["action", 500],
@@ -346,13 +348,16 @@ export function applyTheme(options = {}) {
         theme.fontWeight < 400
           ? base + theme.fontWeight - 400
           : Math.max(base, theme.fontWeight);
-      root.style.setProperty(
+      set(
         "--font-weight-" + role,
         String(Math.min(1000, Math.max(100, weight))),
       );
     }
     root.dataset.theme = theme.mode;
+    root.dataset.themePreference = snapshot.mode ?? 'light';
     root.dataset.themeStyle = theme.style;
+    // 新文档在主脚本执行前复用已解析的变量，不重新实现配色预设。
+    try { localStorage.setItem('my-ui:theme-render', JSON.stringify({ mode: theme.mode, variables })); } catch {}
   };
   render(initial);
   const update = () => render(createTheme(snapshot, media?.matches ?? false));

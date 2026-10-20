@@ -4,6 +4,14 @@ export interface PageOptions {
   title?: string
 }
 
+/** 读取当前页面已经渲染的外观，供原生新窗口首帧使用。 */
+export function readPageAppearance(): { dark: boolean; background: string } | undefined {
+  const root = document.documentElement
+  const background = root?.style.getPropertyValue?.('--background').trim()
+  if (!['light', 'dark'].includes(root?.dataset.theme ?? '') || !background || !/^#(?:[\da-f]{3}|[\da-f]{6})$/i.test(background)) return
+  return { dark: root.dataset.theme === 'dark', background }
+}
+
 const opening = new Map<string, Promise<void>>()
 
 /** 是否运行在提供页面跳转命令的 Tauri App 内。 */
@@ -39,7 +47,10 @@ export function openPage(path: string, options: PageOptions = {}): Promise<void>
     const pending = opening.get(localPath)
     if (pending) return pending
     const request = Promise.resolve()
-      .then(() => window.__TAURI__!.core!.invoke!<void>('open_page', { path: localPath, title: options.title ?? document.title }))
+      .then(() => {
+        const appearance = readPageAppearance()
+        return window.__TAURI__!.core!.invoke!<void>('open_page', { path: localPath, title: options.title ?? document.title, ...(appearance ? { appearance } : {}) })
+      })
       .finally(() => { opening.delete(localPath) })
     opening.set(localPath, request)
     return request

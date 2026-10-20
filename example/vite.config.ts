@@ -21,7 +21,8 @@ export default defineConfig(({ mode }) => ({
     outDir: projectRoot + 'dist',
     emptyOutDir: true,
     rolldownOptions: {
-      input: { main: exampleRoot + 'index.html', nativePage: exampleRoot + 'native-page.html' },
+      input: { main: exampleRoot + 'index.html', nativePage: exampleRoot + 'native-page.html', nativeTheme: exampleRoot + 'src/native-theme.ts' },
+      output: { entryFileNames: chunk => chunk.name === 'nativeTheme' ? 'native-theme.js' : 'assets/[name]-[hash].js' },
     },
   },
   plugins: [

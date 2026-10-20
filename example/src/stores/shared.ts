@@ -1,11 +1,7 @@
 import { createPinia, defineStore } from 'pinia'
-import { createSharedStatePlugin, createWebStateStorage, sharedStateKey } from '@my-ui/vue/state'
-import { createTauriStateStorage } from '@my-ui/vue/state/tauri'
-
-/** 示例在原生壳内共用文件存储，网页使用同源 localStorage。 */
-export const sharedStorage = typeof window.__TAURI__?.core?.invoke === 'function'
-  ? createTauriStateStorage('my-ui-state.json')
-  : createWebStateStorage()
+import { createSharedStatePlugin, sharedStateKey } from '@my-ui/vue/state'
+import { sharedStorage } from './storage'
+export { sharedStorage } from './storage'
 
 /** 两个页面安装相同插件，业务状态仍由普通 Pinia store 定义。 */
 export const sharedPinia = createPinia().use(createSharedStatePlugin({ storage: sharedStorage }))

@@ -317,6 +317,12 @@ bun run build
 
 `example/src/DemoLayout.vue` 负责目录、安全区与页面展示，`demo/catalog.ts` 统一维护列表项和路由，`App.vue` 用同名插槽组织示例内容。统一的 `example/src/navigation.ts` 负责跨平台打开与返回，组件库不依赖 Tauri。子页通过 `index.html?pageWindow=1#example/组件标识` 加载对应内容并隐藏主 Tab；旧的 `#combobox`、`#slider-options` 等链接仍可直接定位。原生 Activity 与共享状态示例位于首页的“完整示例”分组。CSS 保存后即时更新；修改 JS 核心会完整刷新示例，避免旧实例残留。构建结果同时提供 Vue 页面、原生页面和原样的 CSS/JS。
 
+主题偏好由 `stores/theme.ts` 的共享 Pinia store 管理，明暗模式、配色和字重均跨窗口持久化同步；任意窗口修改后，其他窗口与新窗口都会应用。旧的 `my-ui:theme` 设置继续作为迁移来源和首帧快照。`native-appearance.ts` 同步实际明暗主题到 Android 系统栏文字/图标及桌面窗口装饰，主页面和子页面使用相同逻辑。纯 HTML 在 App 内通过独立的 `native-theme.js` 接入同一存储，不加载 Vue；普通离线 HTML 仍只依赖组件 CSS/JS。
+
+页面头部的普通脚本 `public/theme-init.js` 在样式和主模块加载前恢复模式与已解析的主题变量；新原生窗口同时继承父页的背景和实际模式。Android 的 Activity、WebView 和网页使用一致的加载背景，避免新页先亮后暗。
+
+Android 同步应用级夜间配置；选择“跟随系统”时解除应用覆盖，页面通过系统媒体查询更新明暗主题，系统栏同步实际配色。Activity 已声明处理 `uiMode`，切换时保留当前页面和状态。WebView 生命周期与返回动画沿用平台默认行为，不拦截首绘或干预系统返回预览。
+
 `tests/demo-layout.browser.html` 使用真实示例入口检查全部目录跳转、详情返回与前进、滚动和输入保留、旧链接、弹层返回、键盘、320px 窄屏与桌面布局。
 
 `bun run check` 检查 Vue 封装和示例类型；`bun run preview` 在 4178 端口预览 `dist/`。构建后的 `dist/native.html` 与 `dist/lib/` 可直接离线使用，`dist/lib/` 同时保留原生类型声明。
@@ -397,6 +403,8 @@ Android 示例的系统返回优先交给当前 WebView 的最上层弹层：级
 宿主可通过 `MyUI.layers.dismissTop()` 请求返回，通过 `MyUI.layers.subscribe(active => {})` 立即订阅是否存在弹层并取得取消订阅方法。接口不依赖 Tauri；安卓桥接只放在 example 中。禁用 `closeOnEscape` 的弹窗也会消费系统返回，等待业务操作关闭；滑块常驻数值提示不占用返回。
 
 `bun test ./tests/overlay-back.test.ts ./tests/navigation.test.ts` 检查原生桥接、跨平台导航、连续点击、错误重试与网页回退；`cargo test --lib navigation::tests` 检查原生目标地址和窗口边界。`tests/navigation.browser.html` 使用真实 Vue 页面和模拟宿主命令检查跳转接入，`tests/demo-layout.browser.html` 检查普通网页导航，`tests/overlay-back.browser.html` 检查真实弹层交互；浏览器模拟宿主不代替原生设备验证。
+
+`bun test ./tests/theme-state.test.ts ./tests/theme-startup.test.mjs ./tests/theme.test.mjs` 检查主题跨实例同步、持久化、旧配置、模块加载前的主题恢复与原生外观桥接；`tests/theme-sync.browser.html` 使用多个真实示例页面检查主题切换与新页面继承。
 
 ## 目录维护
 

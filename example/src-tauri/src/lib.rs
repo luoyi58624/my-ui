@@ -1,3 +1,4 @@
+mod appearance;
 mod navigation;
 mod overlay_back;
 
@@ -8,6 +9,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             navigation::open_page,
             navigation::close_page,
+            appearance::set_app_theme,
             overlay_back::set_overlay_back_enabled
         ])
         .plugin(tauri_plugin_store::Builder::default().build())

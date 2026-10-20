@@ -1,3 +1,4 @@
+use crate::appearance::PageAppearance;
 use std::sync::atomic::{AtomicU64, Ordering};
 use tauri::Manager;
 
@@ -48,6 +49,7 @@ pub async fn open_page(
     window: tauri::WebviewWindow,
     path: String,
     title: Option<String>,
+    appearance: Option<PageAppearance>,
 ) -> Result<(), String> {
     if !owns_page(window.label()) {
         return Err("当前窗口不能打开应用页面".into());
@@ -67,10 +69,24 @@ pub async fn open_page(
                     .filter(|value| !value.trim().is_empty())
                     .unwrap_or_else(|| "my-ui".into()),
             );
+    let builder = if let Some(ref appearance) = appearance {
+        builder
+            .background_color(appearance.background)
+            .initialization_script(appearance.initialization_script())
+    } else {
+        builder
+    };
     #[cfg(target_os = "android")]
     let builder = builder.activity_name("NativePageActivity");
     #[cfg(not(target_os = "android"))]
     let builder = builder
+        .theme(appearance.as_ref().map(|appearance| {
+            if appearance.dark {
+                tauri::Theme::Dark
+            } else {
+                tauri::Theme::Light
+            }
+        }))
         .inner_size(960.0, 760.0)
         .min_inner_size(360.0, 480.0)
         .center()

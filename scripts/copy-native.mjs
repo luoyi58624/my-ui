@@ -9,4 +9,5 @@ for (const file of ['my-ui.css', 'my-ui.js', 'my-ui.d.ts']) {
 const html = readFileSync(new URL('../example/native.html', import.meta.url), 'utf8')
   .replaceAll('../packages/core/', './lib/')
   .replaceAll('./public/', './')
+  .replaceAll('./src/native-theme.ts', './native-theme.js')
 writeFileSync(new URL('native.html', output), html)

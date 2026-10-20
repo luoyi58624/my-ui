@@ -1813,6 +1813,7 @@ dependencies = [
 name = "my-ui-example"
 version = "1.0.0"
 dependencies = [
+ "serde",
  "tauri",
  "tauri-build",
  "tauri-plugin-store",

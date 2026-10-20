@@ -1,23 +1,12 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { Button, Dialog, Icon, Input, Segmented, Slider, Switch } from '@my-ui/vue'
-import { applyTheme, createTheme, contrastRatio, defaultThemeOptions, themeColors, themeStyles, type ThemeColorId, type ThemeData, type ThemeMode, type ThemePreference, type ThemeStyleId } from '../theme/index.js'
+import { createTheme, contrastRatio, defaultThemeOptions, themeColors, themeStyles, type ThemeColorId, type ThemeMode, type ThemeStyleId } from '../theme/index.js'
 import { createSystemFontWeightSync, supportsSystemFontWeight } from '../font-weight'
+import { useThemeStore } from '../stores/theme'
+import { defaultThemeState } from '../theme/preferences'
 
-type Settings = { mode: ThemePreference; backdropBlur: boolean; fontWeight: number; light: ThemeData; dark: ThemeData }
-function defaults(): Settings {
-  return { mode: defaultThemeOptions.mode, backdropBlur: defaultThemeOptions.backdropBlur, fontWeight: defaultThemeOptions.fontWeight, light: { ...defaultThemeOptions.light }, dark: { ...defaultThemeOptions.dark } }
-}
-function savedSettings(): Settings {
-  try {
-    const saved = JSON.parse((localStorage.getItem('my-ui:theme') ?? localStorage.getItem('chenglan:theme')) ?? 'null')
-    if (!saved) return defaults()
-    const next = { ...defaults(), ...saved, light: { ...defaults().light, ...saved.light }, dark: { ...defaults().dark, ...saved.dark } } as Settings
-    createTheme(next)
-    return next
-  } catch { return defaults() }
-}
-const settings = reactive<Settings>(savedSettings())
+const settings = useThemeStore()
 const open = ref(false)
 const systemMedia = window.matchMedia('(prefers-color-scheme: dark)')
 const systemDark = ref(systemMedia.matches)
@@ -41,12 +30,10 @@ const textContrast = computed(() => {
   const colors = current.value.colors
   return Math.min(...[colors.cardBackground, colors.fill, colors.selectedBackground, colors.hover, colors.press].map(background => contrastRatio(colors.primary, background)))
 })
-let stopTheme: (() => void) | undefined
-watch(settings, value => {
-  const snapshot = { mode: value.mode, backdropBlur: value.backdropBlur, fontWeight: value.fontWeight, light: { ...value.light }, dark: { ...value.dark } }
-  stopTheme = applyTheme(snapshot)
-  try { localStorage.setItem('my-ui:theme', JSON.stringify(snapshot)) } catch { /* 存储失败时仍可在本页使用主题。 */ }
-}, { deep: true, immediate: true })
+watch([() => createTheme({ ...settings.$state, mode: 'light' }).primary, () => createTheme({ ...settings.$state, mode: 'dark' }).primary], ([light, dark]) => {
+  drafts.light = light!
+  drafts.dark = dark!
+})
 const weightSync = createSystemFontWeightSync(weight => { settings.fontWeight = weight }, defaultThemeOptions.fontWeight)
 const restoringWeight = ref(false)
 async function restoreSystemWeight() {
@@ -68,7 +55,6 @@ onMounted(() => {
 })
 onBeforeUnmount(() => {
   weightSync.dispose()
-  stopTheme?.()
   systemMedia.removeEventListener('change', followSystem)
   document.removeEventListener('visibilitychange', resumeSystemWeight)
 })
@@ -94,7 +80,7 @@ function edit(value: string) {
   currentData.value.primary = createTheme(next, systemDark.value).primary
 }
 function reset() {
-  Object.assign(settings, defaults())
+  settings.$patch(defaultThemeState())
   drafts.light = createTheme(settings).primary
   drafts.dark = createTheme({ ...settings, mode: 'dark' }).primary
   notice.value = '已恢复默认主题'
