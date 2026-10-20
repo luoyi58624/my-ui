@@ -1,10 +1,20 @@
 <script setup lang="ts">
-import { computed, nextTick, onActivated, onDeactivated, onBeforeUnmount, ref, watch, type ComponentPublicInstance } from 'vue'
+import {
+  computed,
+  nextTick,
+  onActivated,
+  onDeactivated,
+  onBeforeUnmount,
+  ref,
+  watch,
+  type ComponentPublicInstance
+} from 'vue'
 import { useRoute } from 'vue-router'
 import { Button, CellGroup, Icon, ListRow } from '@my-ui/vue'
 import { Tabs, type NavigationItem } from 'tauri-plugin-native-components/vue'
 import DemoAppBar from './DemoAppBar.vue'
-import ExampleCode from './demo/ExampleCode.vue'
+import DemoDocument from './demo/DemoDocument.vue'
+import { demoDescriptions } from './demo/descriptions'
 import { useNativeBarsSuspended } from './native-components'
 import { demoExamples, demoGroups, nativeDemoGroups } from './demo/catalog'
 import { closePage, isChildPage, navigation, openPage } from './navigation'
@@ -14,28 +24,56 @@ const emit = defineEmits<{
   navigationError: [message: string]
 }>()
 
-const pages: (NavigationItem & { title: string; demo?: number; icon: 'home' | 'grid' | 'message' | 'user' })[] = [
+const pages: (NavigationItem & {
+  title: string
+  demo?: number
+  icon: 'home' | 'grid' | 'message' | 'user'
+})[] = [
   { value: 'home', label: '首页', title: '组件示例', icon: 'home' },
   { value: 'native', label: '原生', title: '原生组件', icon: 'grid' },
   { value: 'messages', label: '消息', title: '消息', icon: 'message', demo: 2 },
-  { value: 'profile', label: '我的', title: '我的', icon: 'user', demo: 3 },
+  { value: 'profile', label: '我的', title: '我的', icon: 'user', demo: 3 }
 ]
 const counts = ref<Record<string, number>>({ messages: 0, profile: 0 })
-const nativePages = computed(() => pages.map(page => ({ ...page, ...(page.demo ? { nativeView: 'demo', nativeProps: { title: page.title, demo: page.demo, count: counts.value[page.value] } } : {}) })))
-const active = ref('home'), visited = ref(new Set<string>())
-const example = computed(() => demoExamples.find(item => active.value === 'example/' + item.id))
-const title = computed(() => example.value?.title ?? pages.find(page => page.value === active.value)?.title ?? '组件示例')
-const openedExamples = computed(() => demoExamples.filter(item => visited.value.has(item.id)))
+const nativePages = computed(() =>
+  pages.map((page) => ({
+    ...page,
+    ...(page.demo
+      ? {
+          nativeView: 'demo',
+          nativeProps: { title: page.title, demo: page.demo, count: counts.value[page.value] }
+        }
+      : {})
+  }))
+)
+const active = ref('home'),
+  visited = ref(new Set<string>())
+const example = computed(() => demoExamples.find((item) => active.value === 'example/' + item.id))
+const title = computed(
+  () =>
+    example.value?.title ?? pages.find((page) => page.value === active.value)?.title ?? '组件示例'
+)
+const openedExamples = computed(() => demoExamples.filter((item) => visited.value.has(item.id)))
 const titleElement = ref<InstanceType<typeof DemoAppBar>>()
 const suspended = useNativeBarsSuspended()
-const elements = new Map<string, HTMLElement>(), positions = new Map<string, number>()
+const elements = new Map<string, HTMLElement>(),
+  positions = new Map<string, number>()
 const route = useRoute()
-const activated = ref(true), visible = ref(!document.hidden)
-const updateVisibility = () => { visible.value = !document.hidden }
+const activated = ref(true),
+  visible = ref(!document.hidden)
+const updateVisibility = () => {
+  visible.value = !document.hidden
+}
 document.addEventListener('visibilitychange', updateVisibility)
-onActivated(() => { activated.value = true })
-onDeactivated(() => { activated.value = false })
-let navigationVersion = 0, returning = false, lastEntry: string | undefined
+onActivated(() => {
+  activated.value = true
+})
+onDeactivated(() => {
+  activated.value = false
+})
+let navigationVersion = 0,
+  returning = false,
+  lastEntry: string | undefined
 
 function setPageElement(value: string, element: Element | ComponentPublicInstance | null) {
   if (element instanceof HTMLElement) elements.set(value, element)
@@ -57,22 +95,27 @@ async function selectPage(value: string, reset = false, anchor?: string) {
   const page = elements.get(value)
   if (!page) return
   const target = anchor ? document.getElementById(anchor) : undefined
-  const top = target && page.contains(target)
-    ? target.getBoundingClientRect().top - page.getBoundingClientRect().top + page.scrollTop - 20
-    : reset ? 0 : positions.get(value) ?? 0
+  const top =
+    target && page.contains(target)
+      ? target.getBoundingClientRect().top - page.getBoundingClientRect().top + page.scrollTop - 20
+      : reset
+        ? 0
+        : (positions.get(value) ?? 0)
   page.scrollTo({ top: Math.max(0, top), behavior: 'instant' })
-  const entry = previousExample ?? demoExamples.find(item => item.id === lastEntry)
+  const entry = previousExample ?? demoExamples.find((item) => item.id === lastEntry)
   if (lastEntry === 'showcase' && value === 'home') {
     page.querySelector<HTMLElement>('[data-showcase-entry]')?.focus({ preventScroll: true })
     lastEntry = undefined
   } else if (entry?.catalog === value) {
-    page.querySelector<HTMLElement>('[data-demo-link="' + entry.id + '"]')?.focus({ preventScroll: true })
+    page
+      .querySelector<HTMLElement>('[data-demo-link="' + entry.id + '"]')
+      ?.focus({ preventScroll: true })
     lastEntry = undefined
   } else if (id) titleElement.value?.focus()
 }
 
 function navigate(value: string) {
-  if (!pages.some(page => page.value === value)) return
+  if (!pages.some((page) => page.value === value)) return
   // 底部同级切换留在当前主页面，只有组件入口调用跨页导航。
   if (active.value === value) void selectPage(value, true)
   void navigation.replace('/' + value).catch(reportError)
@@ -84,7 +127,7 @@ function tabAction(event: { tab: string; value: string }) {
 }
 
 function openExample(id: string) {
-  const item = demoExamples.find(item => item.id === id)
+  const item = demoExamples.find((item) => item.id === id)
   if (!item) return
   const page = elements.get(active.value)
   if (page?.offsetHeight) positions.set(active.value, page.scrollTop)
@@ -118,10 +161,24 @@ function followRoute() {
   }
   returning = false
   let anchor = ''
-  try { anchor = decodeURIComponent(route.path.replace(/^\//, '')) } catch { /* 非法片段回到首页。 */ }
-  const item = demoExamples.find(item => anchor === 'example/' + item.id || anchor === item.id || item.anchors?.includes(anchor))
-  if (item?.path) { void navigation.replace(item.path).catch(reportError); return }
-  const value = item ? 'example/' + item.id : anchor === 'discover' ? 'native' : pages.find(page => page.value === anchor)?.value ?? 'home'
+  try {
+    anchor = decodeURIComponent(route.path.replace(/^\//, ''))
+  } catch {
+    /* 非法片段回到首页。 */
+  }
+  const item = demoExamples.find(
+    (item) =>
+      anchor === 'example/' + item.id || anchor === item.id || item.anchors?.includes(anchor)
+  )
+  if (item?.path) {
+    void navigation.replace(item.path).catch(reportError)
+    return
+  }
+  const value = item
+    ? 'example/' + item.id
+    : anchor === 'discover'
+      ? 'native'
+      : (pages.find((page) => page.value === anchor)?.value ?? 'home')
   void selectPage(value, false, item && !anchor.startsWith('example/') ? anchor : undefined)
 }
 
@@ -135,97 +192,311 @@ onBeforeUnmount(() => {
 <template>
   <div class="demo-app" :class="{ 'demo-app-detail': example }">
     <div class="demo-top">
-      <DemoAppBar ref="titleElement" :title="title" :back="!!example" :code-id="example?.id" :back-label="isChildPage() ? '返回上一页' : example?.catalog === 'native' ? '返回原生组件' : '返回组件列表'" class="demo-app-bar" @back="goBack" />
+      <DemoAppBar
+        ref="titleElement"
+        :title="title"
+        :back="!!example"
+        :code-id="example?.id"
+        :back-label="
+          isChildPage()
+            ? '返回上一页'
+            : example?.catalog === 'native'
+              ? '返回原生组件'
+              : '返回组件列表'
+        "
+        class="demo-app-bar"
+        @back="goBack"
+      />
     </div>
-    <Tabs class="demo-tabs" :model-value="active" :items="nativePages" :navigation-visible="!example" :suspended="suspended" @select="navigate" @action="tabAction" @error="console.error">
-    <main class="demo-main" :aria-label="title">
-      <section v-for="page in pages" v-show="active === page.value" :key="page.value"
-        :ref="element => setPageElement(page.value, element)" class="demo-page"
-        :data-demo-page="page.value" :aria-label="page.title"
-        :inert="active !== page.value" :aria-hidden="active !== page.value ? true : undefined">
-        <div v-if="page.value === 'home' || page.value === 'native'" class="demo-catalog">
-          <div class="demo-intro">
-            <div><h2>{{ page.value === 'native' ? '原生组件' : '组件目录' }}</h2><p>{{ page.value === 'native' ? '体验导航、页面切换与下拉刷新。' : '选择组件，查看交互效果与用法代码。' }}</p></div>
-            <Button v-if="page.value === 'home'" data-showcase-entry variant="outline" icon="layer" @click="openShowcase">完整交互示例 <Icon name="arrow-right" /></Button>
+    <Tabs
+      class="demo-tabs"
+      :model-value="active"
+      :items="nativePages"
+      :navigation-visible="!example"
+      :suspended="suspended"
+      @select="navigate"
+      @action="tabAction"
+      @error="console.error"
+    >
+      <main class="demo-main" :aria-label="title">
+        <section
+          v-for="page in pages"
+          v-show="active === page.value"
+          :key="page.value"
+          :ref="(element) => setPageElement(page.value, element)"
+          class="demo-page"
+          :data-demo-page="page.value"
+          :aria-label="page.title"
+          :inert="active !== page.value"
+          :aria-hidden="active !== page.value ? true : undefined"
+        >
+          <div v-if="page.value === 'home' || page.value === 'native'" class="demo-catalog">
+            <div class="demo-intro">
+              <h2>{{ page.value === 'native' ? '原生组件' : '组件目录' }}</h2>
+              <Button
+                v-if="page.value === 'home'"
+                data-showcase-entry
+                variant="outline"
+                icon="layer"
+                @click="openShowcase"
+              >
+                完整交互示例
+                <Icon name="arrow-right" />
+              </Button>
+            </div>
+            <div class="demo-catalog-groups">
+              <section
+                v-for="group in page.value === 'native' ? nativeDemoGroups : demoGroups"
+                :key="group.title"
+                class="demo-catalog-group"
+                :aria-label="group.title"
+              >
+                <h3>
+                  {{ group.title }}
+                  <span>{{ group.items.length }}</span>
+                </h3>
+                <CellGroup :label="group.title">
+                  <ListRow
+                    v-for="item in group.items"
+                    :key="item.id"
+                    :data-demo-link="item.id"
+                    :title="item.title"
+                    @click="openExample(item.id)"
+                  >
+                    <template #leading>
+                      <span class="demo-catalog-icon"><Icon :name="item.icon" /></span>
+                    </template>
+                  </ListRow>
+                </CellGroup>
+              </section>
+            </div>
           </div>
-          <div class="demo-catalog-groups">
-            <section v-for="group in page.value === 'native' ? nativeDemoGroups : demoGroups" :key="group.title" class="demo-catalog-group" :aria-label="group.title">
-              <h3>{{ group.title }}<span>{{ group.items.length }}</span></h3>
-              <CellGroup :label="group.title">
-                <ListRow v-for="item in group.items" :key="item.id" :data-demo-link="item.id"
-                  :title="item.title" :description="item.description" @click="openExample(item.id)">
-                  <template #leading><span class="demo-catalog-icon"><Icon :name="item.icon" /></span></template>
-                </ListRow>
-              </CellGroup>
-            </section>
+          <div v-else class="demo-placeholder">
+            <span class="demo-placeholder-icon"><Icon :name="page.icon!" /></span>
+            <span class="demo-placeholder-label">DEMO {{ page.demo }}</span>
+            <h2>{{ page.title }}</h2>
+            <p>这是预留的 Demo 页面。</p>
+            <Button variant="outline" @click="counts[page.value]++">
+              点一下 · {{ counts[page.value] }}
+            </Button>
+            <Button variant="outline" @click="navigate('home')">浏览组件</Button>
           </div>
-        </div>
-        <div v-else class="demo-placeholder">
-          <span class="demo-placeholder-icon"><Icon :name="page.icon!" /></span>
-          <span class="demo-placeholder-label">DEMO {{ page.demo }}</span>
-          <h2>{{ page.title }}</h2><p>这是预留的 Demo 页面。</p>
-          <Button variant="outline" @click="counts[page.value]++">点一下 · {{ counts[page.value] }}</Button>
-          <Button variant="outline" @click="navigate('home')">浏览组件</Button>
-        </div>
-      </section>
-      <section v-for="item in openedExamples" v-show="example?.id === item.id" :key="item.id"
-        :ref="element => setPageElement('example/' + item.id, element)" class="demo-page demo-detail"
-        :data-demo-page="'example/' + item.id" :aria-label="item.title"
-        :inert="example?.id !== item.id" :aria-hidden="example?.id !== item.id ? true : undefined">
-        <div class="demo-page-inner">
-          <slot :name="item.id" :active="activated && visible && route.name === 'demo' && example?.id === item.id" />
-          <ExampleCode :id="item.id" />
-        </div>
-      </section>
-    </main>
+        </section>
+        <section
+          v-for="item in openedExamples"
+          v-show="example?.id === item.id"
+          :key="item.id"
+          :ref="(element) => setPageElement('example/' + item.id, element)"
+          class="demo-page demo-detail"
+          :data-demo-page="'example/' + item.id"
+          :aria-label="item.title"
+          :inert="example?.id !== item.id"
+          :aria-hidden="example?.id !== item.id ? true : undefined"
+        >
+          <div class="demo-page-inner">
+            <DemoDocument
+              :id="item.id"
+              :title="item.title"
+              :description="demoDescriptions[item.id] ?? '查看组件的交互示例与对应代码。'"
+            >
+              <slot
+                :name="item.id"
+                :active="activated && visible && route.name === 'demo' && example?.id === item.id"
+              />
+            </DemoDocument>
+          </div>
+        </section>
+      </main>
     </Tabs>
   </div>
 </template>
 
 <style scoped>
-.demo-app { display: grid; grid-template-rows: calc(57px + env(safe-area-inset-top)) minmax(0, 1fr); height: 100dvh; background: var(--background); }
-.demo-top { padding-top: env(safe-area-inset-top); border-bottom: 1px solid var(--border); background: var(--card-background); z-index: 40; }
-.demo-top :deep(.nc-app-bar) { height: 56px; width: min(100%, 1160px); margin: auto; border: 0; }
-.demo-main { height: 100%; position: relative; min-width: 0; min-height: 0; }
-.demo-page { position: absolute; inset: 0; overflow: auto; overscroll-behavior-y: contain; padding: 24px max(20px, env(safe-area-inset-right)) 32px max(20px, env(safe-area-inset-left)); scrollbar-gutter: stable; }
-.demo-page-inner { --card-radius: 18px; --card-padding: 24px; --card-header-gap: 20px; width: min(100%, 1120px); margin: auto; }
-.demo-page-inner > :deep(:first-child) { margin-top: 0; }
-.demo-page-inner :deep(.my-sample-id[data-my-card]) { flex: none; padding: 4px 8px; border-radius: 6px; background: var(--fill); color: var(--text-secondary); font: 500 10px/16px var(--font); letter-spacing: .06em; }
-.demo-catalog { max-width: 960px; margin: auto; }
-.demo-intro { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin: 4px 2px 32px; }
-.demo-intro h2 { margin: 0 0 8px; font-size: 25px; line-height: 1.4; font-weight: var(--font-weight-title, 700); }
-.demo-intro p { margin: 0; color: var(--text-secondary); font-size: 14px; line-height: 1.6; }
-.demo-intro > .my-button { flex-shrink: 0; gap: 8px; padding-inline: 14px; font-size: 13px; border-color: var(--border); background: var(--card-background); }
-.demo-intro > .my-button :deep(svg) { width: 17px; height: 17px; }
-.demo-catalog-groups { display: grid; gap: 28px; }
-.demo-catalog-group { min-width: 0; }
-.demo-catalog-group h3 { display: flex; align-items: center; gap: 8px; margin: 0 2px 10px; font-size: 14px; color: var(--text); font-weight: var(--font-weight-subtitle, 600); }
-.demo-catalog-group h3 span { color: var(--text-secondary); font-size: 12px; font-weight: var(--font-weight, 400); font-variant-numeric: tabular-nums; }
-.demo-catalog-group :deep(.my-group-body) { background: var(--card-background); border: 0; border-radius: 18px; box-shadow: var(--shadow); }
-.demo-catalog-group :deep(.my-list-row) { min-height: 78px; --list-padding-inline: 18px; --list-padding-block: 17px; }
-.demo-catalog-group :deep(.my-list-row-copy small) { font-size: 13px; line-height: 19px; }
-.demo-catalog-group :deep(.my-trailing-icon) { width: 16px; height: 16px; color: var(--text-secondary); }
-.demo-catalog-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; color: var(--primary); background: var(--fill); }
-.demo-catalog-icon svg { width: 19px; height: 19px; }
-.demo-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100%; text-align: center; padding: 24px; }
-.demo-placeholder-icon { display: grid; place-items: center; width: 72px; height: 72px; border-radius: 24px; color: var(--primary); background: var(--fill); margin-bottom: 24px; }
-.demo-placeholder-icon svg { width: 30px; height: 30px; }
-.demo-placeholder-label { color: var(--text-secondary); font-size: 11px; letter-spacing: 2px; }
-.demo-placeholder h2 { margin: 10px 0; font-size: 24px; }
-.demo-placeholder > .my-button { margin-top: 10px; }
-.demo-placeholder p { margin: 0 0 28px; color: var(--text-secondary); font-size: 14px; }
-@media (min-width: 900px) {
-  /* 分类逐行排列，条目在组内分列，避免不同长度的分类留下整块空白。 */
-  .demo-catalog-group :deep(.my-group-body) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .demo-catalog-group :deep(.my-group-body > .my-list-row) { padding-block: 18px; min-height: 82px; }
-  .demo-catalog-group :deep(.my-list-row:nth-child(-n+2)::before) { display: none; }
-  .demo-catalog-group :deep(.my-list-row:nth-child(even)) { border-left: 1px solid var(--border); }
-  .demo-catalog-group :deep(.my-list-row:last-child:nth-child(odd)) { grid-column: 1 / -1; }
+.demo-app {
+  display: grid;
+  grid-template-rows: calc(57px + env(safe-area-inset-top)) minmax(0, 1fr);
+  height: 100dvh;
+  background: var(--background);
 }
-@media (max-width: 760px) { .demo-page { padding: 20px max(14px, env(safe-area-inset-right)) 24px max(14px, env(safe-area-inset-left)); } }
+.demo-top {
+  padding-top: env(safe-area-inset-top);
+  border-bottom: 1px solid var(--border);
+  background: var(--card-background);
+  z-index: 40;
+}
+.demo-top :deep(.nc-app-bar) {
+  height: 56px;
+  width: min(100%, 1160px);
+  margin: auto;
+  border: 0;
+}
+.demo-main {
+  height: 100%;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+.demo-page {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  overscroll-behavior-y: contain;
+  padding: 24px max(20px, env(safe-area-inset-right)) 32px max(20px, env(safe-area-inset-left));
+  scrollbar-gutter: stable;
+}
+.demo-page-inner {
+  --card-radius: 18px;
+  --card-padding: 24px;
+  --card-header-gap: 20px;
+  width: min(100%, 1120px);
+  margin: auto;
+}
+.demo-detail {
+  background: var(--card-background);
+  padding-top: 32px;
+}
+.demo-page-inner > :deep(:first-child) {
+  margin-top: 0;
+}
+.demo-page-inner :deep(.my-sample-id[data-my-card]) {
+  flex: none;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--fill);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 16px;
+  letter-spacing: 0.06em;
+}
+.demo-catalog {
+  max-width: 480px;
+  margin: auto;
+}
+.demo-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  margin: 4px 2px 28px;
+}
+.demo-intro h2 {
+  margin: 0;
+  font-size: 23px;
+  line-height: 1.4;
+  font-weight: var(--font-weight-title, 700);
+}
+.demo-intro > .my-button {
+  gap: 8px;
+  padding-inline: 14px;
+  font-size: 13px;
+  border-color: var(--border);
+  background: var(--card-background);
+}
+.demo-intro > .my-button :deep(svg) {
+  width: 17px;
+  height: 17px;
+}
+.demo-catalog-groups {
+  display: grid;
+  gap: 28px;
+}
+.demo-catalog-group {
+  min-width: 0;
+}
+.demo-catalog-group h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 2px 10px;
+  font-size: 14px;
+  color: var(--text);
+  font-weight: var(--font-weight-subtitle, 600);
+}
+.demo-catalog-group h3 span {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: var(--font-weight, 400);
+  font-variant-numeric: tabular-nums;
+}
+.demo-catalog-group :deep(.my-group-body) {
+  background: var(--card-background);
+  border: 0;
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+}
+.demo-catalog-group :deep(.my-list-row) {
+  min-height: 60px;
+  --list-padding-inline: 18px;
+  --list-padding-block: 12px;
+}
+.demo-catalog-group :deep(.my-trailing-icon) {
+  width: 16px;
+  height: 16px;
+  color: var(--text-secondary);
+}
+.demo-catalog-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  color: var(--primary);
+  background: var(--fill);
+}
+.demo-catalog-icon svg {
+  width: 19px;
+  height: 19px;
+}
+.demo-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  text-align: center;
+  padding: 24px;
+}
+.demo-placeholder-icon {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 24px;
+  color: var(--primary);
+  background: var(--fill);
+  margin-bottom: 24px;
+}
+.demo-placeholder-icon svg {
+  width: 30px;
+  height: 30px;
+}
+.demo-placeholder-label {
+  color: var(--text-secondary);
+  font-size: 11px;
+  letter-spacing: 2px;
+}
+.demo-placeholder h2 {
+  margin: 10px 0;
+  font-size: 24px;
+}
+.demo-placeholder > .my-button {
+  margin-top: 10px;
+}
+.demo-placeholder p {
+  margin: 0 0 28px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+@media (max-width: 760px) {
+  .demo-page {
+    padding: 20px max(14px, env(safe-area-inset-right)) 24px max(14px, env(safe-area-inset-left));
+  }
+}
 @media (max-width: 600px) {
-  .demo-page-inner { --card-radius: 16px; --card-padding: 20px; }
-  .demo-intro { align-items: flex-start; flex-direction: column; gap: 16px; margin-bottom: 28px; }
-  .demo-intro h2 { font-size: 23px; }
+  .demo-page-inner {
+    --card-radius: 16px;
+    --card-padding: 20px;
+  }
 }
 </style>

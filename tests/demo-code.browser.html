@@ -38,10 +38,13 @@ if(new URLSearchParams(location.search).has('frame')){
       });
       await check('示例页面直接展示可折叠代码，展开后包含导入、状态与模板',async()=>{
         await route('/example/button');await until(()=>doc.querySelector('.demo-detail:not([inert]) .demo-code-files'));
-        const detail=doc.querySelector('.demo-detail:not([inert])'),fold=detail.querySelector('details');
+        const detail=doc.querySelector('.demo-detail:not([inert])'),fold=detail.querySelector('[data-example="button-basic"] details');
+        assert(detail.querySelectorAll('[data-example]').length===3,'按钮示例没有分别对应代码');
+        assert(!detail.querySelector('.example-code'),'页面底部仍然堆放总代码');
         assert(!fold.open&&!fold.querySelector('.demo-code'),'代码没有按需展开');
         fold.querySelector('summary').click();await until(()=>code()?.querySelector('.hljs-tag'),'Vue 代码没有高亮');
-        assert(code().textContent.includes("from '@my-ui/vue'")&&code().textContent.includes('const liked')&&code().textContent.includes('<template>'),'代码缺少必要上下文');
+        assert(code().textContent.includes("from '@my-ui/vue'")&&code().textContent.includes('const toast')&&code().textContent.includes('<template>'),'代码缺少必要上下文');
+        assert(!code().textContent.includes('const liked')&&!code().textContent.includes('<Menu'),'基础按钮混入其他示例代码');
         assert(!code().querySelector('script,button,template'),'展示的源码被执行为 DOM');
         fold.querySelector('summary').click();await until(()=>!fold.open&&!fold.querySelector('.demo-code'),'折叠没有隐藏内容');
         fold.querySelector('summary').click();await until(()=>code()?.querySelector('.hljs-tag'),'重新展开丢失代码');
@@ -65,7 +68,7 @@ if(new URLSearchParams(location.search).has('frame')){
         }finally{if(original)Object.defineProperty(win.navigator,'clipboard',original);else Reflect.deleteProperty(win.navigator,'clipboard')}
       });
       await check('相关文件可切换，所有组件目录都有可读取的代码',async()=>{
-        await route('/code/popup');await until(()=>code()?.textContent.includes('SelectionPanel'));
+        await route('/code/popup');await until(()=>code()?.textContent.includes('DrawerExample'));
         [...doc.querySelectorAll('.demo-code-file-list button')].find(button=>button.textContent==='DrawerExample.vue').click();
         await until(()=>code()?.textContent.includes('FormField'),'切换文件后代码未更新');
         const {demoExamples}=await import('/example/src/demo/catalog.ts');
