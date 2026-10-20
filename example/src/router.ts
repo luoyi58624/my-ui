@@ -7,6 +7,7 @@ export const router = createRouter({
     { path: '/', redirect: () => location.pathname.endsWith('/native-page.html') ? '/shared-state' : '/home' },
     { path: '/shared-state', name: 'shared-state', component: () => import('./NativePage.vue') },
     { path: '/html', name: 'html', component: () => import('./NativeHtmlPage.vue') },
+    { path: '/page-refresh', name: 'page-refresh', component: () => import('./PageRefreshDemo.vue') },
     { path: '/:pathMatch(.*)*', name: 'demo', component: () => import('./App.vue') },
   ],
 })
