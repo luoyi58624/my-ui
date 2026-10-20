@@ -14,9 +14,11 @@ const props = withDefaults(defineProps<{
   loading?: boolean
   /** 表示收藏等可切换按钮的选中状态。 */
   selected?: boolean
+  /** 触摸按压激活前的等待毫秒数，默认 0；鼠标与键盘不延迟。 */
+  delayTouchActive?: number
   /** 原生按钮类型，默认避免触发表单提交。 */
   type?: 'button' | 'submit' | 'reset'
-}>(), { variant: 'primary', type: 'button', selected: undefined })
+}>(), { variant: 'primary', type: 'button', selected: undefined, delayTouchActive: 0 })
 const emit = defineEmits<{
   /** 可用状态下触发原生点击事件。 */
   click: [event: MouseEvent]

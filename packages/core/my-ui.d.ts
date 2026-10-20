@@ -97,6 +97,11 @@ export interface NativePopupOptions<T = unknown> {
   ) => void | (() => void);
   onConfirm?: () => void;
 }
+/** Button、交互型 Card 与 ListRow 共用的按压配置。 */
+export interface NativePressOptions {
+  /** 触摸按压激活前的等待毫秒数，默认 0；鼠标与键盘不延迟。 */
+  delayTouchActive?: number;
+}
 /** 原生创建选项，Vue 适配层复用同一个元素与插槽出口。 */
 export interface NativeCreateOptions {
   /** 宿主或原生输入元素的属性与事件。 */
@@ -112,13 +117,13 @@ export interface NativeCreateOptions {
 export interface MyUIApi {
   create(
     name: string,
-    properties?: Record<string, any>,
+    properties?: Record<string, any> & NativePressOptions,
     options?: NativeCreateOptions,
   ): NativeController;
   mount(
     target: string | Element,
     name: string,
-    properties?: Record<string, any>,
+    properties?: Record<string, any> & NativePressOptions,
     options?: NativeCreateOptions,
   ): NativeController;
   init(root?: ParentNode): NativeController[];

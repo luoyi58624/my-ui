@@ -2,7 +2,7 @@
 import { useNative } from '../adapter'
 
 defineOptions({ inheritAttrs: false })
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   /** 行标题，使用 15px、500 字重。 */
   title: string
   /** 二级说明，使用 14px、400 字重并按内容换行。 */
@@ -15,7 +15,9 @@ const props = defineProps<{
   modelValue?: boolean
   /** 禁止当前操作。 */
   disabled?: boolean
-}>()
+  /** 触摸按压激活前的等待毫秒数，默认 0；鼠标与键盘不延迟。 */
+  delayTouchActive?: number
+}>(), { delayTouchActive: 0 })
 const emit = defineEmits<{
   /** 导航行被激活时的原生点击事件。 */
   click: [event: MouseEvent]

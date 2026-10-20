@@ -133,7 +133,7 @@ onBeforeUnmount(() => {
             <section v-for="group in demoGroups" :key="group.title" class="demo-catalog-group" :aria-label="group.title">
               <h3>{{ group.title }}<span>{{ group.items.length }}</span></h3>
               <CellGroup :label="group.title">
-                <ListRow v-for="item in group.items" :key="item.id" :data-demo-link="item.id"
+                <ListRow v-for="item in group.items" :key="item.id" :data-demo-link="item.id" :delay-touch-active="50"
                   :title="item.title" :description="item.description" @click="openExample(item.id)">
                   <template #leading><span class="demo-catalog-icon"><Icon :name="item.icon" /></span></template>
                 </ListRow>

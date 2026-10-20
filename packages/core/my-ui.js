@@ -652,7 +652,7 @@
 
   const definitions = Object.create(null);
   const controllers = new WeakMap();
-  const buttonPressBindings = new WeakMap();
+  const pressBindings = new WeakMap();
   let nextId = 0;
   const kebab = (value) =>
     value.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
@@ -1083,10 +1083,16 @@
   }
 
   // 触屏直接更新按压样式；临时的全局监听仅在按住时存在，不接管原生点击。
-  function bindButtonPress(button) {
-    if (buttonPressBindings.has(button)) return buttonPressBindings.get(button);
-    let stops = [];
+  function bindPressFeedback(button, options = {}) {
+    if (pressBindings.has(button)) {
+      const binding = pressBindings.get(button);
+      binding.configure(options);
+      return binding;
+    }
+    let config = options, stops = [], timer;
     const reset = () => {
+      clearTimeout(timer);
+      timer = undefined;
       stops.forEach((stop) => stop());
       stops = [];
       button.removeAttribute("data-my-pressed");
@@ -1098,13 +1104,13 @@
     const down = (event) => {
       reset();
       const direct = event.pointerType === "touch" || event.pointerType === "pen";
+      const available = () => !button.disabled &&
+        button.getAttribute("aria-disabled") !== "true" && (config.accepts?.(event) ?? true);
       // 保留输入来源，屏蔽触摸结束后浏览器迟到的 :active；鼠标与键盘仍走原生反馈。
-      button.toggleAttribute("data-my-press-input", direct);
-      if (!direct || event.button !== 0 || event.isPrimary === false ||
-          button.disabled || button.getAttribute("aria-disabled") === "true") return;
+      button.toggleAttribute("data-my-press-input", direct || !available());
+      if (!direct || event.button !== 0 || event.isPrimary === false || !available()) return;
       const bounds = button.getBoundingClientRect();
       const { pointerId, clientX, clientY } = event;
-      button.setAttribute("data-my-pressed", "");
       const finish = (event) => { if (event.pointerId === pointerId) reset(); };
       const options = { capture: true, passive: true };
       listen(document, "pointermove", (event) => {
@@ -1123,26 +1129,43 @@
       listen(document, "scroll", reset, options);
       listen(window, "blur", reset);
       listen(document, "visibilitychange", () => { if (document.hidden) reset(); });
+      const activate = () => {
+        timer = undefined;
+        if (button.isConnected && available()) button.setAttribute("data-my-pressed", "");
+        else reset();
+      };
+      // 只延迟真实触摸，等待期间同样监听取消；短于延迟的轻触不补播按压动画。
+      const value = event.pointerType === "touch" ? Number(config.delayTouchActive?.() ?? 0) : 0;
+      const delay = Number.isFinite(value) ? Math.min(2147483647, Math.max(0, value)) : 0;
+      if (delay > 0) timer = setTimeout(activate, delay);
+      else activate();
+    };
+    const enter = (event) => {
+      if (event.pointerType === "mouse" && !stops.length)
+        button.removeAttribute("data-my-press-input");
     };
     const keydown = (event) => {
-      if (event.key === " " || event.key === "Enter") {
+      if (!event.repeat && (event.key === " " || event.key === "Enter")) {
         reset();
         button.removeAttribute("data-my-press-input");
       }
     };
     button.addEventListener("pointerdown", down, { passive: true });
+    button.addEventListener("pointerenter", enter);
     button.addEventListener("keydown", keydown);
     const binding = {
       reset,
+      configure(options) { config = options; },
       destroy() {
         reset();
         button.removeAttribute("data-my-press-input");
         button.removeEventListener("pointerdown", down);
+        button.removeEventListener("pointerenter", enter);
         button.removeEventListener("keydown", keydown);
-        buttonPressBindings.delete(button);
+        pressBindings.delete(button);
       },
     };
-    buttonPressBindings.set(button, binding);
+    pressBindings.set(button, binding);
     return binding;
   }
 
@@ -1168,10 +1191,12 @@
   });
   register("Button", {
     tag: "button",
-    defaults: { variant: "primary", type: "button" },
+    defaults: { variant: "primary", type: "button", delayTouchActive: 0 },
     init(c) {
       c.element.classList.add("my-button");
-      c.pressFeedback = bindButtonPress(c.element);
+      c.pressFeedback = bindPressFeedback(c.element, {
+        delayTouchActive: () => c.p.delayTouchActive,
+      });
       c.cleanups.add(() => c.pressFeedback.destroy());
       c.body = el("span", "button-content");
       c.loading = el("span", "button-loading");
@@ -1529,8 +1554,21 @@
   });
   register("Card", {
     tag: "article",
+    defaults: { delayTouchActive: 0 },
     init(c) {
       c.element.classList.add("my-card");
+      // 内部按钮、链接或输入控件独立操作，不激活整张卡片。
+      const ownTarget = (event) => {
+        const control = event.target.closest?.(
+          "button, a[href], input, select, textarea, label, summary, [contenteditable], [role=button], [role=link], [tabindex]",
+        );
+        return !control || control === c.element;
+      };
+      c.pressFeedback = bindPressFeedback(c.element, {
+        delayTouchActive: () => c.p.delayTouchActive,
+        accepts: (event) => !!c.p.interactive && ownTarget(event),
+      });
+      c.cleanups.add(() => c.pressFeedback.destroy());
       c.head = el("div", "surface-head");
       c.heading = el("div");
       c.title = el("h3");
@@ -1542,20 +1580,37 @@
       c.body.style.display = "contents";
       c.element.append(c.head, c.body);
       c.on(c.element, "click", (event) => {
-        if (c.p.interactive) c.emit("activate", event);
+        if (c.p.interactive && ownTarget(event)) c.emit("activate", event);
       });
       c.on(c.element, "keydown", (event) => {
-        if (
-          c.p.interactive &&
-          event.target === c.element &&
-          ["Enter", " "].includes(event.key)
-        ) {
-          event.preventDefault();
-          c.emit("activate", event);
+        if (!c.p.interactive || event.target !== c.element || !["Enter", " "].includes(event.key)) return;
+        event.preventDefault();
+        if (event.repeat) return;
+        if (event.key === "Enter") c.emit("activate", event);
+        else {
+          c.spacePressed = true;
+          c.element.setAttribute("data-my-press-input", "");
+          c.element.setAttribute("data-my-pressed", "");
         }
+      });
+      c.on(c.element, "keyup", (event) => {
+        if (event.key !== " " || !c.spacePressed) return;
+        event.preventDefault();
+        c.spacePressed = false;
+        c.pressFeedback.reset();
+        if (c.p.interactive && event.target === c.element && document.activeElement === c.element)
+          c.emit("activate", event);
+      });
+      c.on(c.element, "blur", () => {
+        c.spacePressed = false;
+        c.pressFeedback.reset();
       });
     },
     paint(c) {
+      if (!c.p.interactive) {
+        c.spacePressed = false;
+        c.pressFeedback.reset();
+      }
       state(c.element, { "tappable-card": c.p.interactive });
       attrs(c.element, {
         role: c.p.interactive ? "button" : undefined,
@@ -2370,8 +2425,13 @@
   // ── 列表、分段和导航 ────────────────────────────────────────────────────
   register("ListRow", {
     tag: "button",
+    defaults: { delayTouchActive: 0 },
     init(c) {
       c.element.classList.add("my-list-row");
+      c.pressFeedback = bindPressFeedback(c.element, {
+        delayTouchActive: () => c.p.delayTouchActive,
+      });
+      c.cleanups.add(() => c.pressFeedback.destroy());
       c.leading = el("span", "leading-content");
       c.copy = el("span", "list-row-copy");
       c.title = el("strong");
@@ -2390,6 +2450,7 @@
       });
     },
     paint(c) {
+      if (c.p.disabled) c.pressFeedback.reset();
       state(c.element, {
         "list-toggle": c.p.toggle,
         "list-action": !c.p.toggle,
@@ -6923,7 +6984,9 @@
         scope(button, "Button");
       }
       button.classList.add("my-primary");
-      bindButtonPress(button);
+      bindPressFeedback(button, {
+        delayTouchActive: () => button.getAttribute("data-delay-touch-active") ?? 0,
+      });
     }
     return result;
   }

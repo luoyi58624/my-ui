@@ -9,6 +9,7 @@ import MenuShowcase from './demo/MenuShowcase.vue'
 import FeedbackPrimitives from './demo/FeedbackPrimitives.vue'
 import SelectionCollapseShowcase from './demo/SelectionCollapseShowcase.vue'
 import IdentityShowcase from './demo/IdentityShowcase.vue'
+import CardShowcase from './demo/CardShowcase.vue'
 import ImageShowcase from './demo/ImageShowcase.vue'
 import ShadowShowcase from './demo/ShadowShowcase.vue'
 import TouchShowcase from './demo/TouchShowcase.vue'
@@ -152,18 +153,7 @@ async function selectAction(action: Option) {
       </Card>
     </template>
     <template #card>
-      <section id="surfaces">
-        <div class="content-grid">
-          <Card class="feature-panel">
-            <div><div class="feature-icon"><Icon name="cloud" /></div><h3>云端，让美好保持同步</h3><p class="feature-desc">让重要的内容始终触手可及，<br />自由而安心地连接每一刻。</p></div>
-            <div class="feature-bottom"><div class="tiny-avatars" aria-hidden="true"><span class="tiny-avatar">蓝</span><span class="tiny-avatar">青</span><span class="tiny-avatar">云</span></div><small>3 位好友正在使用</small><Button variant="round" icon="arrow-right" aria-label="查看云端服务" @click="notify('已打开云端服务预览')" /></div>
-          </Card>
-          <div class="stacked">
-            <Card class="mini-feature" title="查看收藏" interactive @activate="notify(liked ? '本页收藏：my-ui 组件示例' : '本页暂无收藏，点击心形按钮添加')"><div class="mini-icon"><Icon name="layer" /></div><div><strong>我的收藏</strong><p>把喜欢的，留在这里</p></div><span class="arrow-btn" aria-hidden="true"><Icon name="chevron-right" /></span></Card>
-            <Card class="mini-feature" title="查看最近浏览" interactive @activate="notify(laterSaved ? '稍后查看：my-ui 组件示例' : '正在查看最近浏览（原型示例）')"><div class="mini-icon mint"><Icon name="clock" /></div><div><strong>最近浏览</strong><p>从上次停下的地方继续</p></div><span class="arrow-btn" aria-hidden="true"><Icon name="chevron-right" /></span></Card>
-          </div>
-        </div>
-      </section>
+      <CardShowcase @notify="notify" />
     </template>
     <template #shadows>
       <ShadowShowcase @notify="notify" />
@@ -543,173 +533,6 @@ async function selectAction(action: Option) {
   color: var(--text-secondary);
 }
 
-.content-grid {
-  display: grid;
-  grid-template-columns: 1.14fr .86fr;
-  gap: 22px;
-}
-
-.feature-panel {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  overflow: hidden;
-  min-height: 295px;
-}
-
-.feature-panel::after {
-  content: "";
-  position: absolute;
-  right: -65px;
-  top: 70px;
-  width: 300px;
-  height: 300px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  box-shadow: 0 0 0 38px var(--fill), 0 0 0 77px var(--background);
-  pointer-events: none;
-}
-
-.feature-icon {
-  width: 57px;
-  height: 57px;
-  border-radius: 18px;
-  background: linear-gradient(150deg,var(--primary),var(--primary));
-  color: var(--primary-text);
-  display: grid;
-  place-items: center;
-  box-shadow: 0 10px 23px color-mix(in srgb, var(--primary) 16%, transparent);
-}
-
-.feature-icon svg {
-  width: 26px;
-  height: 26px;
-}
-
-.feature-panel h3 {
-  font-size: 24px;
-  font-weight: var(--font-weight-subtitle, 600);
-  margin: 23px 0 10px;
-}
-
-.feature-panel .feature-desc {
-  font-size: 14px;
-  color: var(--text-secondary);
-  line-height: 1.9;
-  max-width: 260px;
-  margin: 0;
-}
-
-.feature-panel .feature-bottom {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 20px;
-}
-
-.tiny-avatars {
-  display: flex;
-  padding-left: 9px;
-}
-
-.tiny-avatar {
-  height: 28px;
-  width: 28px;
-  border: 2px solid var(--card-background);
-  margin-left: -9px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  color: var(--primary-text);
-  font-size: 11px;
-  font-weight: var(--font-weight-subtitle, 600);
-}
-
-.tiny-avatar:nth-child(1) {
-  background: var(--primary);
-}
-
-.tiny-avatar:nth-child(2) {
-  background: var(--success);
-}
-
-.tiny-avatar:nth-child(3) {
-  background: var(--primary);
-}
-
-.feature-bottom small {
-  font-size: 13px;
-  color: var(--text-secondary);
-  flex: 1;
-}
-
-.stacked {
-  display: grid;
-  gap: 18px;
-}
-
-.mini-feature {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  --card-radius: 26px;
-  min-height: 137px;
-  --card-padding: 22px 24px;
-}
-
-.mini-feature .mini-icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 17px;
-  background: var(--fill);
-  color: var(--primary);
-  display: grid;
-  place-items: center;
-}
-
-.mini-feature .mini-icon svg {
-  width: 24px;
-  height: 24px;
-}
-
-.mini-feature .mini-icon.mint {
-  background: var(--fill);
-  color: var(--success);
-}
-
-.mini-feature strong {
-  display: block;
-  font-weight: var(--font-weight-subtitle, 600);
-  margin-bottom: 7px;
-  font-size: 15px;
-}
-
-.mini-feature p {
-  font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin: 0;
-}
-
-.mini-feature .arrow-btn {
-  margin-left: auto;
-  border: 0;
-  background: var(--fill);
-  height: 44px;
-  width: 44px;
-  border-radius: 12px;
-  color: var(--text-secondary);
-  display: grid;
-  place-items: center;
-}
-
-.mini-feature .arrow-btn svg {
-  width: 16px;
-  height: 16px;
-}
-
 .navigation-panel {
   margin-top: 22px;
   display: grid;
@@ -795,11 +618,6 @@ async function selectAction(action: Option) {
 
 @media (max-width: 760px) {
 
-  .content-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
   .feedback-grid {
     grid-template-columns: 1fr;
     gap: 16px;
@@ -808,18 +626,6 @@ async function selectAction(action: Option) {
   .navigation-panel {
     grid-template-columns: 1fr;
     gap: 20px;
-  }
-
-  .feature-panel {
-    min-height: 288px;
-  }
-
-  .stacked {
-    gap: 16px;
-  }
-
-  .mini-feature {
-    min-height: 125px;
   }
 
   .feedback-panel {
@@ -842,10 +648,6 @@ async function selectAction(action: Option) {
 
   .navigation-panel {
     --card-padding: 24px 22px;
-  }
-
-  .mini-feature {
-    --card-padding: 22px;
   }
 
   .feedback-panel {

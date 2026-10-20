@@ -100,6 +100,24 @@ const actions = [
 
 公共组件：Icon、Avatar、Image、Badge、Button、Tag、TagGroup、Input、Textarea、Form、FormField、Radio、RadioGroup、Checkbox、CheckboxGroup、Choices、Switch、Select、Combobox、Segmented、Slider、Picker、DatePicker、TimePicker、Calendar、Upload、AppBar、Notice、Steps、Progress、Tabs、Navigation、Stepper、CellGroup、ListRow、Collapse、CollapseItem、Card、Tooltip、Divider、Loading、Skeleton、Empty、Floating、Menu、Popover、Dialog、Sheet、Drawer、Popup、Toast。
 
+## 按压反馈与交互卡片
+
+Button、交互型 Card 和 ListRow 支持 `delayTouchActive`：只延迟触摸按压的视觉反馈，单位毫秒，默认 `0`。鼠标和键盘保持即时响应，业务点击仍由正常点击触发。手指提前抬起、移动、开始滚动或窗口失焦时取消等待，不会在结束后补播动画。
+
+```vue
+<Card interactive title="清理存储" :delay-touch-active="50" @activate="openStorage">
+  <Icon name="inbox" />
+  <h3>清理存储</h3>
+  <p>36.8 GB / 128 GB</p>
+</Card>
+<ListRow title="应用管理" :delay-touch-active="50" @click="openApps" />
+<Button :delay-touch-active="50" @click="save">保存</Button>
+```
+
+Card 的 `interactive` 默认关闭；开启后整张卡片缩小并平滑改变背景色，支持 Enter 与空格。内部按钮、链接和输入控件独立操作。`--card-press-scale` 默认 `.92`，大卡片可以调为 `.97`；`--card-press-background` 可覆盖按压背景，未设置时自动根据 CSS 明暗配色混合。
+
+原生接口使用同名属性：`MyUI.create('Card', { interactive: true, delayTouchActive: 50 })`。声明式组件通过 `data-options` 配置；普通 `<button class="my-button" data-delay-touch-active="50">保存</button>` 也支持延迟反馈。
+
 ## Upload 文件上传
 
 ```vue

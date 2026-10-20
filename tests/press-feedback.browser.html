@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>触摸延迟与交互卡片回归</title>
+<link rel="stylesheet" href="/packages/core/my-ui.css">
+<script src="/packages/core/my-ui.js"></script>
+<style>main{max-width:900px;margin:24px auto;padding:20px}#fixture{display:grid;gap:16px;margin:20px 0}#result{white-space:pre-wrap;font:12px/1.7 monospace}#fixture>.my-card{min-height:120px}</style>
+<main><h1>触摸延迟与交互卡片回归</h1><button id="run">运行按压回归</button><div id="fixture"></div><pre id="result">尚未运行</pre></main>
+<script type="module">
+  import { createApp, h, nextTick, ref } from 'vue'
+  import { Button, Card, ListRow } from '/packages/vue/index.ts'
+  import CardShowcase from '/example/src/demo/CardShowcase.vue'
+
+  const fixture = document.querySelector('#fixture'), result = document.querySelector('#result')
+  const reports = [], owned = []
+  const pause = ms => new Promise(resolve => setTimeout(resolve, ms))
+  const assert = (value, message) => { if (!value) throw Error(message) }
+  const pressed = node => node.hasAttribute('data-my-pressed')
+  let app
+  const add = (name, props = {}, options = {}) => {
+    const c = MyUI.create(name, { title: '操作卡片', label: '操作按钮', interactive: true, ...props }, options)
+    owned.push(c); fixture.append(c.element); return c
+  }
+  const pointer = (target, type, options = {}) => {
+    const node = target instanceof Element ? target : fixture.firstElementChild
+    const box = node.getBoundingClientRect()
+    const event = new PointerEvent(type, { bubbles: true, cancelable: true, pointerType: 'touch', pointerId: 7,
+      isPrimary: true, button: 0, clientX: box.left + box.width / 2, clientY: box.top + box.height / 2, ...options })
+    target.dispatchEvent(event); return event
+  }
+  const key = (node, type, key, options = {}) => node.dispatchEvent(new KeyboardEvent(type, { key, bubbles: true, cancelable: true, ...options }))
+  const cleanup = () => { app?.unmount(); app = undefined; owned.splice(0).forEach(c => c.destroy()); fixture.replaceChildren(); delete document.documentElement.dataset.theme }
+  const check = async (name, test) => {
+    try { cleanup(); await test(); reports.push({ name, pass: true }) }
+    catch (error) { reports.push({ name, pass: false, error: error.stack }) }
+    finally { cleanup() }
+  }
+
+  document.querySelector('#run').onclick = async () => {
+    reports.length = 0; result.textContent = '运行中'
+    await check('Button、Card、ListRow 默认触摸立即激活，不阻止浏览器默认行为', () => {
+      for (const name of ['Button', 'Card', 'ListRow']) {
+        const c = add(name), event = pointer(c.element, 'pointerdown')
+        assert(pressed(c.element) && !event.defaultPrevented, name + ' 未立即激活或阻断滚动')
+        pointer(document, 'pointerup'); assert(!pressed(c.element), name + ' 松手残留')
+      }
+    })
+    await check('三种组件的 50ms 延迟仅作用于触摸，等待期间不会补用 :active', async () => {
+      for (const name of ['Button', 'Card', 'ListRow']) {
+        const c = add(name, { delayTouchActive: 50 }), started = performance.now()
+        let activated
+        const observer = new MutationObserver(() => { if (pressed(c.element)) activated ??= performance.now() })
+        observer.observe(c.element, { attributes: true, attributeFilter: ['data-my-pressed'] })
+        pointer(c.element, 'pointerdown')
+        assert(!pressed(c.element) && c.element.hasAttribute('data-my-press-input'), name + ' 未隔离原生活跃态')
+        await pause(85); observer.disconnect()
+        assert(pressed(c.element) && activated - started >= 45, name + ' 延迟提前或没有激活')
+        pointer(document, 'pointerup')
+        pointer(c.element, 'pointerdown', { pointerType: 'pen' })
+        assert(pressed(c.element), name + ' 手写笔被触摸延迟阻塞'); pointer(document, 'pointerup')
+        pointer(c.element, 'pointerdown', { pointerType: 'mouse' })
+        assert(!c.element.hasAttribute('data-my-press-input'), name + ' 鼠标被延迟')
+      }
+    })
+    await check('短于延迟的点按仍可点击，结束后不会补播反馈或重复回调', async () => {
+      for (const name of ['Button', 'Card', 'ListRow']) {
+        let calls = 0
+        const c = add(name, { delayTouchActive: 50, onClick: () => calls++, onActivate: () => calls++ })
+        pointer(c.element, 'pointerdown'); pointer(document, 'pointerup'); c.element.click()
+        assert(calls === 1, name + ' 点击被延迟或重复')
+        await pause(80); assert(!pressed(c.element) && calls === 1, name + ' 结束后补播或重复执行')
+      }
+    })
+    await check('等待期间滚动、移动、取消、失焦和第二根手指会撤销计时', async () => {
+      for (const cancel of [
+        () => fixture.dispatchEvent(new Event('scroll')),
+        node => { const r = node.getBoundingClientRect(); pointer(document, 'pointermove', { clientX: r.right + 15 }) },
+        () => pointer(document, 'pointercancel'),
+        () => window.dispatchEvent(new Event('blur')),
+        () => pointer(document, 'pointerdown', { pointerId: 9, isPrimary: false }),
+      ]) {
+        const c = add('Card', { delayTouchActive: 30 })
+        pointer(c.element, 'pointerdown'); cancel(c.element); await pause(60)
+        assert(!pressed(c.element), '取消后仍激活')
+      }
+    })
+    await check('快速连续按压没有旧计时器串入，新配置用于下一次按压', async () => {
+      const c = add('Card', { delayTouchActive: 60 })
+      pointer(c.element, 'pointerdown'); pointer(document, 'pointerup')
+      c.update({ delayTouchActive: 0 }); pointer(c.element, 'pointerdown')
+      assert(pressed(c.element), '新按压未即时响应'); pointer(document, 'pointercancel')
+      await pause(90); assert(!pressed(c.element), '旧计时器串入新会话')
+    })
+    await check('禁用、关闭 interactive 与卸载均撤销尚未激活的触摸', async () => {
+      for (const name of ['Button', 'ListRow', 'Card']) {
+        const c = add(name, { delayTouchActive: 30 })
+        pointer(c.element, 'pointerdown'); c.update(name === 'Card' ? { interactive: false } : { disabled: true })
+        await pause(60); assert(!pressed(c.element), name + ' 禁用后仍激活')
+        c.update({ disabled: false, interactive: true }); pointer(c.element, 'pointerdown'); c.destroy()
+        await pause(60); assert(!pressed(c.element) && !c.element.hasAttribute('data-my-press-input'), name + ' 卸载后残留反馈')
+      }
+    })
+    await check('交互卡片的背景与整体缩放同时过渡，普通卡片保持静态', async () => {
+      const c = add('Card'), plain = add('Card', { interactive: false })
+      const before = getComputedStyle(c.element).backgroundColor
+      pointer(c.element, 'pointerdown'); pointer(plain.element, 'pointerdown', { pointerId: 8 })
+      assert(!pressed(plain.element), '普通卡片出现按压效果')
+      pointer(c.element, 'pointerdown'); await pause(160)
+      const style = getComputedStyle(c.element)
+      assert(Math.abs(new DOMMatrix(style.transform).a - .92) < .005, '卡片没有整体缩小到参考幅度')
+      assert(style.backgroundColor !== before && style.transitionProperty.includes('background-color'), '颜色仍是瞬切或没有变化')
+      pointer(document, 'pointerup'); await pause(260)
+      assert(Math.abs(new DOMMatrix(getComputedStyle(c.element).transform).a - 1) < .001, '恢复后尺寸不正确')
+    })
+    await check('暗色模式按压背景可辨，恢复后沿用暗色表面', async () => {
+      document.documentElement.dataset.theme = 'dark'
+      const c = add('Card'), before = getComputedStyle(c.element).backgroundColor
+      pointer(c.element, 'pointerdown'); await pause(170)
+      assert(getComputedStyle(c.element).backgroundColor !== before, '暗色卡片没有颜色反馈')
+      pointer(document, 'pointercancel'); await pause(240)
+      assert(getComputedStyle(c.element).backgroundColor === before, '恢复后暗色表面发生偏色')
+    })
+    await check('卡片中的按钮、链接与输入控件独立操作，不冒泡激活父卡片', () => {
+      let parent = 0, child = 0
+      const button = document.createElement('button'), link = document.createElement('a'), input = document.createElement('input')
+      button.textContent = '内部操作'; button.onclick = () => child++
+      link.href = '#inside'; link.textContent = '内部链接'; link.onclick = event => { event.preventDefault(); child++ }
+      const c = add('Card', { onActivate: () => parent++ }, { slots: { default: [button, link, input] } })
+      for (const node of [button, link, input]) {
+        pointer(node, 'pointerdown'); assert(!pressed(c.element), '内部控件按压激活了父卡片')
+        pointer(document, 'pointerup'); node.click()
+      }
+      assert(parent === 0 && child === 2, '内部操作被父卡片捕获')
+      c.element.click(); assert(parent === 1, '整张卡片不能点击')
+    })
+    await check('空格按下即时反馈、抬起执行一次，Enter 不受触摸延迟影响', () => {
+      let calls = 0
+      const c = add('Card', { delayTouchActive: 500, onActivate: () => calls++ })
+      c.element.focus(); key(c.element, 'keydown', ' ')
+      assert(pressed(c.element) && calls === 0, '空格提前执行或没有即时反馈')
+      key(c.element, 'keydown', ' ', { repeat: true }); assert(pressed(c.element) && calls === 0, '长按空格丢失状态或重复执行')
+      key(c.element, 'keyup', ' '); assert(calls === 1 && !pressed(c.element), '空格抬起未执行一次')
+      key(c.element, 'keydown', 'Enter'); assert(calls === 2, 'Enter 被触摸延迟阻塞')
+      key(c.element, 'keydown', ' '); c.element.blur(); key(c.element, 'keyup', ' ')
+      assert(calls === 2 && !pressed(c.element), '失焦后仍执行空格操作')
+    })
+    await check('列表导航和整行开关保留原生激活与选择行为', () => {
+      let changes = 0
+      const c = add('ListRow', { toggle: true, value: false, onChange: () => changes++ })
+      pointer(c.element, 'pointerdown'); assert(pressed(c.element), '列表没有共用即时反馈')
+      pointer(document, 'pointerup'); c.element.click()
+      assert(changes === 1 && c.element.querySelector('input').checked, '整行开关重复切换')
+      c.element.querySelector('input').click(); assert(changes === 2 && !c.element.querySelector('input').checked, '内部开关不能独立操作')
+    })
+    await check('普通 HTML 可设置触摸延迟，升级为受控组件后读取新的属性', async () => {
+      const button = document.createElement('button'); button.className = 'my-button'; button.textContent = '原生按钮'
+      button.dataset.delayTouchActive = '40'; fixture.append(button); MyUI.init(fixture); MyUI.init(fixture)
+      pointer(button, 'pointerdown'); assert(!pressed(button), 'HTML 延迟未生效')
+      await pause(70); assert(pressed(button), 'HTML 延迟结束未激活'); pointer(document, 'pointerup')
+      const c = MyUI.mount(button, 'Button', { delayTouchActive: 0 }); owned.push(c)
+      pointer(button, 'pointerdown'); assert(pressed(button), '挂载组件后仍使用旧延迟'); pointer(document, 'pointerup')
+    })
+    await check('Vue 的三个薄封装正确声明和更新 delayTouchActive，不泄漏为 DOM 属性', async () => {
+      const delay = ref(50)
+      app = createApp({ setup: () => () => h('div', [h(Button, { delayTouchActive: delay.value }, () => '按钮'), h(Card, { title: '卡片', interactive: true, delayTouchActive: delay.value }, () => '内容'), h(ListRow, { title: '列表', delayTouchActive: delay.value })]) })
+      app.mount(fixture); await nextTick(); await nextTick()
+      const nodes = [...fixture.querySelectorAll('[data-my-component]')].filter(node => ['Button', 'Card', 'ListRow'].includes(node.dataset.myComponent))
+      for (const node of nodes) {
+        pointer(node, 'pointerdown'); assert(!pressed(node) && !node.hasAttribute('delaytouchactive'), 'Vue 参数未消费')
+        pointer(document, 'pointercancel')
+      }
+      delay.value = 0; await nextTick(); await nextTick()
+      for (const node of nodes) { pointer(node, 'pointerdown'); assert(pressed(node), 'Vue 参数更新后未即时生效'); pointer(document, 'pointerup') }
+    })
+    await check('示例先展示四张 grid 卡片，再展示大卡片列表，并能切换触摸延迟', async () => {
+      let last = ''
+      app = createApp({ render: () => h(CardShowcase, { onNotify: value => last = value }) }); app.mount(fixture)
+      await nextTick(); await nextTick()
+      const grid = fixture.querySelector('.card-grid'), list = fixture.querySelector('.large-card-list')
+      assert(grid.querySelectorAll('.my-tappable-card').length === 4 && list.querySelectorAll('.my-tappable-card').length === 2, '示例混入展示型卡片')
+      assert(grid.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING, '大卡片出现在 grid 之前')
+      const card = grid.querySelector('.my-card'); card.click(); assert(last.includes('清理存储'), '卡片操作没有结果')
+      fixture.querySelector('.card-delay-toggle').click(); await nextTick(); await nextTick()
+      pointer(card, 'pointerdown'); assert(!pressed(card), '示例没有切到 50ms 延迟')
+      await pause(80); assert(pressed(card), '示例延迟激活失效'); pointer(document, 'pointerup')
+    })
+    result.textContent = JSON.stringify({ passed: reports.filter(item => item.pass).length, total: reports.length, results: reports }, null, 2)
+  }
+</script>
+</html>
