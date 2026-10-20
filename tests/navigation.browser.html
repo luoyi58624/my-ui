@@ -4,7 +4,7 @@
 <script type="module">
 if(new URLSearchParams(location.search).has('frame')){
   document.body.innerHTML='<div id="app"></div>';
-  await import('/example/src/main.ts');
+  await import('/example/src/main.ts').catch(error=>{document.body.textContent=error.stack;throw error});
 }else{
   const reports=[],calls=[],pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));let frame,doc,win,respond=()=>Promise.resolve();
   const assert=(value,message)=>{if(!value)throw Error(message)};
@@ -12,7 +12,7 @@ if(new URLSearchParams(location.search).has('frame')){
   const check=async(name,run)=>{await run();reports.push({name,passed:true})};
   async function load(suffix,android=true){
     const previous=doc;frame.src='/tests/navigation.browser.html?frame=1&'+suffix;
-    await until(()=>frame.contentDocument!==previous&&frame.contentDocument?.querySelector('.demo-bottom button'),'示例加载失败');
+    await until(()=>frame.contentDocument!==previous&&frame.contentDocument?.querySelector('.nc-tabs-navigation button'),'示例加载失败');
     doc=frame.contentDocument;win=frame.contentWindow;await pause(120);
     // 组件和状态先按网页真实挂载，再替换宿主命令；验证视图到桥接的调用，不模拟操作系统。
     Object.defineProperty(win.navigator,'userAgent',{configurable:true,value:android?'Mozilla/5.0 Android':'Mozilla/5.0 Windows NT'});
@@ -47,7 +47,7 @@ if(new URLSearchParams(location.search).has('frame')){
       });
       await check('独立子页显示目标内容，返回调用原生关闭且不改网页历史',async()=>{
         await load('child=1&pageWindow=1#/example/image');win.location.hash='#/example/button';await until(()=>doc.querySelector('.demo-top [aria-label="返回上一页"]'),'子页没有原生返回入口');
-        assert(doc.querySelector('.demo-detail:not([inert])').textContent.includes('主要按钮'),'没有渲染目标示例');assert(win.getComputedStyle(doc.querySelector('.demo-bottom')).display==='none','子页仍显示主 Tab');
+        assert(doc.querySelector('.demo-detail:not([inert])').textContent.includes('主要按钮'),'没有渲染目标示例');assert(win.getComputedStyle(doc.querySelector('.nc-tabs-navigation')).display==='none','子页仍显示主 Tab');
         const count=calls.length,hash=win.location.hash;doc.querySelector('.demo-top [aria-label="返回上一页"]').click();await pause(80);assert(calls.length===count+1&&calls.at(-1).command==='plugin:native-router|back','返回没有关闭当前原生子页');assert(win.location.hash===hash,'返回修改了子页网页路由');
       });
       await check('主窗口直接访问组件旧链接，返回只回目录而不会误关主窗口',async()=>{

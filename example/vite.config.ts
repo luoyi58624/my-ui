@@ -9,9 +9,11 @@ export default defineConfig(({ mode }) => ({
   clearScreen: false,
   publicDir: exampleRoot + 'public',
   resolve: {
-    alias: { '/packages': projectRoot + 'packages' },
+    alias: { '/packages': projectRoot + 'packages', 'tauri-plugin-native-components': exampleRoot + 'node_modules/tauri-plugin-native-components' },
     dedupe: ['vue'],
   },
+  // 本地插件直接分发 Vue 源码，避免开发预构建缓存旧组件出口。
+  optimizeDeps: { exclude: ['tauri-plugin-native-components'] },
   server: {
     fs: { allow: [projectRoot] },
     // Rust 编译与生成文件交给 Tauri 监听，避免反复刷新示例。

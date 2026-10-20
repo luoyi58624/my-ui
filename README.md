@@ -336,7 +336,7 @@ bun run build
 
 开发地址默认 `http://127.0.0.1:5178/`，原生入口为 `/native.html`。示例采用顶部导航与四个底部 Tab 的移动 App 布局。首页按用途分组，以 List 导航进入独立组件示例；“发现、消息、我的”暂为 Demo 占位页。Web 和桌面 App 使用 Vue Router 在当前窗口导航，Android 的每个列表入口创建独立 Activity。返回保留父页面的滚动与输入状态，底部同级切换不增加返回历史，Android 弹窗仍优先响应系统返回。
 
-`example/src/router.ts` 定义 Vue Router，`DemoRoot.vue` 使用 KeepAlive 保留页面和统一弹层宿主；`DemoLayout.vue` 负责目录、安全区与示例展示，`demo/catalog.ts` 维护目录数据，`App.vue` 用同名插槽组织内容。`navigation.ts` 接入独立的 `native-router` 插件，组件库不依赖 Tauri。Android 子页地址为 `index.html?pageWindow=1#/example/组件标识`；旧的 `#combobox`、`#slider-options` 等链接仍可直接定位。原生 Activity 与共享状态示例位于首页的“完整示例”分组。CSS 保存后即时更新；修改 JS 核心会完整刷新示例，避免旧实例残留。构建结果同时提供 Vue 页面、原生页面和原样的 CSS/JS。
+`example/src/router.ts` 定义 Vue Router，`DemoRoot.vue` 使用 KeepAlive 保留页面和统一弹层宿主；`DemoLayout.vue` 负责目录、安全区与示例展示，`demo/catalog.ts` 维护目录数据，`App.vue` 用同名插槽组织内容。`navigation.ts` 接入独立的 `tauri-plugin-native-router` 插件，组件库不依赖 Tauri。Android 子页地址为 `index.html?pageWindow=1#/example/组件标识`；旧的 `#combobox`、`#slider-options` 等链接仍可直接定位。原生 Activity 与共享状态示例位于首页的“完整示例”分组。CSS 保存后即时更新；修改 JS 核心会完整刷新示例，避免旧实例残留。构建结果同时提供 Vue 页面、原生页面和原样的 CSS/JS。
 
 主题偏好由 `stores/theme.ts` 的共享 Pinia store 管理，明暗模式、配色和字重均跨窗口持久化同步；任意窗口修改后，其他窗口与新窗口都会应用。旧的 `my-ui:theme` 设置继续作为迁移来源和首帧快照。`native-appearance.ts` 同步实际明暗主题到 Android 系统栏文字/图标及桌面窗口装饰，主页面和子页面使用相同逻辑。纯 HTML 在 App 内通过独立的 `native-theme.js` 接入同一存储，不加载 Vue；普通离线 HTML 仍只依赖组件 CSS/JS。
 
@@ -387,7 +387,7 @@ bun run build:android    # 构建自包含 arm64 优化 APK
 
 `build:android` 实际执行 `tauri android build --apk --target aarch64`，产物为 `example/src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk`，用 `adb install -r <apk>` 安装。本地示例的 release 构建使用调试证书，便于和开发包相互覆盖安装；正式分发需要配置自己的签名。调试原生桥接时，可在 `example/` 下执行 `bun run tauri android build --apk --debug --target aarch64`。
 
-**系统字重插件**：`android-system-font-weight` 源码已独立到 `D:/project/tauri/plugins/android-system-font-weight/`，由 `example/package.json` 的本地 `file:` 依赖安装，Cargo 引用 `example/node_modules/android-system-font-weight` 中的同一份源码。尚未创建或发布 GitHub 仓库；将来可将 package.json 中的来源替换为实际 `github:OWNER/REPOSITORY#COMMIT`，Cargo 路径保持不变。插件自己的说明包含接入方式。
+**系统字重插件**：`tauri-plugin-android-system-font-weight` 源码已独立到 `D:/project/tauri/plugins/tauri-plugin-android-system-font-weight/`，由 `example/package.json` 的本地 `file:` 依赖安装，Cargo 引用 `example/node_modules/tauri-plugin-android-system-font-weight` 中的同一份源码。尚未创建或发布 GitHub 仓库；将来可将 package.json 中的来源替换为实际 `github:OWNER/REPOSITORY#COMMIT`，Cargo 路径保持不变。插件自己的说明包含接入方式。
 
 插件移植自 `android_system_font_weight`，此次迁移保持采集和探针算法不变。Rust 只注册桥接，Kotlin 在后台线程采集、解析，前端启动只调用一次 `getWght`，`getRawData` 留作诊断。OPPO 系采用通过校验的探针，其他厂商的支持边界与原插件相同，不把 `fontWeightAdjustment` 或厂商滑杆编码当作绝对字重。
 
@@ -395,7 +395,7 @@ bun run build:android    # 构建自包含 arm64 优化 APK
 
 **移动端适配**（只写在示例层，组件库保持中立）：`example/src/mobile.ts` 按 UA 加 `my-mobile-native` 类并拦截长按选中与系统 callout（输入框、可复制文本除外）；`mobile.css` 处理 edge-to-edge 下的状态栏与手势条安全区；viewport 使用 `viewport-fit=cover`。字重统一走主题系统的 `settings.fontWeight`，不另设一套变量。
 
-**统一页面跳转**：独立插件源码位于 `D:/project/tauri/plugins/native-router/`，前端包名 `native-router`，Rust 包名 `tauri-plugin-native-router`。Bun 通过本地 `file:` 依赖安装，Cargo 引用 `example/node_modules/native-router`；将来可换成实际 GitHub 来源，目前没有发布。Web、桌面端使用传入的 Vue Router，Android `push` 创建宿主的 `NativePageActivity`；暂不实现 iOS 原生导航。
+**统一页面跳转**：独立插件源码位于 `D:/project/tauri/plugins/tauri-plugin-native-router/`，前端包名 `tauri-plugin-native-router`，Rust 包名 `tauri-plugin-native-router`。Bun 通过本地 `file:` 依赖安装，Cargo 引用 `example/node_modules/tauri-plugin-native-router`；将来可换成实际 GitHub 来源，目前没有发布。Web、桌面端使用传入的 Vue Router，Android `push` 创建宿主的 `NativePageActivity`；暂不实现 iOS 原生导航。
 
 ```ts
 import { navigation } from './navigation'
@@ -440,3 +440,13 @@ Android 示例的系统返回优先交给当前 WebView 的最上层弹层：级
 项目目录名为 `my-ui`。Git 保留组件源码、示例、正式测试、原始设计参考和构建配置；依赖、构建结果、编辑器设置及本地工具配置均由 `.gitignore` 排除。
 
 临时截图、验证脚本和发布用的仓库副本放在系统临时目录中，用完清理，不在项目内积累 `qa` 或嵌套 Git 仓库。`node_modules` 是可重新安装的本地依赖，`dist` 是构建产物，均不提交。
+
+### 原生导航组件
+
+独立源码位于 `D:/project/tauri/plugins/tauri-plugin-native-components/`，目录、前端包和 Rust crate 均使用 `tauri-plugin-` 前缀，命令及权限仍使用短标识 `native-components`。示例通过 Bun 本地依赖安装完整源码，尚未创建或发布 GitHub 仓库。
+
+从 `tauri-plugin-native-components/vue` 引入 `NativeAppBar`、`NativeBottomNavigation`、`NativeTabs`，同时引入 `tauri-plugin-native-components/style.css`。Android 使用 MaterialToolbar 和 BottomNavigationView，保留官方水波纹；Web 和其他桌面/移动平台显示 Vue 对应内容。CSS 提供尺寸和颜色，插件不生成示例主题。
+
+`NativeTabs` 同时管理底栏和各 Tab 的原生页面，`nativeView` 指向宿主注册的 Android 页面工厂。当前首页保留 Tauri WebView 和组件目录，其他三个 Tab 使用 `DemoNativeTab.kt` 中的独立 Android View；切换保留实例与计数。详情页继续由 `tauri-plugin-native-router` 新建 Activity，各 Tab 不额外打开 Activity 或 WebView。Web/桌面的对应内容保留在 Vue 插槽中。
+
+`DemoAppBar.vue` 将结构化标题、返回和主题操作接入原生导航头；Web 弹层出现时通过 `suspended` 显示 Web 对应内容，退出后恢复原生视图。原生组件绑定发起调用的窗口，不借用 Tauri 的全局 Activity，不改动现有 WebView 生命周期策略。

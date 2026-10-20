@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch, type ComponentPublicInstance } from 'vue'
 import { useRoute } from 'vue-router'
-import { AppBar, Button, CellGroup, Icon, ListRow, Navigation, type Option } from '@my-ui/vue'
-import ThemeSettings from './demo/ThemeSettings.vue'
+import { Button, CellGroup, Icon, ListRow } from '@my-ui/vue'
+import { NativeTabs, type NavigationItem } from 'tauri-plugin-native-components/vue'
+import DemoAppBar from './DemoAppBar.vue'
+import { useNativeBarsSuspended } from './native-components'
 import { demoExamples, demoGroups } from './demo/catalog'
 import { closePage, isChildPage, navigation, openPage } from './navigation'
 
@@ -11,17 +13,20 @@ const emit = defineEmits<{
   navigationError: [message: string]
 }>()
 
-const pages: (Option & { title: string; demo?: number })[] = [
+const pages: (NavigationItem & { title: string; demo?: number; icon: 'home' | 'grid' | 'message' | 'user' })[] = [
   { value: 'home', label: '首页', title: '组件示例', icon: 'home' },
   { value: 'discover', label: '发现', title: '发现', icon: 'grid', demo: 1 },
   { value: 'messages', label: '消息', title: '消息', icon: 'message', demo: 2 },
   { value: 'profile', label: '我的', title: '我的', icon: 'user', demo: 3 },
 ]
+const counts = ref<Record<string, number>>({ discover: 0, messages: 0, profile: 0 })
+const nativePages = computed(() => pages.map(page => ({ ...page, ...(page.demo ? { nativeView: 'demo', nativeProps: { title: page.title, demo: page.demo, count: counts.value[page.value] } } : {}) })))
 const active = ref('home'), visited = ref(new Set<string>())
 const example = computed(() => demoExamples.find(item => active.value === 'example/' + item.id))
 const title = computed(() => example.value?.title ?? pages.find(page => page.value === active.value)?.title ?? '组件示例')
 const openedExamples = computed(() => demoExamples.filter(item => visited.value.has(item.id)))
-const titleElement = ref<HTMLElement>()
+const titleElement = ref<InstanceType<typeof DemoAppBar>>()
+const suspended = useNativeBarsSuspended()
 const elements = new Map<string, HTMLElement>(), positions = new Map<string, number>()
 const route = useRoute()
 let navigationVersion = 0, returning = false
@@ -52,7 +57,7 @@ async function selectPage(value: string, reset = false, anchor?: string) {
   page.scrollTo({ top: Math.max(0, top), behavior: 'instant' })
   if (previousExample && value === 'home') {
     page.querySelector<HTMLElement>('[data-demo-link="' + previousExample.id + '"]')?.focus({ preventScroll: true })
-  } else if (id) titleElement.value?.focus({ preventScroll: true })
+  } else if (id) titleElement.value?.focus()
 }
 
 function navigate(value: string) {
@@ -60,6 +65,11 @@ function navigate(value: string) {
   // 底部同级切换留在当前主页面，只有组件入口调用跨页导航。
   if (active.value === value) void selectPage(value, true)
   void navigation.replace('/' + value).catch(reportError)
+}
+
+function tabAction(event: { tab: string; value: string }) {
+  if (event.value === 'home') navigate('home')
+  else if (event.value === 'increment') counts.value[event.tab] = (counts.value[event.tab] ?? 0) + 1
 }
 
 function openExample(id: string) {
@@ -102,16 +112,9 @@ onBeforeUnmount(() => {
 <template>
   <div class="demo-app" :class="{ 'demo-app-detail': example }">
     <div class="demo-top">
-      <AppBar v-if="example" :title="title" back :back-label="isChildPage() ? '返回上一页' : '返回组件列表'" class="demo-app-bar" @back="goBack">
-        <h1 ref="titleElement" class="demo-title" tabindex="-1">{{ title }}</h1>
-        <template #actions><ThemeSettings /></template>
-      </AppBar>
-      <AppBar v-else :title="title" class="demo-app-bar">
-        <template #leading><span class="demo-brand"><img src="/favicon.svg" alt="" width="28" height="28" /><strong>my-ui</strong></span></template>
-        <h1 class="demo-title">{{ title }}</h1>
-        <template #actions><ThemeSettings /></template>
-      </AppBar>
+      <DemoAppBar ref="titleElement" :title="title" :back="!!example" :back-label="isChildPage() ? '返回上一页' : '返回组件列表'" class="demo-app-bar" @back="goBack" />
     </div>
+    <NativeTabs class="demo-tabs" :model-value="active" :items="nativePages" :navigation-visible="!example" :suspended="suspended" @select="navigate" @action="tabAction" @error="console.error">
     <main class="demo-main" :aria-label="title">
       <section v-for="page in pages" v-show="active === page.value" :key="page.value"
         :ref="element => setPageElement(page.value, element)" class="demo-page"
@@ -135,6 +138,7 @@ onBeforeUnmount(() => {
           <span class="demo-placeholder-icon"><Icon :name="page.icon!" /></span>
           <span class="demo-placeholder-label">DEMO {{ page.demo }}</span>
           <h2>{{ page.title }}</h2><p>这是预留的 Demo 页面。</p>
+          <Button variant="outline" @click="counts[page.value]++">点一下 · {{ counts[page.value] }}</Button>
           <Button variant="outline" @click="navigate('home')">浏览组件</Button>
         </div>
       </section>
@@ -145,24 +149,16 @@ onBeforeUnmount(() => {
         <div class="demo-page-inner"><slot :name="item.id" /></div>
       </section>
     </main>
-    <div v-show="!example" class="demo-bottom" :inert="!!example" :aria-hidden="example ? true : undefined">
-      <Navigation class="demo-navigation" :model-value="active" :options="pages" label="主导航" @update:model-value="navigate" />
-    </div>
+    </NativeTabs>
   </div>
 </template>
 
 <style scoped>
 :global(html.my-demo-app), :global(html.my-demo-app body) { height: 100%; overflow: hidden; padding: 0; scrollbar-gutter: auto; }
-.demo-app { display: grid; grid-template-rows: calc(57px + env(safe-area-inset-top)) minmax(0, 1fr) calc(65px + env(safe-area-inset-bottom)); height: 100dvh; background: var(--background); }
-.demo-app-detail { grid-template-rows: calc(57px + env(safe-area-inset-top)) minmax(0, 1fr) env(safe-area-inset-bottom); }
+.demo-app { display: grid; grid-template-rows: calc(57px + env(safe-area-inset-top)) minmax(0, 1fr); height: 100dvh; background: var(--background); }
 .demo-top { padding-top: env(safe-area-inset-top); border-bottom: 1px solid var(--border); background: var(--card-background); z-index: 40; }
-.demo-top :deep(.my-app-bar) { height: 56px; min-height: 56px; width: min(100%, 1160px); margin: auto; padding: 6px max(12px, env(safe-area-inset-left)) 6px max(12px, env(safe-area-inset-right)); border: 0; }
-.demo-brand { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
-.demo-brand img { display: block; border-radius: 8px; }
-.demo-brand strong { font-size: 14px; font-weight: var(--font-weight-title, 700); }
-.demo-title { margin: 0; font: inherit; font-weight: var(--font-weight-subtitle, 600); }
-.demo-title:focus { outline: none; }
-.demo-main { position: relative; min-width: 0; min-height: 0; }
+.demo-top :deep(.nc-app-bar) { height: 56px; width: min(100%, 1160px); margin: auto; border: 0; }
+.demo-main { height: 100%; position: relative; min-width: 0; min-height: 0; }
 .demo-page { position: absolute; inset: 0; overflow: auto; overscroll-behavior-y: contain; padding: 24px max(20px, env(safe-area-inset-right)) 32px max(20px, env(safe-area-inset-left)); scrollbar-gutter: stable; }
 .demo-page-inner { width: min(100%, 1120px); margin: auto; }
 .demo-page-inner > :deep(:first-child) { margin-top: 0; }
@@ -183,11 +179,8 @@ onBeforeUnmount(() => {
 .demo-placeholder-icon svg { width: 30px; height: 30px; }
 .demo-placeholder-label { color: var(--text-secondary); font-size: 11px; letter-spacing: 2px; }
 .demo-placeholder h2 { margin: 10px 0; font-size: 24px; }
+.demo-placeholder > .my-button { margin-top: 10px; }
 .demo-placeholder p { margin: 0 0 28px; color: var(--text-secondary); font-size: 14px; }
-.demo-bottom { padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); border-top: 1px solid var(--border); background: var(--card-background); z-index: 40; }
-.demo-bottom :deep(.my-navigation) { width: min(100%, 680px); height: 64px; min-height: 64px; margin: auto; padding: 5px 8px; border: 0; border-radius: 0; background: transparent; }
-.demo-bottom :deep(button) { gap: 4px; min-height: 48px; }
 @media (min-width: 900px) { .demo-catalog-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
 @media (max-width: 760px) { .demo-page { padding: 20px max(14px, env(safe-area-inset-right)) 24px max(14px, env(safe-area-inset-left)); } }
-@media (max-width: 360px) { .demo-brand { gap: 5px; } .demo-brand strong { font-size: 12px; } .demo-brand img { width: 24px; height: 24px; } }
 </style>

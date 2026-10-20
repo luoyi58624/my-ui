@@ -5,6 +5,7 @@ import androidx.activity.enableEdgeToEdge
 
 class MainActivity : OverlayActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
+    DemoNativeTabs.register()
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
   }

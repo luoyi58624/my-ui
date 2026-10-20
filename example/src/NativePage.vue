@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { h, ref } from 'vue'
-import { AppBar, Button, Card, CellGroup, Icon, Input, ListRow, Menu, Stepper, popup } from '@my-ui/vue'
-import ThemeSettings from './demo/ThemeSettings.vue'
+import { Button, Card, CellGroup, Icon, Input, ListRow, Menu, Stepper, popup } from '@my-ui/vue'
+import DemoAppBar from './DemoAppBar.vue'
 import { closePage, isAndroidNative } from './navigation'
 import { updateDemoCache, useSharedDemoStore } from './stores/shared'
 
@@ -44,9 +44,7 @@ function openOverlay(kind: 'sheet' | 'drawer') {
 
 <template>
   <div class="native-page">
-    <AppBar title="跨页共享状态" back sticky @back="back">
-      <template #actions><ThemeSettings /></template>
-    </AppBar>
+    <DemoAppBar title="跨页共享状态" back @back="back" />
     <main class="native-page-content">
       <div class="native-page-intro"><span class="native-page-symbol"><Icon name="layer" /></span><h1>来到另一页</h1><p>{{ available ? '从屏幕边缘向内滑动，试试系统的返回效果。' : '在这里修改备注和计数，返回后上一页也会更新。' }}</p></div>
       <Card title="共享的内容" description="两页修改即时同步，重新打开也会恢复">
@@ -71,7 +69,7 @@ function openOverlay(kind: 'sheet' | 'drawer') {
 :global(html.my-native-page) { scroll-padding-top: calc(56px + env(safe-area-inset-top)); }
 :global(html.my-native-page body), :global(html.my-mobile-native.my-native-page body) { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
 .native-page { min-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); background: var(--background); }
-.native-page :deep(.my-app-bar) { top: env(safe-area-inset-top); z-index: 20; background: var(--background); }
+.native-page > .demo-native-header { position: sticky; top: env(safe-area-inset-top); z-index: 20; }
 .native-page-content { display: grid; gap: 22px; max-width: 640px; margin: auto; padding: 26px 18px 32px; }
 .native-page-intro { padding: 8px 4px 12px; }
 .native-page-symbol { display: grid; place-items: center; width: 48px; height: 48px; margin-bottom: 20px; border-radius: 15px; background: var(--fill); color: var(--primary); }

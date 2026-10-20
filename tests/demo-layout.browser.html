@@ -7,13 +7,13 @@ if(params.has('frame')){
   document.body.innerHTML='<div id="app"></div>';
   const base=document.createElement('base');base.href='/example/';document.head.append(base);
   // 使用正式入口验证目录、真实组件、持久状态与弹层返回。
-  await import('/example/src/main.ts');
+  await import('/example/src/main.ts').catch(error=>{document.body.textContent=error.stack;throw error});
 }else{
   const reports=[],fixture=document.querySelector('#fixture'),pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   const assert=(value,message)=>{if(!value)throw Error(message)};
   const until=async(check,message)=>{const start=performance.now();while(!check()){if(performance.now()-start>10000)throw Error(message);await pause(30)}};
   let frame,doc,win;
-  const tab=index=>doc.querySelectorAll('.demo-bottom button')[index];
+  const tab=index=>doc.querySelectorAll('.nc-tabs-navigation button')[index];
   const page=()=>doc.querySelector('.demo-page:not([inert])');
   const pick=async index=>{tab(index).click();await pause(90)};
   const route=async hash=>{win.location.hash=hash;await pause(160)};
@@ -24,20 +24,20 @@ if(params.has('frame')){
     document.querySelector('#run').disabled=true;document.querySelector('#result').textContent='运行中';reports.length=0;fixture.replaceChildren();
     try{
       frame=document.createElement('iframe');frame.src='/tests/demo-layout.browser.html?frame=1#actions';frame.title='移动 App 示例';fixture.append(frame);
-      await until(()=>frame.contentDocument?.querySelectorAll('.demo-bottom button').length===4,'示例加载失败');doc=frame.contentDocument;win=frame.contentWindow;await pause(180);
+      await until(()=>frame.contentDocument?.querySelectorAll('.nc-tabs-navigation button').length===4,'示例加载失败');doc=frame.contentDocument;win=frame.contentWindow;await pause(180);
       const ids=[...doc.querySelectorAll('[data-demo-link]')].map(node=>node.dataset.demoLink);
       await check('首页使用分组 List 导航，另外三个 Tab 为 Demo，首屏不加载组件示例',async()=>{
         assert(page().dataset.demoPage==='home','首页未展示目录');assert(ids.length===27&&new Set(ids).size===ids.length,'目录不完整或重复');
         assert(doc.querySelectorAll('.demo-detail').length===0,'首屏提前挂载全部示例');
-        assert([...doc.querySelectorAll('.demo-bottom button')].map(node=>node.textContent.trim()).join(',')==='首页,发现,消息,我的','底部导航不正确');
+        assert([...doc.querySelectorAll('.nc-tabs-navigation button')].map(node=>node.textContent.trim()).join(',')==='首页,发现,消息,我的','底部导航不正确');
         for(let index=1;index<4;index++){await pick(index);assert(page().querySelector('.demo-placeholder')&&page().textContent.includes('Demo 页面'),'不是 Demo 占位页');assert(!page().querySelector('.my-card'),'其他 Tab 混入组件演示')}
         await pick(0);
       });
       await check('整行点击进入独立示例，详情隐藏底栏，顶栏显示返回按钮',async()=>{
         const position=win.history.state.position;await open('button');assert(win.location.hash==='#/example/button'&&win.history.state.position===position+1,'未建立详情返回历史');
-        assert(doc.querySelector('.demo-top .demo-title').textContent==='Button 按钮'&&page().textContent.includes('主要按钮'),'示例或标题错误');
-        assert(win.getComputedStyle(doc.querySelector('.demo-bottom')).display==='none'&&doc.querySelector('.demo-bottom').inert,'详情仍可操作底栏');
-        assert(doc.activeElement===doc.querySelector('.demo-top .demo-title'),'进入详情未转移焦点');assert(doc.querySelector('[data-demo-page="home"]').inert,'列表仍可交互');await back();
+        assert(doc.querySelector('.demo-top .nc-heading h1').textContent==='Button 按钮'&&page().textContent.includes('主要按钮'),'示例或标题错误');
+        assert(win.getComputedStyle(doc.querySelector('.nc-tabs-navigation')).display==='none'&&doc.querySelector('.nc-tabs-navigation').inert,'详情仍可操作底栏');
+        assert(doc.activeElement===doc.querySelector('.demo-top .nc-heading h1'),'进入详情未转移焦点');assert(doc.querySelector('[data-demo-page="home"]').inert,'列表仍可交互');await back();
       });
       await check('返回恢复目录滚动与入口焦点，Tab 切换不增加返回层级',async()=>{
         const home=page();home.scrollTop=630;await pause(50);await open('input');await back();assert(Math.abs(page().scrollTop-630)<2,'返回丢失目录位置');
@@ -63,7 +63,7 @@ if(params.has('frame')){
         assert(win.MyUI.layers.dismissTop(),'弹层返回未消费');await pause(450);assert(page().dataset.demoPage==='example/feedback'&&!doc.querySelector('#app').inert,'关闭弹层误退页面');assert(!win.MyUI.layers.dismissTop(),'弹层退出后仍占返回');await back();
       });
       await check('顶栏固定，320px 与桌面均无横向溢出，四个 Tab 有完整触控范围',async()=>{
-        for(const width of[320,1100,390]){frame.style.width=width+'px';await pause(100);await pick(0);const header=doc.querySelector('.demo-top').getBoundingClientRect(),footer=doc.querySelector('.demo-bottom').getBoundingClientRect(),content=page().getBoundingClientRect();
+        for(const width of[320,1100,390]){frame.style.width=width+'px';await pause(100);await pick(0);const header=doc.querySelector('.demo-top').getBoundingClientRect(),footer=doc.querySelector('.nc-tabs-navigation').getBoundingClientRect(),content=page().getBoundingClientRect();
           assert(header.top===0&&Math.abs(footer.bottom-win.innerHeight)<2&&content.bottom<=footer.top+1,'固定导航或正文区域错误');assert(page().scrollWidth<=page().clientWidth+2&&win.scrollY===0,'目录横向溢出');
           for(let index=0;index<4;index++){await pick(index);const rect=tab(index).getBoundingClientRect();assert(rect.width>=44&&rect.height>=44&&rect.right<=win.innerWidth+1,'Tab 触控区域不完整')}
           await pick(0);for(const id of['button','input','combobox','picker','menu']){await open(id);assert(page().scrollWidth<=page().clientWidth+2,'详情横向溢出 '+width+'/'+id);const detail=page().getBoundingClientRect();assert(detail.top>=header.bottom-1&&Math.abs(detail.bottom-win.innerHeight)<2,'详情没有用满剩余高度');await back()}
@@ -81,13 +81,13 @@ if(params.has('frame')){
         [...parent.querySelectorAll('button')].find(node=>node.textContent.includes('打开另一页')).click();await until(()=>doc.querySelector('.native-page'),'没有进入共享页');
         assert(win.location.hash==='#/shared-state'&&doc.documentElement.classList.contains('my-native-page'),'共享页未通过路由打开或页面布局错误');
         const note=doc.querySelector('.native-page input');note.value='路由返回保留共享内容';note.dispatchEvent(new win.Event('input',{bubbles:true}));await pause(60);
-        doc.querySelector('.native-page .my-app-bar button').click();await until(()=>page()?.dataset.demoPage==='example/native-navigation','共享页返回失败');await pause(80);
+        doc.querySelector('.native-page .nc-app-bar button').click();await until(()=>page()?.dataset.demoPage==='example/native-navigation','共享页返回失败');await pause(80);
         assert(page()===parent&&page().querySelector('input')===input&&input.value==='路由返回保留共享内容','父页实例丢失或数据未同步');assert(page().scrollTop===top,'返回丢失滚动位置');await back();
       });
       await check('原生 HTML 示例在当前窗口承载且可以返回目录示例',async()=>{
         await open('native-html');page().querySelector('.native-example-link').click();await until(()=>doc.querySelector('.html-page iframe'),'HTML 页面未打开');
         const html=doc.querySelector('.html-page iframe');await until(()=>html.contentDocument?.querySelector('.my-button'),'纯 HTML 组件没有加载');
-        assert(win.location.hash==='#/html','HTML 示例没有使用 Vue Router');doc.querySelector('.html-page .my-app-bar button').click();await until(()=>page()?.dataset.demoPage==='example/native-html','HTML 示例返回失败');await back();
+        assert(win.location.hash==='#/html','HTML 示例没有使用 Vue Router');doc.querySelector('.html-page .nc-app-bar button').click();await until(()=>page()?.dataset.demoPage==='example/native-html','HTML 示例返回失败');await back();
       });
       document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,total:12,reports},null,2);
     }catch(error){document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,error:String(error.stack||error),reports},null,2)}

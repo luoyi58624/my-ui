@@ -1816,6 +1816,7 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tauri-plugin-android-system-font-weight",
+ "tauri-plugin-native-components",
  "tauri-plugin-native-router",
  "tauri-plugin-store",
 ]
@@ -3179,6 +3180,16 @@ dependencies = [
 name = "tauri-plugin-android-system-font-weight"
 version = "0.1.0"
 dependencies = [
+ "tauri",
+ "tauri-plugin",
+]
+
+[[package]]
+name = "tauri-plugin-native-components"
+version = "0.1.0"
+dependencies = [
+ "jni",
+ "serde_json",
  "tauri",
  "tauri-plugin",
 ]

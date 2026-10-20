@@ -5,6 +5,9 @@ import { createTheme, contrastRatio, defaultThemeOptions, themeColors, themeStyl
 import { createSystemFontWeightSync, supportsSystemFontWeight } from '../font-weight'
 import { useThemeStore } from '../stores/theme'
 import { defaultThemeState } from '../theme/preferences'
+import type { NavigationAction } from 'tauri-plugin-native-components'
+
+withDefaults(defineProps<{ controls?: boolean }>(), { controls: true })
 
 const settings = useThemeStore()
 const open = ref(false)
@@ -65,6 +68,16 @@ function setMode(value: string) {
   notice.value = ''
 }
 function toggleMode() { settings.mode = currentMode.value === 'dark' ? 'light' : 'dark' }
+const actions = computed<NavigationAction[]>(() => [
+  ...(settings.mode === 'system' ? [] : [{ value: 'theme', icon: currentMode.value === 'dark' ? 'sun' as const : 'moon' as const, label: currentMode.value === 'dark' ? '切换到浅色模式' : '切换到暗黑模式' }]),
+  { value: 'settings', icon: 'sliders', label: '主题定制' },
+])
+function handleAction(value: string) {
+  if (value === 'theme') toggleMode()
+  else if (value === 'settings') open.value = true
+}
+/** 原生导航通过同一组操作项打开设置或切换外观。 */
+defineExpose({ actions, handleAction })
 function chooseColor(color: ThemeColorId) {
   currentData.value.color = color
   delete currentData.value.primary
@@ -98,8 +111,8 @@ async function copy() {
 
 <template>
   <div class="theme-actions">
-    <Button v-if="settings.mode !== 'system'" class="header-action" variant="bare" :icon="currentMode === 'dark' ? 'sun' : 'moon'" :aria-label="currentMode === 'dark' ? '切换到浅色模式' : '切换到暗黑模式'" @click="toggleMode" />
-    <Button class="header-action" variant="bare" icon="sliders" aria-label="主题定制" :aria-expanded="open" @click="open = true" />
+    <Button v-if="controls && settings.mode !== 'system'" class="header-action" variant="bare" :icon="currentMode === 'dark' ? 'sun' : 'moon'" :aria-label="currentMode === 'dark' ? '切换到浅色模式' : '切换到暗黑模式'" @click="toggleMode" />
+    <Button v-if="controls" class="header-action" variant="bare" icon="sliders" aria-label="主题定制" :aria-expanded="open" @click="open = true" />
     <Dialog v-model="open" title="主题定制" description="浅色与暗色分别保存，修改会即时应用。" style="--dialog-width: 100%; --dialog-margin: 16px; --dialog-padding: clamp(20px, 3vw, 28px); --dialog-radius: 24px; height: 100%; text-align: left">
       <template #header="{ titleId }">
         <div class="theme-dialog-heading"><h2 :id="titleId">主题定制</h2><Button variant="bare" icon="x" aria-label="关闭主题定制" @click="open = false" /></div>
