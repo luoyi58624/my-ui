@@ -652,6 +652,7 @@
 
   const definitions = Object.create(null);
   const controllers = new WeakMap();
+  const buttonPressBindings = new WeakMap();
   let nextId = 0;
   const kebab = (value) =>
     value.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
@@ -1081,6 +1082,70 @@
     return c;
   }
 
+  // 触屏直接更新按压样式；临时的全局监听仅在按住时存在，不接管原生点击。
+  function bindButtonPress(button) {
+    if (buttonPressBindings.has(button)) return buttonPressBindings.get(button);
+    let stops = [];
+    const reset = () => {
+      stops.forEach((stop) => stop());
+      stops = [];
+      button.removeAttribute("data-my-pressed");
+    };
+    const listen = (target, type, handler, options) => {
+      target.addEventListener(type, handler, options);
+      stops.push(() => target.removeEventListener(type, handler, options));
+    };
+    const down = (event) => {
+      reset();
+      const direct = event.pointerType === "touch" || event.pointerType === "pen";
+      // 保留输入来源，屏蔽触摸结束后浏览器迟到的 :active；鼠标与键盘仍走原生反馈。
+      button.toggleAttribute("data-my-press-input", direct);
+      if (!direct || event.button !== 0 || event.isPrimary === false ||
+          button.disabled || button.getAttribute("aria-disabled") === "true") return;
+      const bounds = button.getBoundingClientRect();
+      const { pointerId, clientX, clientY } = event;
+      button.setAttribute("data-my-pressed", "");
+      const finish = (event) => { if (event.pointerId === pointerId) reset(); };
+      const options = { capture: true, passive: true };
+      listen(document, "pointermove", (event) => {
+        if (event.pointerId !== pointerId) return;
+        // 使用按下时的边界，避免缩小后的按钮把边缘触点误判成移出。
+        if (Math.hypot(event.clientX - clientX, event.clientY - clientY) > 10 ||
+            event.clientX < bounds.left || event.clientX > bounds.right ||
+            event.clientY < bounds.top || event.clientY > bounds.bottom) reset();
+      }, options);
+      listen(document, "pointerup", finish, options);
+      listen(document, "pointercancel", finish, options);
+      listen(button, "lostpointercapture", finish);
+      listen(document, "pointerdown", (event) => {
+        if (event.pointerId !== pointerId) reset();
+      }, options);
+      listen(document, "scroll", reset, options);
+      listen(window, "blur", reset);
+      listen(document, "visibilitychange", () => { if (document.hidden) reset(); });
+    };
+    const keydown = (event) => {
+      if (event.key === " " || event.key === "Enter") {
+        reset();
+        button.removeAttribute("data-my-press-input");
+      }
+    };
+    button.addEventListener("pointerdown", down, { passive: true });
+    button.addEventListener("keydown", keydown);
+    const binding = {
+      reset,
+      destroy() {
+        reset();
+        button.removeAttribute("data-my-press-input");
+        button.removeEventListener("pointerdown", down);
+        button.removeEventListener("keydown", keydown);
+        buttonPressBindings.delete(button);
+      },
+    };
+    buttonPressBindings.set(button, binding);
+    return binding;
+  }
+
   // ── 基础组件 ────────────────────────────────────────────────────────
   register("Icon", {
     tag: "svg",
@@ -1106,6 +1171,8 @@
     defaults: { variant: "primary", type: "button" },
     init(c) {
       c.element.classList.add("my-button");
+      c.pressFeedback = bindButtonPress(c.element);
+      c.cleanups.add(() => c.pressFeedback.destroy());
       c.body = el("span", "button-content");
       c.loading = el("span", "button-loading");
       c.element.append(c.body, c.loading);
@@ -1119,6 +1186,7 @@
       });
     },
     paint(c) {
+      if (c.p.disabled || c.p.loading) c.pressFeedback.reset();
       const variants = {
         primary: "primary",
         outline: "outline",
@@ -6843,7 +6911,7 @@
       }
       result.push(mount(element, element.getAttribute("data-my"), options));
     }
-    // 普通语义按钮只加内部样式标记，点击仍然使用浏览器标准事件。
+    // 普通语义按钮共用按压反馈，点击仍然使用浏览器标准事件。
     for (const button of root.querySelectorAll(
       "button.my-button:not([data-my-component])",
     )) {
@@ -6855,6 +6923,7 @@
         scope(button, "Button");
       }
       button.classList.add("my-primary");
+      bindButtonPress(button);
     }
     return result;
   }

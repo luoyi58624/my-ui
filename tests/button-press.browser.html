@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Button 按压反馈回归</title>
+<link rel="stylesheet" href="/packages/core/my-ui.css">
+<script src="/packages/core/my-ui.js"></script>
+<style>
+  main { max-width: 780px; margin: auto; padding: 24px; }
+  #fixture { display: flex; flex-wrap: wrap; gap: 16px; margin: 24px 0; }
+  #result { white-space: pre-wrap; font: 13px/1.7 monospace; }
+</style>
+<main>
+  <h1>Button 按压反馈回归</h1>
+  <button id="run">运行按钮回归</button>
+  <div id="fixture"></div>
+  <pre id="result">尚未运行</pre>
+</main>
+<script type="module">
+  import { createApp, h, nextTick, onUpdated } from 'vue'
+  import { Button } from '/packages/vue/index.ts'
+
+  const fixture = document.querySelector('#fixture'), result = document.querySelector('#result')
+  const results = [], owned = []
+  let app
+  const assert = (value, message) => { if (!value) throw Error(message) }
+  const pressed = button => button.hasAttribute('data-my-pressed')
+  const pointer = (target, type, options = {}) => {
+    const button = target instanceof HTMLButtonElement ? target : fixture.querySelector('button')
+    const box = button.getBoundingClientRect()
+    const event = new PointerEvent(type, {
+      pointerType: 'touch', pointerId: 7, isPrimary: true, button: 0,
+      clientX: box.left + box.width / 2, clientY: box.top + box.height / 2,
+      bubbles: true, cancelable: true, ...options,
+    })
+    target.dispatchEvent(event)
+    return event
+  }
+  const add = (props = {}, options = {}) => {
+    const c = MyUI.create('Button', { label: '保存', ...props }, options)
+    owned.push(c); fixture.append(c.element)
+    return c
+  }
+  const cleanup = () => { app?.unmount(); app = undefined; owned.splice(0).forEach(c => c.destroy()); fixture.replaceChildren() }
+  const check = async (name, test) => {
+    try { cleanup(); await test(); results.push({ name, pass: true }) }
+    catch (error) { results.push({ name, pass: false, error: error.stack }) }
+    finally { cleanup() }
+  }
+
+  document.querySelector('#run').onclick = async () => {
+    results.length = 0
+    await check('七种变体触屏落下立即变色，按压不触发点击或组件重绘', () => {
+      for (const variant of ['primary', 'outline', 'text', 'icon', 'bare', 'round', 'link']) {
+        let clicks = 0, paints = 0
+        const c = add({ variant, onClick: () => clicks++ }, { invalidate: () => paints++ })
+        const before = getComputedStyle(c.element).backgroundColor, previousPaints = paints
+        const event = pointer(c.element, 'pointerdown')
+        assert(pressed(c.element), variant + ' 未立即进入按压态')
+        assert(getComputedStyle(c.element).backgroundColor !== before, variant + ' 背景仍在等待过渡')
+        assert(!event.defaultPrevented && clicks === 0 && paints === previousPaints, '按压阻止默认行为、提前点击或引发重绘')
+        pointer(document, 'pointerup')
+        assert(!pressed(c.element) && clicks === 0, '松手状态未清理或合成了额外点击')
+        c.element.click(); assert(clicks === 1, '原生点击没有恰好执行一次')
+      }
+    })
+    await check('触屏快速缩小，松手恢复原有 160ms 回弹，迟到的 :active 被屏蔽', () => {
+      const button = add().element
+      pointer(button, 'pointerdown')
+      assert(getComputedStyle(button).transitionDuration.split(',')[0] === '0.06s', '按下仍使用慢速动画')
+      pointer(document, 'pointerup')
+      assert(button.hasAttribute('data-my-press-input'), '松手后未屏蔽浏览器迟到的激活态')
+      assert(getComputedStyle(button).transitionDuration.split(',')[0] === '0.16s', '原有回弹动画被改变')
+    })
+    await check('移出原始边界或移动超过 10px 取消，重新移入不会重新按下', () => {
+      const button = add().element, box = button.getBoundingClientRect()
+      pointer(button, 'pointerdown', { clientX: box.left + 1 })
+      pointer(document, 'pointermove', { clientX: box.left + 2, clientY: box.top + box.height / 2 })
+      assert(pressed(button), '缩小后的边界导致误取消')
+      pointer(document, 'pointermove', { clientX: box.left - 1, clientY: box.top + box.height / 2 })
+      assert(!pressed(button), '移出仍保持按压')
+      pointer(document, 'pointermove'); assert(!pressed(button), '移入后重新激活')
+      pointer(button, 'pointerdown'); pointer(document, 'pointermove', { clientY: box.top + box.height / 2 + 11 })
+      assert(!pressed(button), '滑动未取消按压')
+    })
+    await check('取消、失去捕获、滚动、窗口失焦与第二根手指均清理按压态', () => {
+      const button = add().element
+      for (const cancel of [
+        () => pointer(document, 'pointercancel'),
+        () => pointer(button, 'lostpointercapture'),
+        () => fixture.dispatchEvent(new Event('scroll')),
+        () => window.dispatchEvent(new Event('blur')),
+        () => pointer(document, 'pointerdown', { pointerId: 8, isPrimary: false }),
+      ]) {
+        pointer(button, 'pointerdown'); cancel(); assert(!pressed(button), '取消后残留按压态')
+      }
+      pointer(button, 'pointerdown'); pointer(document, 'pointerup', { pointerId: 8 })
+      assert(pressed(button), '其他指针的抬起清除了当前按压')
+      pointer(document, 'pointerup')
+    })
+    await check('禁用与加载均不能按压，按压中切换状态立即恢复', () => {
+      for (const key of ['disabled', 'loading']) {
+        let clicks = 0
+        const c = add({ [key]: true, onClick: () => clicks++ })
+        pointer(c.element, 'pointerdown'); c.element.click()
+        assert(!pressed(c.element) && clicks === 0, key + ' 仍可按压或点击')
+        c.update({ [key]: false }); pointer(c.element, 'pointerdown')
+        assert(pressed(c.element), '恢复可用后不能按压')
+        c.update({ [key]: true }); assert(!pressed(c.element), key + ' 未清理当前按压')
+      }
+    })
+    await check('触摸后使用鼠标、空格或 Enter，重新启用原生 :active', () => {
+      const button = add().element
+      for (const resume of [
+        () => pointer(button, 'pointerdown', { pointerType: 'mouse' }),
+        () => button.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true })),
+        () => button.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })),
+      ]) {
+        pointer(button, 'pointerdown'); pointer(document, 'pointerup'); resume()
+        assert(!pressed(button) && !button.hasAttribute('data-my-press-input'), '原生交互仍被屏蔽')
+      }
+    })
+    await check('反复按压不会积累组件清理项，销毁后不再响应指针', () => {
+      const element = document.createElement('button'), c = add({}, { element })
+      const before = c.cleanups.size
+      for (let i = 0; i < 40; i++) { pointer(element, 'pointerdown'); pointer(document, 'pointerup') }
+      assert(c.cleanups.size === before, '每次按压增加了常驻清理项')
+      pointer(element, 'pointerdown'); c.destroy()
+      assert(!pressed(element) && !element.hasAttribute('data-my-press-input'), '销毁残留样式')
+      pointer(element, 'pointerdown'); assert(!pressed(element), '销毁后监听仍存在')
+    })
+    await check('普通 HTML 按钮重复初始化仍可按压，标准表单提交保持原行为', () => {
+      const form = document.createElement('form'), button = document.createElement('button')
+      button.className = 'my-button'; button.type = 'submit'; button.textContent = '提交'
+      form.append(button); fixture.append(form); MyUI.init(fixture); MyUI.init(fixture)
+      let submits = 0
+      form.onsubmit = event => { event.preventDefault(); submits++ }
+      pointer(button, 'pointerdown'); assert(pressed(button) && submits === 0, '普通 HTML 按压失效或提前提交')
+      pointer(document, 'pointerup'); button.click(); assert(submits === 1, '原生表单提交被重复或阻止')
+    })
+    await check('Vue 薄封装共用触屏反馈，按下和抬起不触发 Vue 更新', async () => {
+      let updates = 0, clicks = 0
+      app = createApp({ setup() { onUpdated(() => updates++); return () => h(Button, { onClick: () => clicks++ }, () => 'Vue 按钮') } })
+      app.mount(fixture); await nextTick(); await nextTick()
+      const button = fixture.querySelector('button'), before = updates
+      pointer(button, 'pointerdown'); assert(pressed(button), 'Vue 按压未立即生效')
+      await nextTick(); pointer(document, 'pointerup'); await nextTick()
+      assert(updates === before && clicks === 0 && !pressed(button), '反馈触发了 Vue 更新或业务点击')
+      button.click(); assert(clicks === 1, 'Vue 原生点击失效')
+    })
+    result.textContent = JSON.stringify({ passed: results.filter(item => item.pass).length, total: results.length, results }, null, 2)
+    const demo = add({ label: '测试原生鼠标与键盘', onClick: () => demo.element.dataset.clicks = String(Number(demo.element.dataset.clicks ?? 0) + 1) })
+    demo.element.id = 'native-button'
+  }
+</script>
+</html>

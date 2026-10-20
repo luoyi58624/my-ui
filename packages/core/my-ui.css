@@ -351,82 +351,82 @@ button[data-my-button]:disabled {
 }
 .my-button[data-my-button]:not(.my-text-only):not(:disabled):not(
     .my-is-loading
-  ):active {
+  ):is(:active:not([data-my-press-input]), [data-my-pressed]) {
   transform: scale(0.95);
 }
 .my-icon-button[data-my-button]:not(.my-bare-icon):not(.my-is-loading):not(
     :disabled
-  ):active {
+  ):is(:active:not([data-my-press-input]), [data-my-pressed]) {
   transform: scale(0.95);
   background-color: var(--press);
 }
-.my-round-arrow[data-my-button]:not(.my-is-loading):not(:disabled):active {
+.my-round-arrow[data-my-button]:not(.my-is-loading):not(:disabled):is(:active:not([data-my-press-input]), [data-my-pressed]) {
   transform: scale(0.95);
   background-color: var(--press);
 }
 .my-button.my-primary[data-my-button]:not(.my-is-loading):not(
     :disabled
-  ):active {
+  ):is(:active:not([data-my-press-input]), [data-my-pressed]) {
   background-color: color-mix(in srgb, var(--primary) 86%, #000);
 }
 .my-button.my-outline[data-my-button]:not(.my-is-loading):not(
     :disabled
-  ):active {
+  ):is(:active:not([data-my-press-input]), [data-my-pressed]) {
   background-color: var(--press);
 }
 .my-button.my-text-only[data-my-button]:not(.my-is-loading):not(
     :disabled
-  ):active {
+  ):is(:active:not([data-my-press-input]), [data-my-pressed]) {
   background-color: var(--press);
   transition-duration: 0s;
   transform: none;
 }
 .my-icon-button.my-bare-icon[data-my-button]:not(.my-is-loading):not(
     :disabled
-  ):active {
+  ):is(:active:not([data-my-press-input]), [data-my-pressed]) {
   background-color: var(--press);
   transition-duration: 0s;
   transform: none;
 }
-.my-underlink[data-my-button]:not(.my-is-loading):not(:disabled):active {
+.my-underlink[data-my-button]:not(.my-is-loading):not(:disabled):is(:active:not([data-my-press-input]), [data-my-pressed]) {
   background-color: var(--press);
   transition-duration: 0s;
   transform: none;
+}
+/* 触屏落下立即变色，缩放快速响应；松手后恢复各变体原有的回弹动画。 */
+button[data-my-button][data-my-pressed]:not(:disabled):not(.my-is-loading) {
+  transition-duration: 60ms, 0s, 0s, 0s;
 }
 @media (hover: hover) and (pointer: fine) {
   .my-button.my-primary[data-my-button]:not(.my-is-loading):not(
       :disabled
-    ):hover:not(:active) {
+    ):hover:not(:is(:active:not([data-my-press-input]), [data-my-pressed])) {
     background-color: color-mix(in srgb, var(--primary) 94%, #000);
   }
   .my-button.my-outline[data-my-button]:not(.my-is-loading):not(
       :disabled
-    ):hover:not(:active) {
+    ):hover:not(:is(:active:not([data-my-press-input]), [data-my-pressed])) {
     background-color: var(--hover);
   }
-  .my-round-arrow[data-my-button]:not(.my-is-loading):not(:disabled):hover:not(
-      :active
-    ) {
+  .my-round-arrow[data-my-button]:not(.my-is-loading):not(:disabled):hover:not(:is(:active:not([data-my-press-input]), [data-my-pressed])) {
     background-color: var(--hover);
   }
   .my-icon-button[data-my-button]:not(.my-bare-icon):not(.my-is-loading):not(
       :disabled
-    ):hover:not(:active) {
+    ):hover:not(:is(:active:not([data-my-press-input]), [data-my-pressed])) {
     background-color: var(--hover);
   }
   .my-button.my-text-only[data-my-button]:not(.my-is-loading):not(
       :disabled
-    ):hover:not(:active) {
+    ):hover:not(:is(:active:not([data-my-press-input]), [data-my-pressed])) {
     background-color: var(--hover);
   }
   .my-icon-button.my-bare-icon[data-my-button]:not(.my-is-loading):not(
       :disabled
-    ):hover:not(:active) {
+    ):hover:not(:is(:active:not([data-my-press-input]), [data-my-pressed])) {
     background-color: var(--hover);
   }
-  .my-underlink[data-my-button]:not(.my-is-loading):not(:disabled):hover:not(
-      :active
-    ) {
+  .my-underlink[data-my-button]:not(.my-is-loading):not(:disabled):hover:not(:is(:active:not([data-my-press-input]), [data-my-pressed])) {
     background-color: var(--hover);
   }
 }
