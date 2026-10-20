@@ -8,6 +8,7 @@
   ],
   "permissions": [
     "core:default",
-    "store:default"
+    "store:default",
+    "native-components:allow-set-window-appearance"
   ]
 }

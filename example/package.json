@@ -21,7 +21,6 @@
     "vue-router": "4.6.4",
     "vue": "3.5.43",
     "tauri-plugin-android-system-font-weight": "file:../../../tauri/plugins/tauri-plugin-android-system-font-weight",
-    "tauri-plugin-native-router": "file:../../../tauri/plugins/tauri-plugin-native-router",
     "tauri-plugin-native-components": "file:../../../tauri/plugins/tauri-plugin-native-components"
   },
   "devDependencies": {

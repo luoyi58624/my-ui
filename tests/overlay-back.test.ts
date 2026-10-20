@@ -1,11 +1,10 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { installNativeOverlayBack } from '../example/src/overlay-back'
 import test from 'node:test'
 
 const settle = async () => { for (let i = 0; i < 16; i++) await Promise.resolve() }
-let instance = 0
 async function withRuntime(run: (api: any) => Promise<void>) {
-  const previous = new Map(['window', 'navigator', 'MyUI'].map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]))
+  const previous = new Map(['window', 'navigator', 'MyUI', 'isTauri'].map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]))
   const runtime = Object.assign(new EventTarget(), { __TAURI__: { core: { invoke: (command: string, args: any) => {
     calls.push({ command, ...args })
     return respond(args.enabled)
@@ -16,11 +15,10 @@ async function withRuntime(run: (api: any) => Promise<void>) {
   const agent = { userAgent: 'Android' }
   for (const [key, value] of Object.entries({ window: runtime, navigator: agent, MyUI: { layers } }))
     Object.defineProperty(globalThis, key, { configurable: true, value })
+  Object.defineProperty(runtime, '__TAURI_INTERNALS__', { get: () => runtime.__TAURI__?.core })
+  Object.defineProperty(globalThis, 'isTauri', { configurable: true, get: () => Boolean(runtime.__TAURI__) })
   try {
-    const source = readFileSync(new URL('../example/src/overlay-back.ts', import.meta.url), 'utf8')
-    const js = new Bun.Transpiler({ loader: 'ts' }).transformSync(source) + '\n// instance ' + ++instance
-    const api = await import('data:text/javascript;base64,' + Buffer.from(js).toString('base64'))
-    await run({ ...api, calls, runtime, agent, emit: (active: boolean) => listener?.(active), respond: (next: typeof respond) => { respond = next } })
+    await run({ installNativeOverlayBack, calls, runtime, agent, emit: (active: boolean) => listener?.(active), respond: (next: typeof respond) => { respond = next } })
   } finally {
     for (const [key, descriptor] of previous) {
       if (descriptor) Object.defineProperty(globalThis, key, descriptor)
@@ -32,7 +30,7 @@ async function withRuntime(run: (api: any) => Promise<void>) {
 test('当前 WebView 的弹层打开和退出完成分别启用、释放原生返回', () => withRuntime(async api => {
   const stop = api.installNativeOverlayBack()
   await settle(); api.emit(true); await settle(); api.emit(false); await settle()
-  assert.deepEqual(api.calls, [false, true, false].map(enabled => ({ command: 'set_overlay_back_enabled', enabled })))
+  assert.deepEqual(api.calls, [false, true, false].map(enabled => ({ command: 'plugin:native-components|set_back_handler', enabled })))
   stop(); await settle()
 }))
 

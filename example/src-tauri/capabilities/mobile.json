@@ -6,7 +6,6 @@
   "windows": ["main", "native-page-*"],
   "permissions": [
     "android-system-font-weight:default",
-    "native-router:default",
     "native-components:default"
   ]
 }

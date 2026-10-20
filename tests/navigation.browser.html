@@ -18,7 +18,7 @@ if(new URLSearchParams(location.search).has('frame')){
     Object.defineProperty(win.navigator,'userAgent',{configurable:true,value:android?'Mozilla/5.0 Android':'Mozilla/5.0 Windows NT'});
     win.isTauri=true;
     // 只记录导航命令；主题和系统栏同步可在路由变化时独立触发。
-    win.__TAURI_INTERNALS__={invoke:(command,args)=>{if(!command.startsWith('plugin:native-router|'))return Promise.resolve();calls.push({command,args});return respond(command,args)}};
+    win.__TAURI_INTERNALS__={invoke:(command,args)=>{if(!/^plugin:native-components\|(push|back)$/.test(command))return Promise.resolve();calls.push({command,args});return respond(command,args)}};
     win.__TAURI__={core:{invoke:win.__TAURI_INTERNALS__.invoke}};
   }
   const click=id=>doc.querySelector('[data-demo-link="'+id+'"]').click();
@@ -34,7 +34,7 @@ if(new URLSearchParams(location.search).has('frame')){
       await load('start=1#/home');calls.length=0;
       await check('首页列表调用原生打开命令并携带正确地址与标题，父页保持原位',async()=>{
         const home=doc.querySelector('[data-demo-page="home"]');home.scrollTop=440;click('button');await until(()=>calls.length===1,'没有调用原生跳转');await pause(70);
-        assert(calls[0].command==='plugin:native-router|push'&&calls[0].args.path.endsWith('#/example/button')&&calls[0].args.title==='Button 按钮','地址或标题未传递');
+        assert(calls[0].command==='plugin:native-components|push'&&calls[0].args.path.endsWith('#/example/button')&&calls[0].args.title==='Button 按钮','地址或标题未传递');
         assert(win.location.hash==='#/home'&&!home.inert&&home.scrollTop===440,'父页面发生网页切换或丢失位置');assert(!doc.querySelector('.demo-detail'),'父页挂载了子页示例');
       });
       await check('原生创建未完成时连续点击只请求一次，完成后可以再打开',async()=>{
@@ -48,7 +48,7 @@ if(new URLSearchParams(location.search).has('frame')){
       await check('独立子页显示目标内容，返回调用原生关闭且不改网页历史',async()=>{
         await load('child=1&pageWindow=1#/example/image');win.location.hash='#/example/button';await until(()=>doc.querySelector('.demo-top [aria-label="返回上一页"]'),'子页没有原生返回入口');
         assert(doc.querySelector('.demo-detail:not([inert])').textContent.includes('主要按钮'),'没有渲染目标示例');assert(win.getComputedStyle(doc.querySelector('.nc-tabs-navigation')).display==='none','子页仍显示主 Tab');
-        const count=calls.length,hash=win.location.hash;doc.querySelector('.demo-top [aria-label="返回上一页"]').click();await pause(80);assert(calls.length===count+1&&calls.at(-1).command==='plugin:native-router|back','返回没有关闭当前原生子页');assert(win.location.hash===hash,'返回修改了子页网页路由');
+        const count=calls.length,hash=win.location.hash;doc.querySelector('.demo-top [aria-label="返回上一页"]').click();await pause(80);assert(calls.length===count+1&&calls.at(-1).command==='plugin:native-components|back','返回没有关闭当前原生子页');assert(win.location.hash===hash,'返回修改了子页网页路由');
       });
       await check('主窗口直接访问组件旧链接，返回只回目录而不会误关主窗口',async()=>{
         await load('direct=1#/example/button');const count=calls.length;doc.querySelector('.demo-top [aria-label="返回组件列表"]').click();await until(()=>win.location.hash==='#/home','没有回到主目录');assert(calls.length===count,'主窗口错误调用了关闭命令');
