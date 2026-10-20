@@ -32,7 +32,7 @@ const emit = defineEmits<{
 .doc-outline {
   position: fixed;
   top: calc(96px + env(safe-area-inset-top));
-  right: max(24px, calc((100% - var(--doc-layout-width, 1040px)) / 2), env(safe-area-inset-right));
+  right: max(32px, env(safe-area-inset-right));
   z-index: 10;
   width: var(--doc-outline-width, 192px);
   min-width: 0;

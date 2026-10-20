@@ -1,108 +1,335 @@
-<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>my-ui 示例代码与入门指南检查</title>
-<style>body{font:14px system-ui;margin:20px;background:#f2f3f5;color:#17191e}iframe{display:block;width:390px;height:844px;border:1px solid #ddd;margin-top:20px}pre{white-space:pre-wrap}</style>
-<main><h1>示例代码与入门指南</h1><button id="run">运行定向检查</button><pre id="result">尚未运行</pre><div id="fixture"></div></main>
-<script type="module">
-if(new URLSearchParams(location.search).has('frame')){
-  document.body.innerHTML='<div id="app"></div>';
-  const base=document.createElement('base');base.href='/example/';document.head.append(base);
-  await import('/example/src/main.ts');
-}else{
-  const reports=[],pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-  const assert=(value,message)=>{if(!value)throw Error(message)};
-  const until=async(check,message='等待页面超时')=>{const start=performance.now();while(!check()){if(performance.now()-start>15000)throw Error(message);await pause(30)}};
-  const check=async(name,run)=>{document.querySelector('#result').textContent='运行中：'+name;await run();reports.push({name,passed:true})};
-  let frame,doc,win;
-  const route=async path=>{win.location.hash=path;await pause(140)};
-  const code=()=>doc.querySelector('.demo-code code');
-  const toggle=()=>doc.querySelector('.demo-code-files summary');
-  document.querySelector('#run').onclick=async()=>{
-    document.querySelector('#run').disabled=true;reports.length=0;
-    try{
-      frame=document.createElement('iframe');frame.src='/tests/demo-code.browser.html?frame=1#/home';frame.title='代码展示检查';document.querySelector('#fixture').replaceChildren(frame);
-      await until(()=>frame.contentDocument?.querySelector('[data-demo-link="quick-start"]'));
-      doc=frame.contentDocument;win=frame.contentWindow;
-      await check('首页提供两份指南，进入后可返回目录',async()=>{
-        doc.querySelector('[data-demo-link="quick-start"]').click();await until(()=>doc.querySelector('[data-guide="quick-start"]'));
-        assert(doc.querySelector('main h1')?.textContent==='快速开始','基础指南标题错误');
-        await until(()=>code()?.textContent.includes('src/'),'入门代码未加载');
-        assert(doc.querySelectorAll('.guide-section').length===6,'基础用法章节缺失');
-        doc.querySelector('[aria-label="返回组件目录"]').click();await until(()=>doc.querySelector('.demo-page:not([inert])')?.dataset.demoPage==='home');
-        doc.querySelector('[data-demo-link="native-integration"]').click();await until(()=>doc.querySelector('[data-guide="native"]'));
-        assert(doc.querySelectorAll('.guide-section').length===7,'原生接入章节缺失');
-        await until(()=>code()?.textContent.includes('tauri-plugin-native-components'),'原生配置未加载');
-        for(const [name,content]of[['src-tauri/Cargo.toml','[dependencies]'],['src-tauri/src/lib.rs','pub fn run()'],['src-tauri/capabilities/mobile.json','native-components:default']]){
-          [...doc.querySelectorAll('.demo-code-file-list button')].find(button=>button.textContent===name).click();
-          await until(()=>code()?.textContent.includes(content)&&code().querySelector('[class^="hljs-"]'),'配置代码没有高亮：'+name);
+<!doctype html>
+<html lang="zh-CN">
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>my-ui 示例代码与入门指南检查</title>
+  <style>
+    body {
+      font: 14px system-ui;
+      margin: 20px;
+      background: #f2f3f5;
+      color: #17191e;
+    }
+    iframe {
+      display: block;
+      width: 390px;
+      height: 844px;
+      border: 1px solid #ddd;
+      margin-top: 20px;
+    }
+    pre {
+      white-space: pre-wrap;
+    }
+  </style>
+  <main>
+    <h1>示例代码与入门指南</h1>
+    <button id="run">运行定向检查</button>
+    <pre id="result">尚未运行</pre>
+    <div id="fixture"></div>
+  </main>
+  <script type="module">
+    if (new URLSearchParams(location.search).has('frame')) {
+      document.body.innerHTML = '<div id="app"></div>'
+      const base = document.createElement('base')
+      base.href = '/example/'
+      document.head.append(base)
+      await import('/example/src/main.ts')
+    } else {
+      const reports = [],
+        pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+      const assert = (value, message) => {
+        if (!value) throw Error(message)
+      }
+      const until = async (check, message = '等待页面超时') => {
+        const start = performance.now()
+        while (!check()) {
+          if (performance.now() - start > 15000) throw Error(message)
+          await pause(30)
         }
-      });
-      await check('示例页面直接展示可折叠代码，展开后包含导入、状态与模板',async()=>{
-        await route('/example/button');await until(()=>doc.querySelector('.demo-detail:not([inert]) .demo-code-files'));
-        const detail=doc.querySelector('.demo-detail:not([inert])'),fold=detail.querySelector('[data-example="button-basic"] details');
-        assert(detail.querySelectorAll('[data-example]').length===3,'按钮示例没有分别对应代码');
-        assert(!detail.querySelector('.example-code'),'页面底部仍然堆放总代码');
-        assert(!fold.open&&!fold.querySelector('.demo-code'),'代码没有按需展开');
-        fold.querySelector('summary').click();await until(()=>code()?.querySelector('.hljs-tag'),'Vue 代码没有高亮');
-        assert(code().textContent.includes("from '@my-ui/vue'")&&code().textContent.includes('const toast')&&code().textContent.includes('<template>'),'代码缺少必要上下文');
-        assert(!code().textContent.includes('const liked')&&!code().textContent.includes('<Menu'),'基础按钮混入其他示例代码');
-        assert(!code().querySelector('script,button,template'),'展示的源码被执行为 DOM');
-        fold.querySelector('summary').click();await until(()=>!fold.open&&!fold.querySelector('.demo-code'),'折叠没有隐藏内容');
-        fold.querySelector('summary').click();await until(()=>code()?.querySelector('.hljs-tag'),'重新展开丢失代码');
-      });
-      await check('Atom One Dark 固定暗色，应用主题切换不改变代码配色',async()=>{
-        for(const theme of['light','dark']){
-          doc.documentElement.dataset.theme=theme;await pause(50);
-          assert(win.getComputedStyle(code()).backgroundColor==='rgb(40, 44, 52)','代码背景不符合 Atom One Dark');
-          assert(win.getComputedStyle(code().querySelector('.hljs-keyword')).color==='rgb(198, 120, 221)','关键字未使用 Atom 高亮');
+      }
+      const check = async (name, run) => {
+        document.querySelector('#result').textContent = '运行中：' + name
+        await run()
+        reports.push({ name, passed: true })
+      }
+      let frame, doc, win
+      const route = async (path) => {
+        win.location.hash = path
+        await pause(140)
+      }
+      const code = () => doc.querySelector('.demo-code code')
+      const toggle = () => doc.querySelector('.demo-code-files summary')
+      document.querySelector('#run').onclick = async () => {
+        document.querySelector('#run').disabled = true
+        reports.length = 0
+        try {
+          frame = document.createElement('iframe')
+          frame.src = '/tests/demo-code.browser.html?frame=1#/home'
+          frame.title = '代码展示检查'
+          document.querySelector('#fixture').replaceChildren(frame)
+          await until(() => frame.contentDocument?.querySelector('[data-demo-link="quick-start"]'))
+          doc = frame.contentDocument
+          win = frame.contentWindow
+          await check('首页提供两份指南，进入后可返回目录', async () => {
+            doc.querySelector('[data-demo-link="quick-start"]').click()
+            await until(() => doc.querySelector('[data-guide="quick-start"]'))
+            assert(doc.querySelector('main h1')?.textContent === '快速开始', '基础指南标题错误')
+            await until(() => code()?.textContent.includes('src/'), '入门代码未加载')
+            assert(doc.querySelectorAll('.guide-section').length === 6, '基础用法章节缺失')
+            assert(
+              [...doc.querySelectorAll('.guide-page details')].every((fold) => fold.open),
+              '快速开始没有默认展开全部代码'
+            )
+            doc.querySelector('[aria-label="返回组件目录"]').click()
+            await until(
+              () => doc.querySelector('.demo-page:not([inert])')?.dataset.demoPage === 'home'
+            )
+            doc.querySelector('[data-demo-link="native-integration"]').click()
+            await until(() => doc.querySelector('[data-guide="native"]'))
+            assert(doc.querySelectorAll('.guide-section').length === 7, '原生接入章节缺失')
+            assert(
+              [...doc.querySelectorAll('.guide-page details')].every((fold) => fold.open),
+              '集成原生没有默认展开全部代码'
+            )
+            await until(
+              () => code()?.textContent.includes('tauri-plugin-native-components'),
+              '原生配置未加载'
+            )
+            for (const [name, content] of [
+              ['src-tauri/Cargo.toml', '[dependencies]'],
+              ['src-tauri/src/lib.rs', 'pub fn run()'],
+              ['src-tauri/capabilities/mobile.json', 'native-components:default']
+            ]) {
+              ;[...doc.querySelectorAll('.demo-code-file-list button')]
+                .find((button) => button.textContent === name)
+                .click()
+              await until(
+                () =>
+                  code()?.textContent.includes(content) && code().querySelector('[class^="hljs-"]'),
+                '配置代码没有高亮：' + name
+              )
+            }
+          })
+          await check('组件文档只默认展开第一例代码，并支持手动收起和重开', async () => {
+            await route('/example/button')
+            await until(() => doc.querySelector('.demo-detail:not([inert]) .demo-code-files'))
+            const detail = doc.querySelector('.demo-detail:not([inert])'),
+              fold = detail.querySelector('[data-example="button-basic"] details')
+            assert(
+              detail.querySelectorAll('[data-example]').length === 3,
+              '按钮示例没有分别对应代码'
+            )
+            assert(!detail.querySelector('.example-code'), '页面底部仍然堆放总代码')
+            assert(fold.open, '第一例代码没有默认展开')
+            assert(
+              [...detail.querySelectorAll('details')].slice(1).every((item) => !item.open),
+              '其他示例代码没有默认收起'
+            )
+            await until(() => code()?.querySelector('.hljs-tag'), 'Vue 代码没有高亮')
+            assert(
+              code().textContent.includes("from '@my-ui/vue'") &&
+                code().textContent.includes('const toast') &&
+                code().textContent.includes('<template>'),
+              '代码缺少必要上下文'
+            )
+            assert(
+              !code().textContent.includes('const liked') && !code().textContent.includes('<Menu'),
+              '基础按钮混入其他示例代码'
+            )
+            assert(!code().querySelector('script,button,template'), '展示的源码被执行为 DOM')
+            fold.querySelector('summary').click()
+            await until(() => !fold.open && !fold.querySelector('.demo-code'), '折叠没有隐藏内容')
+            fold.querySelector('summary').click()
+            await until(() => code()?.querySelector('.hljs-tag'), '重新展开丢失代码')
+          })
+          await check('Atom One Dark 固定暗色，应用主题切换不改变代码配色', async () => {
+            for (const theme of ['light', 'dark']) {
+              doc.documentElement.dataset.theme = theme
+              await pause(50)
+              assert(
+                win.getComputedStyle(code()).backgroundColor === 'rgb(40, 44, 52)',
+                '代码背景不符合 Atom One Dark'
+              )
+              assert(
+                win.getComputedStyle(code().querySelector('.hljs-keyword')).color ===
+                  'rgb(198, 120, 221)',
+                '关键字未使用 Atom 高亮'
+              )
+            }
+            assert(
+              ![...doc.querySelectorAll('link[rel="stylesheet"]')].some((link) =>
+                /cdn.jsdelivr/.test(link.href)
+              ),
+              '代码主题依赖 CDN'
+            )
+            doc.documentElement.dataset.theme = 'light'
+          })
+          await check('复制调用展示库并保留原始源码，键盘可操作复制入口', async () => {
+            let copied = ''
+            const original = Object.getOwnPropertyDescriptor(win.navigator, 'clipboard')
+            Object.defineProperty(win.navigator, 'clipboard', {
+              configurable: true,
+              value: {
+                writeText: async (text) => {
+                  copied = text
+                }
+              }
+            })
+            try {
+              const button = doc.querySelector('.demo-code-copy')
+              button.focus()
+              assert(doc.activeElement === button, '复制按钮不能聚焦')
+              button.click()
+              await until(() => button.textContent.includes('已复制'))
+              assert(
+                copied === code().textContent && !copied.includes('hljs-'),
+                '复制内容不是原始源码'
+              )
+            } finally {
+              if (original) Object.defineProperty(win.navigator, 'clipboard', original)
+              else Reflect.deleteProperty(win.navigator, 'clipboard')
+            }
+          })
+          await check('相关文件可切换，所有组件目录都有可读取的代码', async () => {
+            await route('/code/popup')
+            await until(() => code()?.textContent.includes('DrawerExample'))
+            const fileButton = [
+              ...doc.querySelectorAll('.code-page .demo-code-file-list button')
+            ].find((button) => button.textContent === 'DrawerExample.vue')
+            const files = fileButton.closest('details')
+            fileButton.click()
+            await until(
+              () => files.querySelector('code')?.textContent.includes('FormField'),
+              '切换文件后代码未更新'
+            )
+            const { demoExamples } = await import('/example/src/demo/catalog.ts')
+            const { exampleCode } = await import('/example/src/demo/code/examples.ts')
+            for (const item of demoExamples.filter((item) => !item.path?.startsWith('/guide/'))) {
+              const files = exampleCode(item.id)
+              assert(files.length > 0, '示例缺少代码：' + item.id)
+              for (const file of files) {
+                const source = typeof file.source === 'string' ? file.source : await file.source()
+                assert(source.trim().length > 20, '代码为空：' + file.name)
+              }
+            }
+            const { guides } = await import('/example/src/demo/code/guides.ts')
+            for (const guide of Object.values(guides))
+              for (const section of guide.sections)
+                for (const file of section.files ?? []) {
+                  const source = typeof file.source === 'string' ? file.source : await file.source()
+                  assert(source.trim().length > 20, '指南文件为空：' + file.name)
+                }
+          })
+          await check('原生示例移除导航栏代码入口，页面操作和刷新保持正常', async () => {
+            await route('/native/app-bar')
+            await until(() => doc.querySelector('[data-component-demo="app-bar"]'))
+            const native = doc.querySelector('[data-component-demo="app-bar"]')
+            assert(!native.querySelector('[aria-label="查看代码"]'), '原生示例仍有导航栏代码入口')
+            native.querySelector('[aria-label="页面操作"]').click()
+            await until(() => native.textContent.includes('已点击页面操作'), '页面操作未响应')
+            await route('/page-refresh')
+            await until(() => doc.querySelector('.refresh-demo'))
+            assert(
+              !doc.querySelector('.refresh-demo [aria-label="查看代码"]'),
+              '刷新示例仍有导航栏代码入口'
+            )
+            ;[...doc.querySelectorAll('.refresh-demo button')]
+              .find((button) => button.textContent.trim() === '刷新动态')
+              .click()
+            await until(
+              () => doc.querySelector('.refresh-demo').textContent.includes('已更新 1 次'),
+              '刷新入口受代码操作影响'
+            )
+          })
+          await check('窄屏与桌面代码均完整展开，只保留横向滚动', async () => {
+            for (const width of [320, 390, 1100]) {
+              frame.style.width = width + 'px'
+              await route('/code/popup')
+              await until(() =>
+                doc.querySelector('.code-page code')?.textContent.includes('<template>')
+              )
+              const root = doc.querySelector('.code-page'),
+                pre = code().closest('pre')
+              assert(root.scrollWidth <= win.innerWidth + 1, '代码页横向溢出：' + width)
+              const style = win.getComputedStyle(pre)
+              assert(
+                style.maxHeight === 'none' &&
+                  style.overflowX === 'auto' &&
+                  style.overflowY === 'hidden',
+                '代码仍限制高度或启用垂直滚动'
+              )
+              assert(pre.scrollHeight <= pre.clientHeight + 1, '长代码没有完整展开')
+              await route('/guide/native')
+              await until(() => doc.querySelector('[data-guide="native"]'))
+              assert(
+                doc.querySelector('.guide-page').scrollWidth <= win.innerWidth + 1,
+                '指南横向溢出：' + width
+              )
+            }
+          })
+          await check('两份指南使用居中正文与固定目录，移动端隐藏目录', async () => {
+            for (const path of ['/guide/quick-start', '/guide/native']) {
+              await route(path)
+              await until(() => doc.querySelector('.guide-content .doc-outline a'))
+              assert(!doc.querySelector('.guide-contents'), '仍有横排目录按钮')
+              for (const width of [1463, 390]) {
+                frame.style.width = width + 'px'
+                await pause(80)
+                const root = doc.querySelector('.guide-page'),
+                  outline = root.querySelector('.doc-outline'),
+                  body = root.querySelector('.guide-intro').getBoundingClientRect()
+                assert(body.width <= 801, '指南正文过宽')
+                if (width === 390) {
+                  assert(win.getComputedStyle(outline).display === 'none', '移动端仍显示目录')
+                  assert(
+                    Math.abs((body.left + body.right) / 2 - win.innerWidth / 2) < 16,
+                    '移动端正文没有居中'
+                  )
+                  continue
+                }
+                const bounds = outline.getBoundingClientRect()
+                assert(win.getComputedStyle(outline).position === 'fixed', '指南目录没有固定')
+                assert(body.right + 24 < bounds.left, '指南正文与目录重叠')
+                assert(
+                  Math.abs((body.left + body.right) / 2 - win.innerWidth / 2) < 16,
+                  '指南正文没有独立居中'
+                )
+                assert(
+                  Math.abs(win.innerWidth - bounds.right - 32) < 1,
+                  '指南目录偏离屏幕右侧原有位置'
+                )
+                const scroller = root.querySelector('.nc-page-scroll')
+                scroller.scrollTop = 200
+                await pause(60)
+                assert(
+                  Math.abs(outline.getBoundingClientRect().top - bounds.top) < 1,
+                  '正文滚动带走了指南目录'
+                )
+                const hash = win.location.hash,
+                  last = [...outline.querySelectorAll('a')].at(-1)
+                last.click()
+                await pause(60)
+                assert(
+                  win.location.hash === hash && last.getAttribute('aria-current') === 'location',
+                  '指南目录没有定位对应章节'
+                )
+              }
+            }
+          })
+          document.querySelector('#result').textContent = JSON.stringify(
+            { passed: reports.length, total: 8, reports },
+            null,
+            2
+          )
+        } catch (error) {
+          document.querySelector('#result').textContent = JSON.stringify(
+            { passed: reports.length, error: String(error.stack || error), reports },
+            null,
+            2
+          )
+        } finally {
+          document.querySelector('#run').disabled = false
         }
-        assert(![...doc.querySelectorAll('link[rel="stylesheet"]')].some(link=>/cdn.jsdelivr/.test(link.href)),'代码主题依赖 CDN');
-        doc.documentElement.dataset.theme='light';
-      });
-      await check('复制调用展示库并保留原始源码，键盘可操作复制入口',async()=>{
-        let copied='';const original=Object.getOwnPropertyDescriptor(win.navigator,'clipboard');
-        Object.defineProperty(win.navigator,'clipboard',{configurable:true,value:{writeText:async text=>{copied=text}}});
-        try{
-          const button=doc.querySelector('.demo-code-copy');button.focus();assert(doc.activeElement===button,'复制按钮不能聚焦');
-          button.click();await until(()=>button.textContent.includes('已复制'));
-          assert(copied===code().textContent&&!copied.includes('hljs-'),'复制内容不是原始源码');
-        }finally{if(original)Object.defineProperty(win.navigator,'clipboard',original);else Reflect.deleteProperty(win.navigator,'clipboard')}
-      });
-      await check('相关文件可切换，所有组件目录都有可读取的代码',async()=>{
-        await route('/code/popup');await until(()=>code()?.textContent.includes('DrawerExample'));
-        [...doc.querySelectorAll('.demo-code-file-list button')].find(button=>button.textContent==='DrawerExample.vue').click();
-        await until(()=>code()?.textContent.includes('FormField'),'切换文件后代码未更新');
-        const {demoExamples}=await import('/example/src/demo/catalog.ts');
-        const {exampleCode}=await import('/example/src/demo/code/examples.ts');
-        for(const item of demoExamples.filter(item=>!item.path?.startsWith('/guide/'))){
-          const files=exampleCode(item.id);assert(files.length>0,'示例缺少代码：'+item.id);
-          for(const file of files){const source=typeof file.source==='string'?file.source:await file.source();assert(source.trim().length>20,'代码为空：'+file.name)}
-        }
-        const {guides}=await import('/example/src/demo/code/guides.ts');
-        for(const guide of Object.values(guides))for(const section of guide.sections)for(const file of section.files??[]){const source=typeof file.source==='string'?file.source:await file.source();assert(source.trim().length>20,'指南文件为空：'+file.name)}
-      });
-      await check('原生示例提供独立代码入口，返回保留示例交互',async()=>{
-        await route('/native/app-bar');await until(()=>doc.querySelector('[data-component-demo="app-bar"]'));
-        doc.querySelector('[aria-label="查看代码"]').click();await until(()=>code()?.textContent.includes('NavigationAction'),'原生导航代码未展示');
-        doc.querySelector('[aria-label="返回示例"]').click();await until(()=>doc.querySelector('[data-component-demo="app-bar"]'));
-        await route('/page-refresh');await until(()=>doc.querySelector('.refresh-demo'));
-        doc.querySelector('[aria-label="查看代码"]').click();await until(()=>code()?.textContent.includes('finally'),'刷新用法未展示');
-        doc.querySelector('[aria-label="返回示例"]').click();await until(()=>doc.querySelector('.refresh-demo'));
-        [...doc.querySelectorAll('.refresh-demo button')].find(button=>button.textContent.trim()==='刷新动态').click();
-        await until(()=>doc.querySelector('.refresh-demo').textContent.includes('已更新 1 次'),'刷新入口受代码操作影响');
-      });
-      await check('窄屏与桌面均限制代码区域滚动，不撑宽页面',async()=>{
-        for(const width of[320,390,1100]){
-          frame.style.width=width+'px';await route('/code/popup');await until(()=>doc.querySelector('.code-page code')?.textContent.includes('<template>'));
-          const root=doc.querySelector('.code-page'),pre=code().closest('pre');
-          assert(root.scrollWidth<=win.innerWidth+1,'代码页横向溢出：'+width);
-          assert(pre.clientHeight<=541&&win.getComputedStyle(pre).overflow==='auto','长代码没有内部滚动');
-          await route('/guide/native');await until(()=>doc.querySelector('[data-guide="native"]'));
-          assert(doc.querySelector('.guide-page').scrollWidth<=win.innerWidth+1,'指南横向溢出：'+width);
-        }
-      });
-      document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,total:7,reports},null,2);
-    }catch(error){document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,error:String(error.stack||error),reports},null,2)}
-    finally{document.querySelector('#run').disabled=false}
-  };
-}
-</script></html>
+      }
+    }
+  </script>
+</html>

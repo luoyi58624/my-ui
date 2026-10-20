@@ -1,92 +1,273 @@
-<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>旧版完整交互示例入口检查</title>
-<style>body{font:14px system-ui;margin:20px;background:#f2f3f5}iframe{display:block;width:1100px;height:844px;border:1px solid #ddd;margin-top:20px}pre{white-space:pre-wrap}</style>
-<main><h1>旧版完整交互示例</h1><button id="run">运行定向检查</button><pre id="result">尚未运行</pre><div id="fixture"></div></main>
-<script type="module">
-if(new URLSearchParams(location.search).has('frame')){
-  document.body.innerHTML='<div id="app"></div>';
-  const base=document.createElement('base');base.href='/example/';document.head.append(base);
-  await import('/example/src/main.ts');
-}else{
-  const reports=[],pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-  const assert=(condition,message)=>{if(!condition)throw Error(message)};
-  const until=async(check,message)=>{const start=performance.now();while(!check()){if(performance.now()-start>10000)throw Error(message);await pause(30)}};
-  let frame,doc,win;
-  const check=async(name,run)=>{document.querySelector('#result').textContent='运行中：'+name;await run();reports.push({name,passed:true})};
-  const showcase=()=>doc.querySelector('.showcase-layout');
-  const home=()=>doc.querySelector('[data-demo-page="home"]:not([inert])');
-  const clickText=(root,text)=>{const button=[...root.querySelectorAll('button')].find(button=>button.textContent.trim()===text);assert(button,'找不到按钮 '+text);button.click();return button};
-  const enter=async()=>{doc.querySelector('[data-showcase-entry]').click();await until(()=>showcase(),'整页示例未打开');await pause(100)};
-  const back=async()=>{showcase().querySelector('[aria-label="返回组件目录"]').click();await until(()=>home()&&!showcase(),'没有返回组件目录');await pause(80)};
-  document.querySelector('#run').onclick=async()=>{
-    document.querySelector('#run').disabled=true;reports.length=0;
-    try{
-      frame=document.createElement('iframe');frame.src='/tests/showcase.browser.html?frame=1#/home';document.querySelector('#fixture').replaceChildren(frame);
-      await until(()=>frame.contentDocument?.querySelector('[data-showcase-entry]'),'首页未加载');doc=frame.contentDocument;win=frame.contentWindow;
-      await check('首页仅有一个完整示例入口，旧版布局按需加载',async()=>{
-        assert(doc.querySelectorAll('[data-showcase-entry]').length===1,'入口重复');
-        assert(home().querySelectorAll('[data-demo-link]').length===28,'原有目录丢失');
-        assert(!showcase()&&!doc.querySelector('.demo-detail'),'首页提前挂载整页交互');
-        assert(!win.performance.getEntriesByType('resource').some(entry=>entry.name.includes('/ShowcaseLayout.vue')),'旧版布局未按需加载');
-      });
-      await check('桌面分类按行排列，移动端条目恢复单列且没有横向溢出',async()=>{
-        const groups=[...home().querySelectorAll('.demo-catalog-group')];
-        for(let i=1;i<groups.length;i++)assert(groups[i].getBoundingClientRect().top>=groups[i-1].getBoundingClientRect().bottom,'不同长度的分类仍并排留空');
-        const items=groups[1].querySelectorAll('[data-demo-link]');
-        assert(items[0].getBoundingClientRect().top===items[1].getBoundingClientRect().top,'桌面条目未在组内分列');
-        frame.style.width='320px';await pause(100);
-        assert(items[1].getBoundingClientRect().top>=items[0].getBoundingClientRect().bottom,'窄屏条目未恢复单列');
-        assert(home().scrollWidth<=home().clientWidth+1,'窄屏目录溢出');frame.style.width='1100px';await pause(100);
-      });
-      let catalog,top,entry;
-      await check('入口打开旧版头图、五组连续交互与主题设置，离开当前目录',async()=>{
-        catalog=home();catalog.scrollTop=180;top=catalog.scrollTop;entry=doc.querySelector('[data-showcase-entry]');
-        const position=win.history.state.position;await enter();
-        assert(win.location.hash==='#/showcase'&&win.history.state.position===position+1,'没有正常建立返回历史');
-        assert(showcase().querySelector('h1').textContent.includes('自然留白'),'缺少旧版头图');
-        assert(showcase().querySelectorAll('.sample-window,.float-chip').length===3,'旧版头图卡片缺失');
-        for(const id of ['actions','controls','surfaces','feedback','scenarios'])assert(showcase().querySelector('#showcase-'+id+' [data-my-component]'),'完整交互缺失 '+id);
-        assert(!doc.querySelector('.demo-app'),'目录布局与整页示例同时出现');
-      });
-      await check('顶部分类滚动定位与选中状态正常，不切换到独立组件页',async()=>{
-        const position=win.history.state.position;showcase().querySelector('.site-nav a').click();
-        await until(()=>showcase().querySelector('.site-nav a.current')?.textContent==='基础组件','分类选中状态未更新');
-        await pause(550);const header=showcase().querySelector('.masthead').getBoundingClientRect(),target=showcase().querySelector('#showcase-actions').getBoundingClientRect();
-        assert(target.top>=header.bottom-2&&target.top<header.bottom+45,'分类被导航头遮挡');
-        assert(win.location.hash==='#/showcase'&&win.history.state.position===position,'锚点变成了页面跳转');
-      });
-      let input;
-      await check('整页复用真实按钮、输入与确认弹窗，关闭弹窗不退出页面',async()=>{
-        clickText(showcase(),'主要按钮');await until(()=>doc.body.textContent.includes('主要操作已执行'),'按钮交互没有反馈');
-        input=showcase().querySelector('#showcase-controls input');input.value='旧版整页输入';input.dispatchEvent(new win.Event('input',{bubbles:true}));await pause(40);
-        clickText(showcase(),'打开确认弹窗');await until(()=>doc.querySelector('.my-overlay.my-show'),'确认弹窗未打开');
-        assert(doc.querySelector('#app').inert,'弹窗没有隔离背景');assert(win.MyUI.layers.dismissTop(),'弹窗没有响应关闭');
-        await until(()=>!doc.querySelector('#app').inert,'弹窗关闭后页面仍被隔离');
-        assert(win.location.hash==='#/showcase','关闭弹窗误退页面');
-      });
-      await check('整页离开后暂停播放，返回目录保留滚动与入口焦点，再次进入保留输入',async()=>{
-        const clock=showcase().querySelector('.playback-time'),play=showcase().querySelector('.playback-actions button');
-        play.click();await pause(550);await back();const time=clock.textContent;await pause(600);
-        assert(clock.textContent===time,'整页停用后仍在播放');assert(home()===catalog&&Math.abs(home().scrollTop-top)<2,'返回丢失目录或位置');
-        assert(doc.activeElement===entry,'返回未恢复入口焦点');await enter();
-        assert(showcase().querySelector('#showcase-controls input')===input&&input.value==='旧版整页输入','再次进入丢失输入或重建实例');
-        assert(showcase().querySelector('.playback-actions button').textContent.trim()==='播放','返回整页后擅自继续播放');
-      });
-      await check('整页与目录共用暗黑模式，320px 和 390px 页面没有横向溢出',async()=>{
-        showcase().querySelector('[aria-label="切换到暗黑模式"]').click();await pause(80);
-        assert(doc.documentElement.dataset.theme==='dark','整页切换暗黑模式无效');
-        for(const width of [320,390]){frame.style.width=width+'px';await pause(120);assert(showcase().scrollWidth<=showcase().clientWidth+1,'整页窄屏溢出 '+width)}
-        await back();assert(doc.documentElement.dataset.theme==='dark','返回后主题未共用');
-      });
-      await check('直接打开旧版分类链接可以定位并通过标题栏返回目录',async()=>{
-        const previous=doc;frame.src='/tests/showcase.browser.html?frame=1&direct=1#/showcase#controls';
-        await until(()=>frame.contentDocument!==previous&&frame.contentDocument?.querySelector('.showcase-layout'),'直接入口未打开');doc=frame.contentDocument;win=frame.contentWindow;
-        await until(()=>showcase().scrollTop>100,'直接入口未定位分类');
-        await back();assert(win.location.hash==='#/home','直接打开整页后不能返回目录');
-      });
-      document.querySelector('#result').textContent=JSON.stringify({passed:true,total:8,reports},null,2);
-    }catch(error){document.querySelector('#result').textContent=JSON.stringify({passed:false,error:String(error.stack||error),reports},null,2)}
-    finally{document.querySelector('#run').disabled=false}
-  };
-}
-</script></html>
+<!doctype html>
+<html lang="zh-CN">
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>旧版完整交互示例入口检查</title>
+  <style>
+    body {
+      font: 14px system-ui;
+      margin: 20px;
+      background: #f2f3f5;
+    }
+    iframe {
+      display: block;
+      width: 1100px;
+      height: 844px;
+      border: 1px solid #ddd;
+      margin-top: 20px;
+    }
+    pre {
+      white-space: pre-wrap;
+    }
+  </style>
+  <main>
+    <h1>旧版完整交互示例</h1>
+    <button id="run">运行定向检查</button>
+    <pre id="result">尚未运行</pre>
+    <div id="fixture"></div>
+  </main>
+  <script type="module">
+    if (new URLSearchParams(location.search).has('frame')) {
+      document.body.innerHTML = '<div id="app"></div>'
+      const base = document.createElement('base')
+      base.href = '/example/'
+      document.head.append(base)
+      await import('/example/src/main.ts')
+    } else {
+      const reports = [],
+        pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+      const assert = (condition, message) => {
+        if (!condition) throw Error(message)
+      }
+      const until = async (check, message) => {
+        const start = performance.now()
+        while (!check()) {
+          if (performance.now() - start > 10000) throw Error(message)
+          await pause(30)
+        }
+      }
+      let frame, doc, win
+      const check = async (name, run) => {
+        document.querySelector('#result').textContent = '运行中：' + name
+        await run()
+        reports.push({ name, passed: true })
+      }
+      const showcase = () => doc.querySelector('.showcase-layout')
+      const home = () => doc.querySelector('[data-demo-page="home"]:not([inert])')
+      const clickText = (root, text) => {
+        const button = [...root.querySelectorAll('button')].find(
+          (button) => button.textContent.trim() === text
+        )
+        assert(button, '找不到按钮 ' + text)
+        button.click()
+        return button
+      }
+      const enter = async () => {
+        doc.querySelector('[data-showcase-entry]').click()
+        await until(() => showcase(), '整页示例未打开')
+        await pause(100)
+      }
+      const back = async () => {
+        showcase().querySelector('[aria-label="返回组件目录"]').click()
+        await until(() => home() && !showcase(), '没有返回组件目录')
+        await pause(80)
+      }
+      document.querySelector('#run').onclick = async () => {
+        document.querySelector('#run').disabled = true
+        reports.length = 0
+        try {
+          frame = document.createElement('iframe')
+          frame.src = '/tests/showcase.browser.html?frame=1#/home'
+          document.querySelector('#fixture').replaceChildren(frame)
+          await until(
+            () => frame.contentDocument?.querySelector('[data-showcase-entry]'),
+            '首页未加载'
+          )
+          doc = frame.contentDocument
+          win = frame.contentWindow
+          await check('完整示例分组提供唯一入口，旧版布局按需加载', async () => {
+            assert(doc.querySelectorAll('[data-showcase-entry]').length === 1, '入口重复')
+            const entry = home().querySelector('[data-showcase-entry]'),
+              group = entry.closest('.demo-catalog-group')
+            assert(
+              group.getAttribute('aria-label') === '完整示例',
+              '完整交互入口没有移入完整示例分组'
+            )
+            assert(
+              group.querySelectorAll('[data-demo-link]').length === 3 &&
+                group.querySelector('h3 span').textContent === '3',
+              '完整示例数量未同步'
+            )
+            assert(!home().querySelector('.demo-intro [data-showcase-entry]'), '顶部仍有重复按钮')
+            assert(home().querySelectorAll('[data-demo-link]').length === 29, '原有目录丢失')
+            assert(!showcase() && !doc.querySelector('.demo-detail'), '首页提前挂载整页交互')
+            assert(
+              !win.performance
+                .getEntriesByType('resource')
+                .some((entry) => entry.name.includes('/ShowcaseLayout.vue')),
+              '旧版布局未按需加载'
+            )
+          })
+          await check('桌面与移动端共用单列窄栏目录且没有横向溢出', async () => {
+            const groups = [...home().querySelectorAll('.demo-catalog-group')]
+            for (let i = 1; i < groups.length; i++)
+              assert(
+                groups[i].getBoundingClientRect().top >=
+                  groups[i - 1].getBoundingClientRect().bottom,
+                '不同长度的分类仍并排留空'
+              )
+            const items = groups[1].querySelectorAll('[data-demo-link]')
+            assert(
+              items[1].getBoundingClientRect().top >= items[0].getBoundingClientRect().bottom,
+              '桌面目录仍在分列'
+            )
+            assert(groups[1].getBoundingClientRect().width <= 480, '桌面目录没有沿用移动端宽度')
+            frame.style.width = '320px'
+            await pause(100)
+            assert(
+              items[1].getBoundingClientRect().top >= items[0].getBoundingClientRect().bottom,
+              '窄屏条目未恢复单列'
+            )
+            assert(home().scrollWidth <= home().clientWidth + 1, '窄屏目录溢出')
+            frame.style.width = '1100px'
+            await pause(100)
+          })
+          let catalog, top, entry
+          await check('入口打开旧版头图与五组连续交互，子页没有重复主题和设置入口', async () => {
+            catalog = home()
+            catalog.scrollTop = 180
+            top = catalog.scrollTop
+            entry = doc.querySelector('[data-showcase-entry]')
+            const position = win.history.state.position
+            await enter()
+            assert(
+              win.location.hash === '#/showcase' && win.history.state.position === position + 1,
+              '没有正常建立返回历史'
+            )
+            assert(
+              showcase().querySelector('.hero h1').textContent.includes('自然留白'),
+              '缺少旧版头图'
+            )
+            assert(
+              showcase().querySelectorAll('.sample-window,.float-chip').length === 3,
+              '旧版头图卡片缺失'
+            )
+            for (const id of ['actions', 'controls', 'surfaces', 'feedback', 'scenarios'])
+              assert(
+                showcase().querySelector('#showcase-' + id + ' [data-my-component]'),
+                '完整交互缺失 ' + id
+              )
+            assert(!doc.querySelector('.demo-app'), '目录布局与整页示例同时出现')
+            assert(
+              !showcase().querySelector('[aria-label="主题定制"],[aria-label^="切换到"]'),
+              '整页示例仍有重复主题入口'
+            )
+          })
+          await check('顶部分类滚动定位与选中状态正常，不切换到独立组件页', async () => {
+            const position = win.history.state.position
+            showcase().querySelector('.site-nav a').click()
+            await until(
+              () => showcase().querySelector('.site-nav a.current')?.textContent === '基础组件',
+              '分类选中状态未更新'
+            )
+            await pause(550)
+            const header = showcase().querySelector('.masthead').getBoundingClientRect(),
+              target = showcase().querySelector('#showcase-actions').getBoundingClientRect()
+            assert(
+              target.top >= header.bottom - 2 && target.top < header.bottom + 45,
+              '分类被导航头遮挡'
+            )
+            assert(
+              win.location.hash === '#/showcase' && win.history.state.position === position,
+              '锚点变成了页面跳转'
+            )
+          })
+          let input
+          await check('整页复用真实按钮、输入与确认弹窗，关闭弹窗不退出页面', async () => {
+            clickText(showcase(), '主要按钮')
+            await until(() => doc.body.textContent.includes('主要操作已执行'), '按钮交互没有反馈')
+            input = showcase().querySelector('#showcase-controls input')
+            input.value = '旧版整页输入'
+            input.dispatchEvent(new win.Event('input', { bubbles: true }))
+            await pause(40)
+            clickText(showcase(), '打开确认弹窗')
+            await until(() => doc.querySelector('.my-overlay.my-show'), '确认弹窗未打开')
+            assert(doc.querySelector('#app').inert, '弹窗没有隔离背景')
+            assert(win.MyUI.layers.dismissTop(), '弹窗没有响应关闭')
+            await until(() => !doc.querySelector('#app').inert, '弹窗关闭后页面仍被隔离')
+            assert(win.location.hash === '#/showcase', '关闭弹窗误退页面')
+          })
+          await check(
+            '整页离开后暂停播放，返回目录保留滚动与入口焦点，再次进入保留输入',
+            async () => {
+              const clock = showcase().querySelector('.playback-time'),
+                play = showcase().querySelector('.playback-actions button')
+              play.click()
+              await pause(550)
+              await back()
+              const time = clock.textContent
+              await pause(600)
+              assert(clock.textContent === time, '整页停用后仍在播放')
+              assert(
+                home() === catalog && Math.abs(home().scrollTop - top) < 2,
+                '返回丢失目录或位置'
+              )
+              assert(doc.activeElement === entry, '返回未恢复入口焦点')
+              await enter()
+              assert(
+                showcase().querySelector('#showcase-controls input') === input &&
+                  input.value === '旧版整页输入',
+                '再次进入丢失输入或重建实例'
+              )
+              assert(
+                showcase().querySelector('.playback-actions button').textContent.trim() === '播放',
+                '返回整页后擅自继续播放'
+              )
+            }
+          )
+          await check('主题从首页切换，整页继承暗黑模式且窄屏没有横向溢出', async () => {
+            await back()
+            doc.querySelector('.demo-top [aria-label="切换到暗黑模式"]').click()
+            await pause(80)
+            await enter()
+            assert(doc.documentElement.dataset.theme === 'dark', '整页切换暗黑模式无效')
+            for (const width of [320, 390]) {
+              frame.style.width = width + 'px'
+              await pause(120)
+              assert(showcase().scrollWidth <= showcase().clientWidth + 1, '整页窄屏溢出 ' + width)
+            }
+            await back()
+            assert(doc.documentElement.dataset.theme === 'dark', '返回后主题未共用')
+          })
+          await check('直接打开旧版分类链接可以定位并通过标题栏返回目录', async () => {
+            const previous = doc
+            frame.src = '/tests/showcase.browser.html?frame=1&direct=1#/showcase#controls'
+            await until(
+              () =>
+                frame.contentDocument !== previous &&
+                frame.contentDocument?.querySelector('.showcase-layout'),
+              '直接入口未打开'
+            )
+            doc = frame.contentDocument
+            win = frame.contentWindow
+            await until(() => showcase().scrollTop > 100, '直接入口未定位分类')
+            await back()
+            assert(win.location.hash === '#/home', '直接打开整页后不能返回目录')
+          })
+          document.querySelector('#result').textContent = JSON.stringify(
+            { passed: true, total: 8, reports },
+            null,
+            2
+          )
+        } catch (error) {
+          document.querySelector('#result').textContent = JSON.stringify(
+            { passed: false, error: String(error.stack || error), reports },
+            null,
+            2
+          )
+        } finally {
+          document.querySelector('#run').disabled = false
+        }
+      }
+    }
+  </script>
+</html>

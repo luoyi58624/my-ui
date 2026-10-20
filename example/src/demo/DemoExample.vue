@@ -26,6 +26,7 @@ const props = defineProps<{
   bare?: boolean
 }>()
 const document = inject(documentKey, undefined)
+const codeOpen = document?.defaultCodeOpen(props.name) ?? false
 const root = ref<HTMLElement>()
 const heading = computed(() => 'example-' + document?.id + '-' + props.name)
 const files = computed(() => previewFiles(props.source, props.name, props.setup, props.related))
@@ -61,7 +62,7 @@ onBeforeUnmount(() => unregister?.())
     </header>
     <div class="doc-example-frame">
       <div class="doc-example-preview"><slot /></div>
-      <CodeFiles :files="files" title="示例代码" />
+      <CodeFiles :files="files" :open="codeOpen" title="示例代码" />
     </div>
   </section>
   <div v-else-if="bare" v-bind="$attrs">

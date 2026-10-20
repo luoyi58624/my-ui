@@ -12,7 +12,7 @@ const message = ref('下拉刷新，或点击按钮')
 async function reload() {
   try {
     // 用实际请求替换这段模拟等待。
-    await new Promise(resolve => setTimeout(resolve, 800))
+    await new Promise((resolve) => setTimeout(resolve, 800))
     message.value = '更新于 ' + new Date().toLocaleTimeString()
   } finally {
     // 成功和失败都要结束刷新；不要再次手动调用 reload。
@@ -22,8 +22,13 @@ async function reload() {
 </script>
 
 <template>
-  <Page ref="page" style="height: 100dvh" refreshable
-    v-model:refreshing="refreshing" @refresh="reload">
+  <Page
+    ref="page"
+    style="height: 100dvh"
+    refreshable
+    v-model:refreshing="refreshing"
+    @refresh="reload"
+  >
     <template #navbar><AppBar title="最新动态" /></template>
     <main style="padding: 24px">
       <p>{{ message }}</p>
@@ -39,18 +44,26 @@ import { AppBar, Page, type NavigationAction } from 'tauri-plugin-native-compone
 import 'tauri-plugin-native-components/style.css'
 
 const message = ref('')
-const actions: NavigationAction[] = [
-  { value: 'settings', label: '设置', icon: 'sliders' },
-]
-function onAction(value: string) { message.value = '点击了：' + value }
-function goBack() { window.history.back() }
+const actions: NavigationAction[] = [{ value: 'settings', label: '设置', icon: 'sliders' }]
+function onAction(value: string) {
+  message.value = '点击了：' + value
+}
+function goBack() {
+  window.history.back()
+}
 </script>
 
 <template>
   <Page style="height: 100dvh">
     <template #navbar>
-      <AppBar title="我的收藏" subtitle="12 个灵感" back
-        :actions="actions" @back="goBack" @action="onAction" />
+      <AppBar
+        title="我的收藏"
+        subtitle="12 个灵感"
+        back
+        :actions="actions"
+        @back="goBack"
+        @action="onAction"
+      />
     </template>
     <p>{{ message }}</p>
   </Page>
@@ -66,7 +79,7 @@ const selected = ref('home')
 const items: NavigationItem[] = [
   { value: 'home', label: '首页', icon: 'home' },
   { value: 'messages', label: '消息', icon: 'message', badge: 2 },
-  { value: 'profile', label: '我的', icon: 'user' },
+  { value: 'profile', label: '我的', icon: 'user' }
 ]
 </script>
 
@@ -78,8 +91,17 @@ const items: NavigationItem[] = [
 </template>
 
 <style scoped>
-.shell { display: flex; flex-direction: column; height: 100dvh; }
-main { flex: 1; min-height: 0; overflow: auto; padding: 24px; }
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
+main {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 24px;
+}
 </style>`
 
 /** Tabs 默认承载 Vue 内容，nativeView 需要 Android 宿主注册页面工厂。 */
@@ -92,7 +114,7 @@ const selected = ref('home')
 const count = ref(0)
 const items: NavigationItem[] = [
   { value: 'home', label: '首页', icon: 'home' },
-  { value: 'profile', label: '我的', icon: 'user' },
+  { value: 'profile', label: '我的', icon: 'user' }
 ]
 </script>
 

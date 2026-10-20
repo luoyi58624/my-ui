@@ -1,51 +1,210 @@
-<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>my-ui 多窗口主题同步</title><style>body{font:14px system-ui;margin:20px;background:#f2f3f5;color:#17191e}#fixture{display:flex;gap:12px;flex-wrap:wrap}iframe{width:390px;height:720px;border:1px solid #ddd}pre{white-space:pre-wrap}</style>
-<main><h1>多窗口主题同步</h1><button id="run">运行定向检查</button><pre id="result">尚未运行</pre><div id="fixture"></div></main>
-<script type="module">
-if(new URLSearchParams(location.search).has('frame')){
-  document.body.innerHTML='<div id="app"></div>';await import('/example/src/main.ts');
-}else{
-  const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms)),assert=(value,message)=>{if(!value)throw Error(message)},reports=[];
-  const until=async(check,message)=>{const start=performance.now();while(!check()){if(performance.now()-start>10000)throw Error(message);await pause(30)}};
-  const fields=['mode','backdropBlur','fontWeight','light','dark'],keys=['my-ui:theme','my-ui:theme-render',...fields.map(field=>'my-ui:state:theme:'+field)];
-  const frames=[];let sequence=0;
-  const open=async()=>{const frame=document.createElement('iframe');frame.src='/tests/theme-sync.browser.html?frame=1&instance='+ ++sequence+'#home';document.querySelector('#fixture').append(frame);frames.push(frame);await until(()=>frame.contentDocument?.querySelector('.demo-top [aria-label="主题定制"]'),'示例未加载');await pause(160);return frame};
-  const root=frame=>frame.contentDocument.documentElement;
-  const toggle=(frame,label)=>frame.contentDocument.querySelector('.demo-top [aria-label="'+label+'"]').click();
-  const check=async(name,run)=>{await run();reports.push({name,passed:true})};
-  const firstFrame=async(mode)=>{
-    // 主模块保持未加载，直接检查真实 HTML 入口的第一帧，不能靠最终渲染掩盖闪屏。
-    const html=await(await fetch('/example/index.html')).text(),frame=document.createElement('iframe');
-    frame.srcdoc=html.replace('</head>','<link rel="stylesheet" href="/packages/core/my-ui.css"></head>').replace('<script type="module" src="/src/main.ts"></scr'+'ipt>', '<script>requestAnimationFrame(()=>{window.firstThemeFrame={mode:document.documentElement.dataset.theme,background:getComputedStyle(document.documentElement).backgroundColor}})</scr'+'ipt>');
-    document.querySelector('#fixture').append(frame);
-    try{await until(()=>frame.contentWindow.firstThemeFrame,'入口首帧未渲染');const actual=frame.contentWindow.firstThemeFrame;assert(actual.mode===mode,'主模块加载前模式错误');assert(actual.background===(mode==='dark'?'rgb(18, 20, 25)':'rgb(242, 243, 245)'),'首帧背景与主题不一致')}
-    finally{frame.remove()}
-  };
-  document.querySelector('#run').onclick=async()=>{
-    const backup=new Map(keys.map(key=>[key,localStorage.getItem(key)]));document.querySelector('#run').disabled=true;reports.length=0;document.querySelector('#result').textContent='运行中';
-    try{
-      localStorage.setItem('my-ui:state:theme:mode','"light"');const a=await open(),b=await open();
-      await until(()=>root(a).dataset.theme==='light'&&root(b).dataset.theme==='light','初始共享主题未恢复');
-      await check('任意窗口切换暗色，另一已打开窗口同步页面与按钮状态',async()=>{
-        toggle(a,'切换到暗黑模式');await until(()=>root(a).dataset.theme==='dark'&&root(b).dataset.theme==='dark','暗色未同步');assert(b.contentDocument.querySelector('[aria-label="切换到浅色模式"]'),'另一窗口按钮状态未同步');
-      });
-      await check('新窗口继承已保存暗色，独立子页也能渲染',async()=>{
-        const c=await open();await until(()=>root(c).dataset.theme==='dark','新窗口未继承暗色');c.contentWindow.location.hash='#example/button';await until(()=>c.contentDocument.querySelector('.demo-detail:not([inert])'),'独立示例未打开');assert(root(c).dataset.theme==='dark','进入示例丢失主题');
-      });
-      await check('暗色页面第一帧已恢复正确背景，无需等待 Vue 或共享存储',()=>firstFrame('dark'));
-      await check('第二个窗口切回浅色，全部窗口双向更新',async()=>{
-        toggle(b,'切换到浅色模式');await until(()=>frames.every(frame=>root(frame).dataset.theme==='light'),'浅色未同步');for(const frame of frames)assert(frame.contentDocument.querySelector('[aria-label="切换到暗黑模式"]'),'返回按钮状态不同步');
-      });
-      await check('浅色页面第一帧也保持正确背景',()=>firstFrame('light'));
-      await check('设置面板选择跟随系统，偏好同步后各页面按系统外观渲染',async()=>{
-        a.contentDocument.querySelector('[aria-label="主题定制"]').click();await until(()=>a.contentDocument.querySelector('.mode-segment button'),'设置面板未打开');
-        [...a.contentDocument.querySelectorAll('.mode-segment button')].find(button=>button.textContent.trim()==='跟随系统').click();
-        await until(()=>localStorage.getItem('my-ui:state:theme:mode')==='"system"'&&frames.every(frame=>!frame.contentDocument.querySelector('.demo-top [aria-label^="切换到"]')),'系统偏好未同步');
-        for(const frame of frames){const expected=frame.contentWindow.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';assert(root(frame).dataset.theme===expected,'系统外观解析不一致')}
-      });
-      document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,total:6,reports},null,2);
-    }catch(error){document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,error:String(error.stack||error),reports},null,2)}
-    finally{for(const frame of frames)frame.remove();frames.length=0;for(const[key,value]of backup){if(value===null)localStorage.removeItem(key);else localStorage.setItem(key,value)}document.querySelector('#run').disabled=false}
-  };
-}
-</script></html>
+<!doctype html>
+<html lang="zh-CN">
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>my-ui 多窗口主题同步</title
+  ><style>
+    body {
+      font: 14px system-ui;
+      margin: 20px;
+      background: #f2f3f5;
+      color: #17191e;
+    }
+    #fixture {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    iframe {
+      width: 390px;
+      height: 720px;
+      border: 1px solid #ddd;
+    }
+    pre {
+      white-space: pre-wrap;
+    }
+  </style>
+  <main>
+    <h1>多窗口主题同步</h1>
+    <button id="run">运行定向检查</button>
+    <pre id="result">尚未运行</pre>
+    <div id="fixture"></div>
+  </main>
+  <script type="module">
+    if (new URLSearchParams(location.search).has('frame')) {
+      document.body.innerHTML = '<div id="app"></div>'
+      await import('/example/src/main.ts')
+    } else {
+      const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+        assert = (value, message) => {
+          if (!value) throw Error(message)
+        },
+        reports = []
+      const until = async (check, message) => {
+        const start = performance.now()
+        while (!check()) {
+          if (performance.now() - start > 10000) throw Error(message)
+          await pause(30)
+        }
+      }
+      const fields = ['mode', 'backdropBlur', 'fontWeight', 'light', 'dark'],
+        keys = [
+          'my-ui:theme',
+          'my-ui:theme-render',
+          ...fields.map((field) => 'my-ui:state:theme:' + field)
+        ]
+      const frames = []
+      let sequence = 0
+      const open = async () => {
+        const frame = document.createElement('iframe')
+        frame.src = '/tests/theme-sync.browser.html?frame=1&instance=' + ++sequence + '#home'
+        document.querySelector('#fixture').append(frame)
+        frames.push(frame)
+        await until(
+          () => frame.contentDocument?.querySelector('.demo-top [aria-label="主题定制"]'),
+          '示例未加载'
+        )
+        await pause(160)
+        return frame
+      }
+      const root = (frame) => frame.contentDocument.documentElement
+      const toggle = (frame, label) =>
+        frame.contentDocument.querySelector('.demo-top [aria-label="' + label + '"]').click()
+      const check = async (name, run) => {
+        await run()
+        reports.push({ name, passed: true })
+      }
+      const firstFrame = async (mode) => {
+        // 主模块保持未加载，直接检查真实 HTML 入口的第一帧，不能靠最终渲染掩盖闪屏。
+        const html = await (await fetch('/example/index.html')).text(),
+          frame = document.createElement('iframe')
+        frame.srcdoc = html
+          .replace('</head>', '<link rel="stylesheet" href="/packages/core/my-ui.css"></head>')
+          .replace(
+            '<script type="module" src="/src/main.ts"></scr' + 'ipt>',
+            '<script>requestAnimationFrame(()=>{window.firstThemeFrame={mode:document.documentElement.dataset.theme,background:getComputedStyle(document.documentElement).backgroundColor}})</scr' +
+              'ipt>'
+          )
+        document.querySelector('#fixture').append(frame)
+        try {
+          await until(() => frame.contentWindow.firstThemeFrame, '入口首帧未渲染')
+          const actual = frame.contentWindow.firstThemeFrame
+          assert(actual.mode === mode, '主模块加载前模式错误')
+          assert(
+            actual.background === (mode === 'dark' ? 'rgb(18, 20, 25)' : 'rgb(242, 243, 245)'),
+            '首帧背景与主题不一致'
+          )
+        } finally {
+          frame.remove()
+        }
+      }
+      document.querySelector('#run').onclick = async () => {
+        const backup = new Map(keys.map((key) => [key, localStorage.getItem(key)]))
+        document.querySelector('#run').disabled = true
+        reports.length = 0
+        document.querySelector('#result').textContent = '运行中'
+        try {
+          localStorage.setItem('my-ui:state:theme:mode', '"light"')
+          const a = await open(),
+            b = await open()
+          await until(
+            () => root(a).dataset.theme === 'light' && root(b).dataset.theme === 'light',
+            '初始共享主题未恢复'
+          )
+          await check('任意窗口切换暗色，另一已打开窗口同步页面与按钮状态', async () => {
+            toggle(a, '切换到暗黑模式')
+            await until(
+              () => root(a).dataset.theme === 'dark' && root(b).dataset.theme === 'dark',
+              '暗色未同步'
+            )
+            assert(
+              b.contentDocument.querySelector('[aria-label="切换到浅色模式"]'),
+              '另一窗口按钮状态未同步'
+            )
+          })
+          await check('新窗口继承已保存暗色，独立子页也能渲染', async () => {
+            const c = await open()
+            await until(() => root(c).dataset.theme === 'dark', '新窗口未继承暗色')
+            c.contentWindow.location.hash = '#example/button'
+            await until(
+              () => c.contentDocument.querySelector('.demo-detail:not([inert])'),
+              '独立示例未打开'
+            )
+            assert(root(c).dataset.theme === 'dark', '进入示例丢失主题')
+          })
+          await check('暗色页面第一帧已恢复正确背景，无需等待 Vue 或共享存储', () =>
+            firstFrame('dark')
+          )
+          await check('第二个窗口切回浅色，全部窗口双向更新', async () => {
+            toggle(b, '切换到浅色模式')
+            await until(
+              () => frames.every((frame) => root(frame).dataset.theme === 'light'),
+              '浅色未同步'
+            )
+            for (const frame of frames) {
+              const doc = frame.contentDocument,
+                detail = doc.querySelector('.demo-detail:not([inert])')
+              if (detail)
+                assert(
+                  !doc.querySelector(
+                    '.demo-top [aria-label="主题定制"],.demo-top [aria-label^="切换到"]'
+                  ),
+                  '子页仍有重复主题入口'
+                )
+              else
+                assert(
+                  doc.querySelector('.demo-top [aria-label="切换到暗黑模式"]'),
+                  '首页主题按钮状态不同步'
+                )
+            }
+          })
+          await check('浅色页面第一帧也保持正确背景', () => firstFrame('light'))
+          await check('设置面板选择跟随系统，偏好同步后各页面按系统外观渲染', async () => {
+            a.contentDocument.querySelector('[aria-label="主题定制"]').click()
+            await until(
+              () => a.contentDocument.querySelector('.mode-segment button'),
+              '设置面板未打开'
+            )
+            ;[...a.contentDocument.querySelectorAll('.mode-segment button')]
+              .find((button) => button.textContent.trim() === '跟随系统')
+              .click()
+            await until(
+              () =>
+                localStorage.getItem('my-ui:state:theme:mode') === '"system"' &&
+                frames.every(
+                  (frame) =>
+                    !frame.contentDocument.querySelector('.demo-top [aria-label^="切换到"]')
+                ),
+              '系统偏好未同步'
+            )
+            for (const frame of frames) {
+              const expected = frame.contentWindow.matchMedia('(prefers-color-scheme: dark)')
+                .matches
+                ? 'dark'
+                : 'light'
+              assert(root(frame).dataset.theme === expected, '系统外观解析不一致')
+            }
+          })
+          document.querySelector('#result').textContent = JSON.stringify(
+            { passed: reports.length, total: 6, reports },
+            null,
+            2
+          )
+        } catch (error) {
+          document.querySelector('#result').textContent = JSON.stringify(
+            { passed: reports.length, error: String(error.stack || error), reports },
+            null,
+            2
+          )
+        } finally {
+          for (const frame of frames) frame.remove()
+          frames.length = 0
+          for (const [key, value] of backup) {
+            if (value === null) localStorage.removeItem(key)
+            else localStorage.setItem(key, value)
+          }
+          document.querySelector('#run').disabled = false
+        }
+      }
+    }
+  </script>
+</html>

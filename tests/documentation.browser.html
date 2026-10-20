@@ -1,119 +1,341 @@
 <!doctype html>
 <html lang="zh-CN">
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>组件文档与逐例代码检查</title>
-<style>body{font:14px system-ui;margin:20px;background:#f2f3f5}iframe{display:block;width:1100px;height:900px;border:1px solid #ddd;margin-top:20px}pre{white-space:pre-wrap}</style>
-<main><h1>组件文档与逐例代码</h1><button id="run">运行定向检查</button><pre id="result">尚未运行</pre><div id="fixture"></div></main>
-<script type="module">
-if(new URLSearchParams(location.search).has('frame')){
-  document.body.innerHTML='<div id="app"></div>';
-  const base=document.createElement('base');base.href='/example/';document.head.append(base);
-  await import('/example/src/main.ts');
-}else{
-  const reports=[],pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-  const assert=(value,message)=>{if(!value)throw Error(message)};
-  const until=async(check,message='等待文档超时')=>{const start=performance.now();while(!check()){if(performance.now()-start>12000)throw Error(message);await pause(20)}};
-  const check=async(name,run)=>{document.querySelector('#result').textContent='运行中：'+name;await run();reports.push({name,passed:true})};
-  let frame,doc,win;
-  const detail=()=>doc.querySelector('.demo-detail:not([inert])');
-  const route=async id=>{win.location.hash='/example/'+id;await until(()=>detail()?.dataset.demoPage==='example/'+id);await pause(40)};
-  document.querySelector('#run').onclick=async()=>{
-    document.querySelector('#run').disabled=true;reports.length=0;
-    try{
-      frame=document.createElement('iframe');frame.src='/tests/documentation.browser.html?frame=1#/example/button';document.querySelector('#fixture').replaceChildren(frame);
-      await until(()=>frame.contentDocument?.querySelector('[data-example="button-basic"]'));
-      doc=frame.contentDocument;win=frame.contentWindow;
-      const {demoExamples}=await import('/example/src/demo/catalog.ts');
-      const {previewGroups}=await import('/example/src/demo/code/source.ts');
-      const pages=demoExamples.filter(item=>!item.path);
-      let exampleCount=0,sourceCount=0;
-      await check('所有文档逐例配对预览与代码，正文不再附加总源码',async()=>{
-        for(const page of pages){
-          await route(page.id);const root=detail();
-          assert(root.querySelector('.doc-intro h1')?.textContent===page.title,'缺少文档标题 '+page.id);
-          assert(!root.querySelector('.example-code'),'仍然堆放总源码 '+page.id);
-          const blocks=[...root.querySelectorAll('[data-example]')];assert(blocks.length>0,'缺少独立示例 '+page.id);
-          const groups=await previewGroups(page.id);
-          for(const group of groups)await group.files[0].source();
-          if(groups.length)assert(groups.map(item=>item.name).join()===blocks.map(item=>item.dataset.example).join(),'独立代码页与文档不对应 '+page.id);
-          for(const block of blocks){
-            assert(block.querySelectorAll('.doc-example-preview').length===1&&block.querySelectorAll('.demo-code-files').length===1,'预览与代码没有一一对应 '+block.dataset.example);
-            assert(block.querySelector('.doc-example-heading > p'),'缺少用法说明 '+block.dataset.example);
-            const fold=block.querySelector('details');assert(!fold.open,'代码没有按需展开 '+block.dataset.example);
-            fold.querySelector('summary').click();await until(()=>fold.querySelector('.demo-code code')||fold.querySelector('[role="alert"]'));
-            assert(fold.querySelector('.demo-code code')?.textContent.includes('<template>'),'对应代码读取失败 '+page.id+'/'+block.dataset.example);
-            assert(!fold.querySelector('code').textContent.includes('<DemoExample'),'代码泄漏文档容器 '+block.dataset.example);
-            fold.querySelector('summary').click();await until(()=>!fold.open);
-            exampleCount++;
-          }
-          for(const group of groups)for(const file of group.files){
-            const source=typeof file.source==='string'?file.source:await file.source();
-            assert(source.trim().length>20,'代码或依赖文件为空 '+group.name+'/'+file.name);sourceCount++;
-          }
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>组件文档与逐例代码检查</title>
+  <style>
+    body {
+      font: 14px system-ui;
+      margin: 20px;
+      background: #f2f3f5;
+    }
+    iframe {
+      display: block;
+      width: 1100px;
+      height: 900px;
+      border: 1px solid #ddd;
+      margin-top: 20px;
+    }
+    pre {
+      white-space: pre-wrap;
+    }
+  </style>
+  <main>
+    <h1>组件文档与逐例代码</h1>
+    <button id="run">运行定向检查</button>
+    <pre id="result">尚未运行</pre>
+    <div id="fixture"></div>
+  </main>
+  <script type="module">
+    if (new URLSearchParams(location.search).has('frame')) {
+      document.body.innerHTML = '<div id="app"></div>'
+      const base = document.createElement('base')
+      base.href = '/example/'
+      document.head.append(base)
+      await import('/example/src/main.ts')
+    } else {
+      const reports = [],
+        pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+      const assert = (value, message) => {
+        if (!value) throw Error(message)
+      }
+      const until = async (check, message = '等待文档超时') => {
+        const start = performance.now()
+        while (!check()) {
+          if (performance.now() - start > 12000) throw Error(message)
+          await pause(20)
         }
-      });
-      await check('基础用法仅展示当前控件的状态和模板',async()=>{
-        const basic=(await previewGroups('button'))[0],input=(await previewGroups('input'))[0],select=(await previewGroups('input'))[2];
-        const read=async group=>group.files[0].source();
-        const buttonCode=await read(basic),inputCode=await read(input),selectCode=await read(select);
-        assert(buttonCode.includes('notify')&&buttonCode.includes('<Toast')&&!buttonCode.includes('liked')&&!buttonCode.includes('openSheet'),'基础按钮混入其他交互');
-        assert(inputCode.includes('const search')&&!inputCode.includes('const nickname')&&!inputCode.includes('const category'),'搜索代码混入其他输入控件');
-        assert(selectCode.includes('<Select')&&selectCode.includes('const categories')&&!selectCode.includes('<Input'),'下拉选择没有自己的代码');
-        assert(buttonCode.includes('\n    <Button')&&!buttonCode.includes('</Button><Button'),'代码没有正常缩进');
-      });
-      await check('展开、切换文件与收起代码不重建交互控件',async()=>{
-        await route('input');const block=detail().querySelector('[data-example="input-search"]'),input=block.querySelector('input');
-        input.value='保持文档交互状态';input.dispatchEvent(new win.Event('input',{bubbles:true}));
-        const fold=block.querySelector('details');fold.querySelector('summary').click();await until(()=>fold.querySelector('code'));
-        const tabs=fold.querySelectorAll('.demo-code-file-list button');tabs[1].click();await until(()=>fold.querySelector('code')?.textContent.includes('.btn-row'));
-        tabs[0].click();await until(()=>fold.querySelector('code')?.textContent.includes('<Input'));
-        fold.querySelector('summary').click();await route('tag');await route('input');
-        assert(detail().querySelector('[data-example="input-search"] input')===input&&input.value==='保持文档交互状态','代码操作丢失实例或输入状态');
-      });
-      await check('桌面目录定位当前示例，保持原路由和焦点',async()=>{
-        await route('button');const root=detail(),links=root.querySelectorAll('.doc-outline a'),hash=win.location.hash;
-        assert(links.length===3,'本页目录条目不完整');links[2].click();await pause(80);
-        const target=root.querySelector('[data-example="button-states"]');
-        assert(win.location.hash===hash,'目录定位变成页面跳转');
-        assert(doc.activeElement===target.querySelector('h2'),'目录定位未转移阅读焦点');
-        assert(target.getBoundingClientRect().top<root.getBoundingClientRect().bottom,'目录没有滚动到对应示例');
-      });
-      await check('展开收起具有连续高度过渡，快速反向与减少动态效果均能正确结束',async()=>{
-        await route('button');const fold=detail().querySelector('[data-example="button-basic"] details'),summary=fold.querySelector('summary');
-        summary.click();await until(()=>fold.querySelector('.demo-code code'));
-        const body=fold.querySelector('.demo-code-motion'),inner=body.querySelector('.demo-code-body');
-        if(win.matchMedia('(prefers-reduced-motion: reduce)').matches){
-          assert(!body.getAnimations().length,'减少动态效果时仍播放动画');
-          summary.click();await until(()=>!fold.open);return;
+      }
+      const check = async (name, run) => {
+        document.querySelector('#result').textContent = '运行中：' + name
+        await run()
+        reports.push({ name, passed: true })
+      }
+      let frame, doc, win
+      const detail = () => doc.querySelector('.demo-detail:not([inert])')
+      const route = async (id) => {
+        win.location.hash = '/example/' + id
+        await until(() => detail()?.dataset.demoPage === 'example/' + id)
+        await pause(40)
+      }
+      document.querySelector('#run').onclick = async () => {
+        document.querySelector('#run').disabled = true
+        reports.length = 0
+        try {
+          frame = document.createElement('iframe')
+          frame.src = '/tests/documentation.browser.html?frame=1#/example/button'
+          document.querySelector('#fixture').replaceChildren(frame)
+          await until(() => frame.contentDocument?.querySelector('[data-example="button-basic"]'))
+          doc = frame.contentDocument
+          win = frame.contentWindow
+          const { demoExamples } = await import('/example/src/demo/catalog.ts')
+          const { previewGroups } = await import('/example/src/demo/code/source.ts')
+          const pages = demoExamples.filter((item) => !item.path)
+          let exampleCount = 0,
+            sourceCount = 0
+          await check('所有文档逐例配对预览与代码，正文不再附加总源码', async () => {
+            for (const page of pages) {
+              await route(page.id)
+              const root = detail()
+              assert(
+                root.querySelector('.doc-intro h1')?.textContent === page.title,
+                '缺少文档标题 ' + page.id
+              )
+              assert(!root.querySelector('.example-code'), '仍然堆放总源码 ' + page.id)
+              const blocks = [...root.querySelectorAll('[data-example]')]
+              assert(blocks.length > 0, '缺少独立示例 ' + page.id)
+              const groups = await previewGroups(page.id)
+              for (const group of groups) await group.files[0].source()
+              if (groups.length)
+                assert(
+                  groups.map((item) => item.name).join() ===
+                    blocks.map((item) => item.dataset.example).join(),
+                  '独立代码页与文档不对应 ' + page.id
+                )
+              for (const [index, block] of blocks.entries()) {
+                assert(
+                  block.querySelectorAll('.doc-example-preview').length === 1 &&
+                    block.querySelectorAll('.demo-code-files').length === 1,
+                  '预览与代码没有一一对应 ' + block.dataset.example
+                )
+                assert(
+                  block.querySelector('.doc-example-heading > p'),
+                  '缺少用法说明 ' + block.dataset.example
+                )
+                const fold = block.querySelector('details')
+                assert(fold.open === (index === 0), '默认展开状态错误 ' + block.dataset.example)
+                if (!fold.open) fold.querySelector('summary').click()
+                await until(
+                  () =>
+                    fold.querySelector('.demo-code code') || fold.querySelector('[role="alert"]')
+                )
+                assert(
+                  fold.querySelector('.demo-code code')?.textContent.includes('<template>'),
+                  '对应代码读取失败 ' + page.id + '/' + block.dataset.example
+                )
+                assert(
+                  !fold.querySelector('code').textContent.includes('<DemoExample'),
+                  '代码泄漏文档容器 ' + block.dataset.example
+                )
+                fold.querySelector('summary').click()
+                await until(() => !fold.open)
+                exampleCount++
+              }
+              for (const group of groups)
+                for (const file of group.files) {
+                  const source = typeof file.source === 'string' ? file.source : await file.source()
+                  assert(
+                    source.trim().length > 20,
+                    '代码或依赖文件为空 ' + group.name + '/' + file.name
+                  )
+                  sourceCount++
+                }
+            }
+          })
+          await check('基础用法仅展示当前控件的状态和模板', async () => {
+            const basic = (await previewGroups('button'))[0],
+              input = (await previewGroups('input'))[0],
+              select = (await previewGroups('input'))[2]
+            const read = async (group) => group.files[0].source()
+            const buttonCode = await read(basic),
+              inputCode = await read(input),
+              selectCode = await read(select)
+            assert(
+              buttonCode.includes('notify') &&
+                buttonCode.includes('<Toast') &&
+                !buttonCode.includes('liked') &&
+                !buttonCode.includes('openSheet'),
+              '基础按钮混入其他交互'
+            )
+            assert(
+              inputCode.includes('const search') &&
+                !inputCode.includes('const nickname') &&
+                !inputCode.includes('const category'),
+              '搜索代码混入其他输入控件'
+            )
+            assert(
+              selectCode.includes('<Select') &&
+                selectCode.includes('const categories') &&
+                !selectCode.includes('<Input'),
+              '下拉选择没有自己的代码'
+            )
+            assert(
+              buttonCode.includes('\n    <Button') && !buttonCode.includes('</Button><Button'),
+              '代码没有正常缩进'
+            )
+          })
+          await check('展开、切换文件与收起代码不重建交互控件', async () => {
+            await route('input')
+            const block = detail().querySelector('[data-example="input-search"]'),
+              input = block.querySelector('input')
+            input.value = '保持文档交互状态'
+            input.dispatchEvent(new win.Event('input', { bubbles: true }))
+            const fold = block.querySelector('details')
+            fold.querySelector('summary').click()
+            await until(() => fold.querySelector('code'))
+            const tabs = fold.querySelectorAll('.demo-code-file-list button')
+            tabs[1].click()
+            await until(() => fold.querySelector('code')?.textContent.includes('.btn-row'))
+            tabs[0].click()
+            await until(() => fold.querySelector('code')?.textContent.includes('<Input'))
+            fold.querySelector('summary').click()
+            await route('tag')
+            await route('input')
+            assert(
+              detail().querySelector('[data-example="input-search"] input') === input &&
+                input.value === '保持文档交互状态',
+              '代码操作丢失实例或输入状态'
+            )
+          })
+          await check('桌面目录定位当前示例，保持原路由和焦点', async () => {
+            frame.style.width = '1463px'
+            await pause(60)
+            await route('button')
+            const root = detail(),
+              links = root.querySelectorAll('.doc-outline a'),
+              hash = win.location.hash
+            const outline = root.querySelector('.doc-outline'),
+              before = outline.getBoundingClientRect()
+            assert(win.getComputedStyle(outline).position === 'fixed', '桌面目录没有固定在视口右侧')
+            assert(Math.abs(win.innerWidth - before.right - 32) < 1, '目录偏离屏幕右侧原有位置')
+            const content = root.querySelector('.doc-content').getBoundingClientRect()
+            assert(content.width <= 801, '正文超过阅读宽度')
+            assert(
+              Math.abs((content.left + content.right) / 2 - win.innerWidth / 2) <= 16,
+              '正文没有独立居中'
+            )
+            assert(
+              root.querySelector('.doc-content').getBoundingClientRect().right + 24 <= before.left,
+              '正文与固定目录重叠'
+            )
+            root.scrollTop = 180
+            await pause(60)
+            assert(
+              Math.abs(outline.getBoundingClientRect().top - before.top) < 1,
+              '正文滚动带走了目录'
+            )
+            assert(links.length === 3, '本页目录条目不完整')
+            links[2].click()
+            await pause(80)
+            const target = root.querySelector('[data-example="button-states"]')
+            assert(win.location.hash === hash, '目录定位变成页面跳转')
+            assert(doc.activeElement === target.querySelector('h2'), '目录定位未转移阅读焦点')
+            assert(
+              target.getBoundingClientRect().top < root.getBoundingClientRect().bottom,
+              '目录没有滚动到对应示例'
+            )
+            frame.style.width = '1100px'
+            await pause(60)
+          })
+          await check('展开收起具有连续高度过渡，快速反向与减少动态效果均能正确结束', async () => {
+            await route('button')
+            const fold = detail().querySelector('[data-example="button-basic"] details'),
+              summary = fold.querySelector('summary')
+            summary.click()
+            await until(() => fold.querySelector('.demo-code code'))
+            const body = fold.querySelector('.demo-code-motion'),
+              inner = body.querySelector('.demo-code-body')
+            if (win.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+              assert(!body.getAnimations().length, '减少动态效果时仍播放动画')
+              summary.click()
+              await until(() => !fold.open)
+              return
+            }
+            await until(() => body.getAnimations().length > 0, '展开没有动画')
+            await pause(55)
+            const middle = body.getBoundingClientRect().height,
+              target = inner.getBoundingClientRect().height
+            assert(middle > 0 && middle < target - 1, '展开直接跳到最终高度')
+            await until(() => !body.getAnimations().length)
+            assert(Math.abs(body.getBoundingClientRect().height - target) < 2, '展开结束仍裁切代码')
+            summary.click()
+            await pause(40)
+            assert(
+              fold.open &&
+                body.isConnected &&
+                body.inert &&
+                body.getBoundingClientRect().height > 0,
+              '收起时提前移除内容或仍能交互'
+            )
+            await until(() => !fold.open && !fold.querySelector('.demo-code'), '收起动画没有结束')
+            summary.click()
+            await pause(35)
+            summary.click()
+            await pause(25)
+            summary.click()
+            await until(
+              () =>
+                fold.open &&
+                fold.querySelector('.demo-code code') &&
+                !fold.querySelector('.demo-code-motion').getAnimations().length
+            )
+            assert(
+              summary.getAttribute('aria-expanded') === 'true' &&
+                !fold.querySelector('.demo-code-motion').inert,
+              '快速反向后状态错乱'
+            )
+            summary.click()
+            await until(() => !fold.open)
+          })
+          await check('320、390 与 1100 像素宽度下，预览和展开代码均不撑宽页面', async () => {
+            for (const width of [320, 390, 1100]) {
+              frame.style.width = width + 'px'
+              await pause(60)
+              for (const id of [
+                'button',
+                'input',
+                'picker',
+                'date-time-picker',
+                'menu',
+                'popup',
+                'primitives'
+              ]) {
+                await route(id)
+                const root = detail(),
+                  fold = root.querySelector('details')
+                if (!fold.open) fold.querySelector('summary').click()
+                await until(() => fold.querySelector('.demo-code code'))
+                assert(root.scrollWidth <= root.clientWidth + 1, '文档横向溢出 ' + width + '/' + id)
+                const pre = fold.querySelector('.demo-code pre'),
+                  style = win.getComputedStyle(pre)
+                assert(
+                  style.maxHeight === 'none' && pre.scrollHeight <= pre.clientHeight + 1,
+                  '长代码没有完整展开 ' + id
+                )
+                assert(
+                  style.overflowX === 'auto' && style.overflowY === 'hidden',
+                  '代码出现内部垂直滚动 ' + id
+                )
+                assert(
+                  (win.getComputedStyle(root.querySelector('.doc-outline')).display === 'none') ===
+                    width <= 1024,
+                  '目录未按屏幕宽度隐藏 ' + width
+                )
+                fold.querySelector('summary').click()
+              }
+            }
+          })
+          document.querySelector('#result').textContent = JSON.stringify(
+            {
+              passed: reports.length,
+              total: 6,
+              pages: pages.length,
+              examples: exampleCount,
+              sources: sourceCount,
+              reports
+            },
+            null,
+            2
+          )
+        } catch (error) {
+          document.querySelector('#result').textContent = JSON.stringify(
+            { passed: reports.length, error: String(error.stack || error), reports },
+            null,
+            2
+          )
+        } finally {
+          document.querySelector('#run').disabled = false
         }
-        await until(()=>body.getAnimations().length>0,'展开没有动画');await pause(55);
-        const middle=body.getBoundingClientRect().height,target=inner.getBoundingClientRect().height;
-        assert(middle>0&&middle<target-1,'展开直接跳到最终高度');
-        await until(()=>!body.getAnimations().length);
-        assert(Math.abs(body.getBoundingClientRect().height-target)<2,'展开结束仍裁切代码');
-        summary.click();await pause(40);
-        assert(fold.open&&body.isConnected&&body.inert&&body.getBoundingClientRect().height>0,'收起时提前移除内容或仍能交互');
-        await until(()=>!fold.open&&!fold.querySelector('.demo-code'),'收起动画没有结束');
-        summary.click();await pause(35);summary.click();await pause(25);summary.click();
-        await until(()=>fold.open&&fold.querySelector('.demo-code code')&&!fold.querySelector('.demo-code-motion').getAnimations().length);
-        assert(summary.getAttribute('aria-expanded')==='true'&&!fold.querySelector('.demo-code-motion').inert,'快速反向后状态错乱');
-        summary.click();await until(()=>!fold.open);
-      });
-      await check('320、390 与 1100 像素宽度下，预览和展开代码均不撑宽页面',async()=>{
-        for(const width of[320,390,1100]){
-          frame.style.width=width+'px';await pause(60);
-          for(const id of['button','input','picker','date-time-picker','menu','popup','primitives']){
-            await route(id);const root=detail(),fold=root.querySelector('details');fold.querySelector('summary').click();await until(()=>fold.querySelector('.demo-code code'));
-            assert(root.scrollWidth<=root.clientWidth+1,'文档横向溢出 '+width+'/'+id);
-            const pre=fold.querySelector('.demo-code pre');assert(pre.clientHeight<=540,'长代码没有内部滚动 '+id);
-            assert(win.getComputedStyle(pre).overflow==='auto','代码不能滚动 '+id);
-            fold.querySelector('summary').click();
-          }
-        }
-      });
-      document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,total:6,pages:pages.length,examples:exampleCount,sources:sourceCount,reports},null,2);
-    }catch(error){document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,error:String(error.stack||error),reports},null,2)}
-    finally{document.querySelector('#run').disabled=false}
-  };
-}
-</script></html>
+      }
+    }
+  </script>
+</html>

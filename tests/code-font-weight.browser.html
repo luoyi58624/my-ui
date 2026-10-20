@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="zh-CN">
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>my-ui 代码区域独立字重回归</title>
+  <style>
+    body {
+      font: 14px system-ui;
+      margin: 20px;
+    }
+    iframe {
+      display: block;
+      width: 1100px;
+      max-width: 100%;
+      height: 844px;
+      border: 1px solid #ddd;
+      margin-top: 20px;
+    }
+    pre {
+      white-space: pre-wrap;
+    }
+  </style>
+  <main>
+    <h1>代码区域独立字重</h1>
+    <button id="run">运行定向检查</button>
+    <pre id="result">尚未运行</pre>
+    <div id="fixture"></div>
+  </main>
+  <script type="module">
+    if (new URLSearchParams(location.search).has('frame')) {
+      document.body.innerHTML = '<div id="app"></div>'
+      const base = document.createElement('base')
+      base.href = '/example/'
+      document.head.append(base)
+      await import('/example/src/main.ts')
+    } else {
+      const reports = [],
+        pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+      const assert = (value, message) => {
+        if (!value) throw Error(message)
+      }
+      const until = async (check, message) => {
+        const start = performance.now()
+        while (!check()) {
+          if (performance.now() - start > 15000) throw Error(message)
+          await pause(30)
+        }
+      }
+      const check = async (name, run) => {
+        document.querySelector('#result').textContent = '运行中：' + name
+        await run()
+        reports.push({ name, passed: true })
+      }
+      const fields = ['mode', 'backdropBlur', 'fontWeight', 'light', 'dark']
+      const keys = [
+        'my-ui:theme',
+        'chenglan:theme',
+        'my-ui:theme-render',
+        'my-ui:font-weight-customized',
+        ...fields.map((field) => 'my-ui:state:theme:' + field)
+      ]
+      let frame,
+        doc,
+        win,
+        pageSelector = '.guide-page',
+        returnRoute,
+        sequence = 0
+      const root = () => doc.querySelector(pageSelector)
+      const code = () => root()?.querySelector('.demo-code code')
+      const visible = (selector) =>
+        [...doc.querySelectorAll(selector)].find((element) => element.getClientRects().length)
+      const openSettings = async () => {
+        returnRoute = win.location.hash
+        win.location.hash = '/home'
+        await until(
+          () => doc.querySelector('.demo-top [aria-label="主题定制"]')?.getClientRects().length,
+          '首页设置入口未显示'
+        )
+        doc.querySelector('.demo-top [aria-label="主题定制"]').click()
+        await until(() => visible('input[aria-label="全局字重"]'), '全局字重设置未打开')
+      }
+      const closeSettings = async () => {
+        visible('[aria-label="关闭主题定制"]').click()
+        await until(() => !visible('input[aria-label="全局字重"]'), '设置面板未关闭')
+        win.location.hash = returnRoute
+        await until(() => root()?.getClientRects().length && code(), '关闭设置后未返回原页面')
+      }
+      const setWeight = async (weight) => {
+        await openSettings()
+        const slider = visible('input[aria-label="全局字重"]')
+        slider.value = String(weight)
+        slider.dispatchEvent(new win.Event('input', { bubbles: true }))
+        await until(
+          () =>
+            Number(win.getComputedStyle(doc.documentElement).getPropertyValue('--font-weight')) ===
+            weight,
+          '设置没有应用字重 ' + weight
+        )
+        await closeSettings()
+      }
+      const assertWeights = (weight, footer = false) => {
+        assert(Number(win.getComputedStyle(doc.body).fontWeight) === weight, '页面未应用全局字重')
+        const action = weight < 400 ? weight + 100 : Math.max(500, weight)
+        const selectors = [
+          ['.demo-code code', 400],
+          ['.demo-code-lines', 400],
+          ['.demo-code-toolbar', 400],
+          ['.demo-code-filename', 400],
+          ['.demo-code-filename small', 400],
+          ['.demo-code-copy', 400],
+          ['.demo-code-files summary', action],
+          ['.demo-code-count', weight],
+          ['.demo-code-toggle', weight],
+          ['.demo-code-file-list button', weight]
+        ]
+        if (footer)
+          selectors.push(
+            ['.example-code-footer p', weight],
+            ['.example-code-footer code', weight],
+            ['.example-code-footer button', weight]
+          )
+        for (const [selector, expected] of selectors) {
+          const elements = root().querySelectorAll(selector)
+          assert(elements.length, '缺少检查对象 ' + selector)
+          for (const element of elements) {
+            const actual = win.getComputedStyle(element).fontWeight
+            assert(
+              Number(actual) === expected,
+              selector + ' 字重应为 ' + expected + '，实际 ' + actual
+            )
+          }
+        }
+        for (const token of code().querySelectorAll('span'))
+          assert(Number(win.getComputedStyle(token).fontWeight) === 400, '语法高亮受到全局字重影响')
+      }
+      const loadGuide = async () => {
+        pageSelector = '.guide-page'
+        frame.src =
+          '/tests/code-font-weight.browser.html?frame=1&instance=' +
+          ++sequence +
+          '#/guide/quick-start'
+        await until(
+          () =>
+            frame.contentDocument
+              ?.querySelector('.guide-page .demo-code code')
+              ?.textContent.includes('src/'),
+          '快速开始页面未加载'
+        )
+        doc = frame.contentDocument
+        win = frame.contentWindow
+      }
+      document.querySelector('#run').onclick = async () => {
+        const backup = new Map(keys.map((key) => [key, localStorage.getItem(key)]))
+        document.querySelector('#run').disabled = true
+        reports.length = 0
+        try {
+          // 直接操作真实设置面板，覆盖滑块、共享状态和主题渲染的完整路径。
+          for (const key of keys) localStorage.removeItem(key)
+          frame = document.createElement('iframe')
+          frame.title = '代码字重实际页面'
+          document.querySelector('#fixture').replaceChildren(frame)
+          await loadGuide()
+          await check('指南保留格式化示例代码，导航头不重复显示主题与设置', async () => {
+            assert(!root().querySelector('[aria-label="主题定制"]'), '指南仍有重复设置入口')
+            assert(!root().querySelector('[aria-label^="切换到"]'), '指南仍有重复主题入口')
+            const section = root().querySelector('#guide-quick-start-first-component')
+            assert(section.querySelector('details').open, '指南代码没有默认展开')
+            await until(
+              () => section.querySelector('code')?.textContent.includes('function greet'),
+              '第一个交互示例未加载'
+            )
+            const source = section.querySelector('code').textContent
+            assert(source.includes('function greet() {\n'), '示例函数没有格式化为多行')
+            assert(source.includes('.welcome {\n'), '示例 CSS 没有格式化为多行')
+          })
+          await check('全局增粗后代码区保持常规字重，外部标签与操作文字同步增粗', async () => {
+            await setWeight(800)
+            assertWeights(800)
+          })
+          await check('全局变细、默认与最大字重均不影响代码区，操作文字保留层级', async () => {
+            for (const weight of [100, 350, 400, 1000]) {
+              await setWeight(weight)
+              assertWeights(weight)
+            }
+          })
+          await check('切换文件和折叠重开后，正文、行号与高亮仍保持常规字重', async () => {
+            await setWeight(800)
+            const files = root().querySelector('.demo-code-files')
+            ;[...files.querySelectorAll('.demo-code-file-list button')]
+              .find((button) => button.textContent === 'main.ts')
+              .click()
+            await until(() => code()?.querySelector('.hljs-keyword'), 'TypeScript 高亮未加载')
+            assertWeights(800)
+            files.querySelector('summary').click()
+            await until(() => !files.open, '代码未折叠')
+            files.querySelector('summary').click()
+            await until(() => code()?.querySelector('.hljs-keyword'), '代码未重新展开')
+            assertWeights(800)
+          })
+          await check('刷新后页面恢复手动字重，代码区域仍保持独立字重', async () => {
+            await until(
+              () => JSON.parse(localStorage.getItem('my-ui:theme') || 'null')?.fontWeight === 800,
+              '字重没有保存'
+            )
+            await loadGuide()
+            await until(
+              () => win.getComputedStyle(doc.body).fontWeight === '800',
+              '刷新后没有恢复字重'
+            )
+            assertWeights(800)
+          })
+          await check('独立代码页及底部说明、导航跟随设置，恢复字重回到默认', async () => {
+            win.location.hash = '/code/button'
+            pageSelector = '.code-page'
+            await until(() => code()?.querySelector('.hljs-keyword'), '独立代码页未加载')
+            assertWeights(800, true)
+            await openSettings()
+            visible('.weight-reset').click()
+            await until(() => win.getComputedStyle(doc.body).fontWeight === '400', '恢复字重未生效')
+            await closeSettings()
+            assertWeights(400, true)
+          })
+          await check('桌面与窄屏均保留代码字体和暗色，长代码完整展开', async () => {
+            await setWeight(1000)
+            for (const width of [390, 1100]) {
+              frame.style.maxWidth = 'none'
+              frame.style.width = width + 'px'
+              await pause(50)
+              assertWeights(1000, true)
+              const style = win.getComputedStyle(code()),
+                pre = code().closest('pre')
+              assert(style.fontFamily.includes('MyUI Demo Consolas'), '代码字体被覆盖')
+              assert(style.backgroundColor === 'rgb(40, 44, 52)', '代码暗色背景被改变')
+              assert(root().scrollWidth <= win.innerWidth + 1, '代码区域撑宽页面：' + width)
+              const preStyle = win.getComputedStyle(pre)
+              assert(preStyle.maxHeight === 'none', '代码仍有最大高度限制')
+              assert(preStyle.overflowX === 'auto', '代码没有保留横向滚动')
+              assert(preStyle.overflowY === 'hidden', '代码仍可能显示垂直滚动条')
+              assert(pre.scrollHeight <= pre.clientHeight + 1, '长代码没有完整展开')
+            }
+          })
+          await check('所有示例共用导航头和返回箭头，主题与设置入口仅在首页', async () => {
+            win.location.hash = '/home'
+            await until(() => visible('.demo-top [aria-label="主题定制"]'), '首页设置入口缺失')
+            assert(visible('.demo-top [aria-label^="切换到"]'), '首页主题切换入口缺失')
+            for (const width of [1463, 390]) {
+              frame.style.maxWidth = 'none'
+              frame.style.width = width + 'px'
+              await pause(50)
+              let arrowPath
+              for (const [path, selector] of [
+                ['/example/button', '[data-demo-page="example/button"]'],
+                ['/guide/quick-start', '[data-guide="quick-start"]'],
+                ['/guide/native', '[data-guide="native"]'],
+                ['/code/button', '.code-page'],
+                ['/native/app-bar', '[data-component-demo="app-bar"]'],
+                ['/native/bottom-navigation', '[data-component-demo="bottom-navigation"]'],
+                ['/native/tabs', '[data-component-demo="tabs"]'],
+                ['/page-refresh', '.refresh-demo'],
+                ['/showcase', '.showcase-layout'],
+                ['/html', '.html-page'],
+                ['/shared-state', '.native-page']
+              ]) {
+                win.location.hash = path
+                await until(() => visible(selector), '子页未打开：' + path)
+                assert(!visible('[aria-label="主题定制"]'), '子页仍有设置图标：' + path)
+                assert(!visible('[aria-label^="切换到"]'), '子页仍有主题切换图标：' + path)
+                assert(!visible('[aria-label="查看代码"]'), '子页仍有代码图标：' + path)
+                const header = visible('.demo-native-header')
+                assert(header, '没有使用统一导航组件：' + path)
+                const bar = header.querySelector('.nc-app-bar'),
+                  button = bar.querySelector('.nc-leading button'),
+                  bounds = bar.getBoundingClientRect(),
+                  outer = header.getBoundingClientRect(),
+                  title = bar.querySelector('.nc-heading').getBoundingClientRect(),
+                  icon = button.querySelector('svg')
+                assert(
+                  bounds.height === 56 && button.getBoundingClientRect().width === 44,
+                  '导航或返回按钮尺寸不统一：' + path
+                )
+                assert(
+                  Math.abs(bounds.width - Math.min(outer.width, 1160)) < 1 &&
+                    Math.abs((bounds.left + bounds.right) / 2 - (outer.left + outer.right) / 2) < 1,
+                  '导航宽度与居中约束不统一：' + path
+                )
+                assert(
+                  Math.abs((title.left + title.right) / 2 - (bounds.left + bounds.right) / 2) < 1,
+                  '标题没有居中：' + path
+                )
+                assert(
+                  Math.abs(button.getBoundingClientRect().left - bounds.left - 8) < 1,
+                  '返回箭头边距不统一：' + path
+                )
+                const paths = [...icon.querySelectorAll('path')]
+                  .map((node) => node.getAttribute('d'))
+                  .join()
+                arrowPath ??= paths
+                assert(paths === arrowPath && paths.length > 0, '返回箭头图标不统一：' + path)
+              }
+            }
+          })
+          document.querySelector('#result').textContent = JSON.stringify(
+            { passed: reports.length, total: 8, reports },
+            null,
+            2
+          )
+        } catch (error) {
+          document.querySelector('#result').textContent = JSON.stringify(
+            { passed: reports.length, error: String(error.stack || error), reports },
+            null,
+            2
+          )
+        } finally {
+          frame?.remove()
+          for (const [key, value] of backup) {
+            if (value === null) localStorage.removeItem(key)
+            else localStorage.setItem(key, value)
+          }
+          document.querySelector('#run').disabled = false
+        }
+      }
+    }
+  </script>
+</html>

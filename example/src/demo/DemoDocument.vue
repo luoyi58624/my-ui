@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, provide, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, provide, ref } from 'vue'
 import { documentKey, type DocumentExample } from './document'
+import DocumentOutline from './DocumentOutline.vue'
 
 const props = defineProps<{
   /** 组件目录的唯一标识。 */
@@ -13,11 +14,26 @@ const props = defineProps<{
 const root = ref<HTMLElement>()
 const examples = ref<DocumentExample[]>([])
 const current = ref('')
+const outlineItems = computed(() =>
+  examples.value.map((example) => ({
+    id: example.name,
+    title: example.title,
+    href: '#example-' + props.id + '-' + example.name
+  }))
+)
+let firstExample: string | undefined
 let scroller: HTMLElement | null = null,
   frame = 0
 function update() {
   frame = 0
   if (!scroller || scroller.inert) return
+  if (
+    scroller.scrollTop > 0 &&
+    scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 2
+  ) {
+    current.value = examples.value.at(-1)?.name ?? ''
+    return
+  }
   const top = scroller.getBoundingClientRect().top + 90
   current.value =
     [...examples.value]
@@ -31,6 +47,10 @@ function schedule() {
 }
 provide(documentKey, {
   id: props.id,
+  defaultCodeOpen(name) {
+    firstExample ??= name
+    return firstExample === name
+  },
   register(example) {
     examples.value.push(example)
     void nextTick(schedule)
@@ -39,7 +59,9 @@ provide(documentKey, {
     }
   }
 })
-function locate(example: DocumentExample) {
+function locate(name: string) {
+  const example = examples.value.find((item) => item.name === name)
+  if (!example) return
   current.value = example.name
   example.element.scrollIntoView({ block: 'start', behavior: 'instant' })
   example.element.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true })
@@ -68,20 +90,7 @@ onBeforeUnmount(() => {
     </header>
     <div class="doc-layout">
       <article class="doc-content" :aria-label="title + '用法示例'"><slot /></article>
-      <aside class="doc-outline" aria-label="本页目录">
-        <nav>
-          <h2>本页目录</h2>
-          <a
-            v-for="example in examples"
-            :key="example.name"
-            :href="'#example-' + id + '-' + example.name"
-            :aria-current="current === example.name ? 'location' : undefined"
-            @click.prevent="locate(example)"
-          >
-            {{ example.title }}
-          </a>
-        </nav>
-      </aside>
+      <DocumentOutline :items="outlineItems" :value="current" @select="locate" />
     </div>
   </div>
 </template>
@@ -90,8 +99,24 @@ onBeforeUnmount(() => {
 .demo-document {
   --card-radius: 10px;
   --card-padding: 24px;
+  --doc-outline-width: 192px;
+  width: min(800px, calc(100% - var(--doc-outline-width) - 64px));
+  box-sizing: border-box;
+  margin-inline: clamp(
+      0px,
+      calc((100% - 800px) / 2),
+      calc(100% - 800px - var(--doc-outline-width) - 64px)
+    )
+    auto;
   min-width: 0;
+  /* 宽屏正文独立居中，空间不足时为固定在屏幕右侧的目录让出位置。 */
   padding: 12px 0 28px;
+}
+.doc-intro,
+.doc-layout {
+  width: 100%;
+  max-width: 800px;
+  margin-inline: auto;
 }
 .doc-intro {
   margin-bottom: 44px;
@@ -122,10 +147,7 @@ onBeforeUnmount(() => {
   line-height: 1.9;
 }
 .doc-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 172px;
-  align-items: start;
-  gap: 48px;
+  display: block;
 }
 .doc-content {
   min-width: 0;
@@ -220,54 +242,10 @@ onBeforeUnmount(() => {
   padding-top: 0;
   border-top: 0;
 }
-.doc-outline {
-  position: sticky;
-  top: 24px;
-  min-width: 0;
-}
-.doc-outline nav {
-  padding-left: 16px;
-  border-left: 1px solid var(--border);
-}
-.doc-outline h2 {
-  margin: 0 0 12px;
-  color: var(--text);
-  font-size: 12px;
-  font-weight: var(--font-weight-subtitle, 600);
-}
-.doc-outline a {
-  display: block;
-  padding: 7px 0;
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 1.7;
-  text-decoration: none;
-}
-.doc-outline a:hover,
-.doc-outline a[aria-current] {
-  color: var(--primary);
-}
-.doc-outline a[aria-current] {
-  position: relative;
-}
-.doc-outline a[aria-current]::before {
-  position: absolute;
-  inset: 8px auto 8px -17px;
-  width: 2px;
-  background: var(--primary);
-  content: '';
-}
-.doc-outline a:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 3px;
-}
-@media (max-width: 1000px) {
-  .doc-layout {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-  }
-  .doc-outline {
-    display: none;
+@media (max-width: 1024px) {
+  .demo-document {
+    width: min(100%, 800px);
+    margin-inline: auto;
   }
 }
 @media (max-width: 600px) {
@@ -288,6 +266,7 @@ onBeforeUnmount(() => {
   }
 }
 :global(html.my-mobile-native .demo-document) {
-  padding-right: 0;
+  width: min(100%, 800px);
+  margin-inline: auto;
 }
 </style>

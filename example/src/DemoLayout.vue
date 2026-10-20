@@ -135,13 +135,6 @@ function openExample(id: string) {
   void openPage(item.path ?? '/example/' + id, { title: item.title }).catch(reportError)
 }
 
-function openShowcase() {
-  const page = elements.get(active.value)
-  if (page?.offsetHeight) positions.set(active.value, page.scrollTop)
-  lastEntry = 'showcase'
-  void openPage('/showcase', { title: '完整交互示例' }).catch(reportError)
-}
-
 function reportError(error: unknown) {
   returning = false
   emit('navigationError', error instanceof Error ? error.message : String(error))
@@ -182,7 +175,8 @@ function followRoute() {
   void selectPage(value, false, item && !anchor.startsWith('example/') ? anchor : undefined)
 }
 
-watch(() => route.fullPath, followRoute, { immediate: true })
+// 在 KeepAlive 移走页面前记录位置，默认展开的长代码也能正确恢复滚动。
+watch(() => route.fullPath, followRoute, { immediate: true, flush: 'sync' })
 onBeforeUnmount(() => {
   navigationVersion++
   document.removeEventListener('visibilitychange', updateVisibility)
@@ -196,7 +190,7 @@ onBeforeUnmount(() => {
         ref="titleElement"
         :title="title"
         :back="!!example"
-        :code-id="example?.id"
+        :settings="active === 'home'"
         :back-label="
           isChildPage()
             ? '返回上一页'
@@ -233,16 +227,6 @@ onBeforeUnmount(() => {
           <div v-if="page.value === 'home' || page.value === 'native'" class="demo-catalog">
             <div class="demo-intro">
               <h2>{{ page.value === 'native' ? '原生组件' : '组件目录' }}</h2>
-              <Button
-                v-if="page.value === 'home'"
-                data-showcase-entry
-                variant="outline"
-                icon="layer"
-                @click="openShowcase"
-              >
-                完整交互示例
-                <Icon name="arrow-right" />
-              </Button>
             </div>
             <div class="demo-catalog-groups">
               <section
@@ -260,6 +244,7 @@ onBeforeUnmount(() => {
                     v-for="item in group.items"
                     :key="item.id"
                     :data-demo-link="item.id"
+                    :data-showcase-entry="item.id === 'showcase' ? '' : undefined"
                     :title="item.title"
                     @click="openExample(item.id)"
                   >
@@ -320,15 +305,8 @@ onBeforeUnmount(() => {
 }
 .demo-top {
   padding-top: env(safe-area-inset-top);
-  border-bottom: 1px solid var(--border);
   background: var(--card-background);
   z-index: 40;
-}
-.demo-top :deep(.nc-app-bar) {
-  height: 56px;
-  width: min(100%, 1160px);
-  margin: auto;
-  border: 0;
 }
 .demo-main {
   height: 100%;
@@ -348,7 +326,7 @@ onBeforeUnmount(() => {
   --card-radius: 18px;
   --card-padding: 24px;
   --card-header-gap: 20px;
-  width: min(100%, 1120px);
+  width: 100%;
   margin: auto;
 }
 .demo-detail {
@@ -374,10 +352,6 @@ onBeforeUnmount(() => {
   margin: auto;
 }
 .demo-intro {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 16px;
   margin: 4px 2px 28px;
 }
 .demo-intro h2 {
@@ -385,17 +359,6 @@ onBeforeUnmount(() => {
   font-size: 23px;
   line-height: 1.4;
   font-weight: var(--font-weight-title, 700);
-}
-.demo-intro > .my-button {
-  gap: 8px;
-  padding-inline: 14px;
-  font-size: 13px;
-  border-color: var(--border);
-  background: var(--card-background);
-}
-.demo-intro > .my-button :deep(svg) {
-  width: 17px;
-  height: 17px;
 }
 .demo-catalog-groups {
   display: grid;
