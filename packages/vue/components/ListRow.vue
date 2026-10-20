@@ -17,7 +17,7 @@ const props = withDefaults(defineProps<{
   disabled?: boolean
   /** 触摸按压激活前的等待毫秒数，默认 0；鼠标与键盘不延迟。 */
   delayTouchDown?: number
-  /** 触摸抬起后保留按压反馈的毫秒数，默认 100；滚动和取消立即撤销。 */
+  /** 从触摸按下起算的最短反馈毫秒数，默认 100；只补剩余时间，滚动和取消立即撤销。 */
   delayTouchUp?: number
 }>(), { delayTouchDown: 0, delayTouchUp: 100 })
 const emit = defineEmits<{

@@ -187,7 +187,7 @@
       pointer(document, 'pointerup'); assert(pressed(card), '卡片没有保留轻触反馈')
       await pause(125); assert(!pressed(card), '保留结束后卡片没有恢复')
     })
-    await check('原生组件默认按下立即响应、抬起保留 100ms，点击即时且捕获丢失不打断反馈', async () => {
+    await check('原生组件轻触只补足到按下后 100ms，正常长按抬起立即恢复', async () => {
       for (const name of ['Button', 'Card', 'ListRow']) {
         let calls = 0
         const c = MyUI.create(name, { title: '操作', label: '操作', interactive: true, onClick: () => calls++, onActivate: () => calls++ })
@@ -196,6 +196,8 @@
         pointer(document, 'pointerup'); pointer(c.element, 'lostpointercapture'); c.element.click()
         assert(pressed(c.element) && calls === 1, name + ' 保留反馈失败或点击延迟')
         await pause(125); assert(!pressed(c.element), name + ' 保留反馈没有清理')
+        pointer(c.element, 'pointerdown'); await pause(150); pointer(document, 'pointerup')
+        assert(!pressed(c.element), name + ' 正常长按后仍额外等待 100ms')
       }
     })
     result.textContent = JSON.stringify({ passed: reports.filter(item => item.pass).length, total: reports.length, results: reports }, null, 2)

@@ -101,7 +101,7 @@ export interface NativePopupOptions<T = unknown> {
 export interface NativePressOptions {
   /** 触摸按压激活前的等待毫秒数，默认 0；鼠标与键盘不延迟。 */
   delayTouchDown?: number;
-  /** 触摸抬起后保留按压反馈的毫秒数；核心默认 0，各组件定义自身默认值。 */
+  /** 从触摸按下起算的最短反馈毫秒数，抬起时只补剩余时间；核心默认 0。 */
   delayTouchUp?: number;
 }
 /** 原生创建选项，Vue 适配层复用同一个元素与插槽出口。 */

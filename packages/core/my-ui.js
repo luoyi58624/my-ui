@@ -1116,6 +1116,7 @@
       // 保留输入来源，屏蔽触摸结束后浏览器迟到的 :active；鼠标与键盘仍走原生反馈。
       button.toggleAttribute("data-my-press-input", direct || !available());
       if (!direct || event.button !== 0 || event.isPrimary === false || !available()) return;
+      const downAt = performance.now();
       const bounds = button.getBoundingClientRect();
       const { pointerId, clientX, clientY } = event;
       let released = false;
@@ -1125,8 +1126,9 @@
         released = true;
         clearTimeout(timer);
         timer = undefined;
+        // 只补足从按下起算的最短反馈时间；正常长按抬起不再额外等待。
         const duration = event.pointerType === "touch" && button.hasAttribute("data-my-pressed")
-          ? delay("delayTouchUp") : 0;
+          ? Math.max(0, delay("delayTouchUp") - (performance.now() - downAt)) : 0;
         if (duration > 0) upTimer = setTimeout(reset, duration);
         else reset();
       };

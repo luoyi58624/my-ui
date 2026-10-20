@@ -41,7 +41,7 @@ function harness(options = {}) {
   const document = new Target(), window = new Target(), element = new Target(), tasks = new Map()
   let clock = 0, nextId = 0
   const bind = runInNewContext(`(() => { const pressBindings = new WeakMap(); ${implementation}; return bindPressFeedback })()`, {
-    document, window,
+    document, window, performance: { now: () => clock },
     setTimeout: (callback, delay) => { tasks.set(++nextId, { callback, time: clock + delay }); return nextId },
     clearTimeout: id => tasks.delete(id),
   })
@@ -157,14 +157,32 @@ test('非法延迟回退即时反馈，非主指针与右键不激活', () => {
   }
 })
 
-test('正常触摸抬起后保留 100ms，点击仍即时执行且只执行一次', () => {
+test('20ms 轻触只补足 80ms，点击仍即时执行且只执行一次', () => {
   const h = harness({ delayTouchUp: () => 100 }); let clicks = 0
   h.element.addEventListener('click', () => clicks++)
-  h.down(); h.event(h.document, 'pointerup'); h.event(h.element, 'click')
+  h.down(); h.advance(20); h.event(h.document, 'pointerup'); h.event(h.element, 'click')
   assert.equal(clicks, 1); assert.equal(h.pressed(), true)
-  h.advance(99); assert.equal(h.pressed(), true)
+  h.advance(79); assert.equal(h.pressed(), true)
   h.advance(1); assert.equal(h.pressed(), false)
   assert.equal(clicks, 1); assert.equal(h.globalListeners(), 0)
+})
+
+test('100ms 只是从按下起算的兜底，达到或超过后抬起立即退出', () => {
+  for (const elapsed of [100, 101, 150, 500]) {
+    const h = harness({ delayTouchUp: () => 100 })
+    h.down(); h.advance(elapsed); h.event(h.document, 'pointerup')
+    assert.equal(h.pressed(), false); assert.equal(h.tasks.size, 0); assert.equal(h.globalListeners(), 0)
+  }
+})
+
+test('99ms 轻触只补 1ms，按下激活有延迟时仍按指针按下时间计算', () => {
+  const edge = harness({ delayTouchUp: () => 100 })
+  edge.down(); edge.advance(99); edge.event(edge.document, 'pointerup')
+  assert.equal(edge.pressed(), true); edge.advance(1); assert.equal(edge.pressed(), false)
+  const h = harness({ delayTouchDown: () => 50, delayTouchUp: () => 100 })
+  h.down(); h.advance(50); assert.equal(h.pressed(), true)
+  h.advance(20); h.event(h.document, 'pointerup'); h.advance(29); assert.equal(h.pressed(), true)
+  h.advance(1); assert.equal(h.pressed(), false)
 })
 
 test('正常抬起后的隐式捕获丢失和重复抬起不打断或延长保留时间', () => {
