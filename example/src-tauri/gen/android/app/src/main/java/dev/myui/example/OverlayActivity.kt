@@ -19,6 +19,7 @@ abstract class OverlayActivity : TauriActivity() {
         var appNightMode: Int? = null
     }
     private var overlayWebView: WebView? = null
+    private val backPreview = BackPreview(this)
     private val overlayBack = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() {
             val webView = overlayWebView
@@ -47,6 +48,12 @@ abstract class OverlayActivity : TauriActivity() {
     override fun onResume() {
         super.onResume()
         appDarkMode?.let(::applySystemBars)
+        backPreview.resume(overlayWebView)
+    }
+
+    override fun onPause() {
+        backPreview.capture()
+        super.onPause()
     }
 
     /** 同步应用夜间模式、窗口背景以及系统栏的文字和图标。 */
@@ -101,6 +108,7 @@ abstract class OverlayActivity : TauriActivity() {
     }
 
     override fun onDestroy() {
+        backPreview.destroy()
         overlayBack.remove()
         overlayWebView = null
         super.onDestroy()
