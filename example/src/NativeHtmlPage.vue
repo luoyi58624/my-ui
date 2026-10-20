@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { NativeAppBar } from 'tauri-plugin-native-components/vue'
+import { AppBar } from 'tauri-plugin-native-components/vue'
 import { closePage } from './navigation'
 
 const error = ref('')
@@ -12,7 +12,7 @@ function back() {
 
 <template>
   <div class="html-page">
-    <NativeAppBar title="原生 HTML 示例" back @back="back" @error="console.error" />
+    <AppBar title="原生 HTML 示例" back @back="back" @error="console.error" />
     <p v-if="error" role="alert">{{ error }}</p>
     <iframe :src="source" title="直接使用 CSS 与 JavaScript 的组件示例" />
   </div>

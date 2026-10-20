@@ -447,8 +447,8 @@ Android 示例的系统返回优先交给当前 WebView 的最上层弹层：级
 
 独立源码位于 `D:/project/tauri/plugins/tauri-plugin-native-components/`，目录、前端包和 Rust crate 均使用 `tauri-plugin-` 前缀，命令及权限仍使用短标识 `native-components`。示例通过 Bun 本地依赖安装完整源码，尚未创建或发布 GitHub 仓库。
 
-从 `tauri-plugin-native-components/vue` 引入 `NativeAppBar`、`NativeBottomNavigation`、`NativeTabs`，同时引入 `tauri-plugin-native-components/style.css`。Android 使用 MaterialToolbar 和 BottomNavigationView，保留官方水波纹；Web 和其他桌面/移动平台显示 Vue 对应内容。CSS 提供尺寸和颜色，插件不生成示例主题。
+从 `tauri-plugin-native-components/vue` 引入 `AppBar`、`BottomNavigation`、`Tabs`，同时引入 `tauri-plugin-native-components/style.css`。组件按职责命名，通过 Vue 属性、事件和插槽封装平台能力。Android 使用 MaterialToolbar 和 BottomNavigationView，保留官方水波纹；Web 和其他桌面/移动平台显示 Vue 对应内容。CSS 提供尺寸和颜色，插件不生成示例主题。
 
-`NativeTabs` 同时管理底栏和各 Tab 的原生页面，`nativeView` 指向宿主注册的 Android 页面工厂。当前首页保留 Tauri WebView 和组件目录，其他三个 Tab 使用 `DemoNativeTab.kt` 中的独立 Android View；切换保留实例与计数。详情页继续由 `tauri-plugin-native-router` 新建 Activity，各 Tab 不额外打开 Activity 或 WebView。Web/桌面的对应内容保留在 Vue 插槽中。
+`Tabs` 同时管理底栏和各 Tab 的原生页面，`nativeView` 指向宿主注册的 Android 页面工厂。当前首页保留 Tauri WebView 和组件目录，其他三个 Tab 使用 `DemoNativeTab.kt` 中的独立 Android View；切换保留实例与计数。详情页继续由 `tauri-plugin-native-router` 新建 Activity，各 Tab 不额外打开 Activity 或 WebView。Web/桌面的对应内容保留在 Vue 插槽中。
 
 `DemoAppBar.vue` 将结构化标题、返回和主题操作接入原生导航头；Web 弹层出现时通过 `suspended` 显示 Web 对应内容，退出后恢复原生视图。原生组件绑定发起调用的窗口，不借用 Tauri 的全局 Activity，不改动现有 WebView 生命周期策略。

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch, type ComponentPublicInstance } from 'vue'
+import { computed, nextTick, onActivated, onDeactivated, onBeforeUnmount, ref, watch, type ComponentPublicInstance } from 'vue'
 import { useRoute } from 'vue-router'
 import { Button, CellGroup, Icon, ListRow } from '@my-ui/vue'
-import { NativeTabs, type NavigationItem } from 'tauri-plugin-native-components/vue'
+import { Tabs, type NavigationItem } from 'tauri-plugin-native-components/vue'
 import DemoAppBar from './DemoAppBar.vue'
 import { useNativeBarsSuspended } from './native-components'
 import { demoExamples, demoGroups } from './demo/catalog'
@@ -29,6 +29,11 @@ const titleElement = ref<InstanceType<typeof DemoAppBar>>()
 const suspended = useNativeBarsSuspended()
 const elements = new Map<string, HTMLElement>(), positions = new Map<string, number>()
 const route = useRoute()
+const activated = ref(true), visible = ref(!document.hidden)
+const updateVisibility = () => { visible.value = !document.hidden }
+document.addEventListener('visibilitychange', updateVisibility)
+onActivated(() => { activated.value = true })
+onDeactivated(() => { activated.value = false })
 let navigationVersion = 0, returning = false
 
 function setPageElement(value: string, element: Element | ComponentPublicInstance | null) {
@@ -106,6 +111,7 @@ function followRoute() {
 watch(() => route.fullPath, followRoute, { immediate: true })
 onBeforeUnmount(() => {
   navigationVersion++
+  document.removeEventListener('visibilitychange', updateVisibility)
 })
 </script>
 
@@ -114,7 +120,7 @@ onBeforeUnmount(() => {
     <div class="demo-top">
       <DemoAppBar ref="titleElement" :title="title" :back="!!example" :back-label="isChildPage() ? '返回上一页' : '返回组件列表'" class="demo-app-bar" @back="goBack" />
     </div>
-    <NativeTabs class="demo-tabs" :model-value="active" :items="nativePages" :navigation-visible="!example" :suspended="suspended" @select="navigate" @action="tabAction" @error="console.error">
+    <Tabs class="demo-tabs" :model-value="active" :items="nativePages" :navigation-visible="!example" :suspended="suspended" @select="navigate" @action="tabAction" @error="console.error">
     <main class="demo-main" :aria-label="title">
       <section v-for="page in pages" v-show="active === page.value" :key="page.value"
         :ref="element => setPageElement(page.value, element)" class="demo-page"
@@ -146,10 +152,10 @@ onBeforeUnmount(() => {
         :ref="element => setPageElement('example/' + item.id, element)" class="demo-page demo-detail"
         :data-demo-page="'example/' + item.id" :aria-label="item.title"
         :inert="example?.id !== item.id" :aria-hidden="example?.id !== item.id ? true : undefined">
-        <div class="demo-page-inner"><slot :name="item.id" /></div>
+        <div class="demo-page-inner"><slot :name="item.id" :active="activated && visible && route.name === 'demo' && example?.id === item.id" /></div>
       </section>
     </main>
-    </NativeTabs>
+    </Tabs>
   </div>
 </template>
 

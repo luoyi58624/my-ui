@@ -1,5 +1,5 @@
 import { createApp, h, ref } from 'vue'
-import { NativeAppBar, NativeTabs } from 'tauri-plugin-native-components/vue'
+import { AppBar, Tabs } from 'tauri-plugin-native-components/vue'
 import 'tauri-plugin-native-components/style.css'
 
 const w = window as any
@@ -12,7 +12,7 @@ const items = [
   { value: 'profile', label: '我的', icon: 'user' as const, badge: 3, nativeView: 'demo', nativeProps: { count: 3 } },
 ]
 w.app = createApp({ setup: () => () => h('div', { style: '--nc-surface:#fff;--nc-text:#17191e;--nc-muted:#626776;--nc-primary:#2456ca;--nc-selected:#e8efff;--nc-border:#ddd' }, [
-  visible.value ? h(NativeAppBar, { title: title.value, back: true, suspended: suspended.value, actions: [{ value: 'settings', label: '设置', icon: 'sliders' }], onBack: () => w.events.push('back'), onAction: value => w.events.push(value), onError: () => w.events.push('error') }) : null,
-  h(NativeTabs, { style: 'height:400px', modelValue: selected.value, items, suspended: suspended.value, 'onUpdate:modelValue': value => { selected.value = value }, onSelect: value => w.events.push(value), onAction: event => w.events.push(event.tab + ':' + event.value), onError: () => w.events.push('error') }, () => h('p', '页面内容')),
+  visible.value ? h(AppBar, { title: title.value, back: true, suspended: suspended.value, actions: [{ value: 'settings', label: '设置', icon: 'sliders' }], onBack: () => w.events.push('back'), onAction: value => w.events.push(value), onError: () => w.events.push('error') }) : null,
+  h(Tabs, { style: 'height:400px', modelValue: selected.value, items, suspended: suspended.value, 'onUpdate:modelValue': value => { selected.value = value }, onSelect: value => w.events.push(value), onAction: event => w.events.push(event.tab + ':' + event.value), onError: () => w.events.push('error') }, () => h('p', '页面内容')),
 ]) })
 w.app.mount('#app')
