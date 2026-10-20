@@ -175,8 +175,9 @@ onBeforeUnmount(() => {
 .demo-top :deep(.nc-app-bar) { height: 56px; width: min(100%, 1160px); margin: auto; border: 0; }
 .demo-main { height: 100%; position: relative; min-width: 0; min-height: 0; }
 .demo-page { position: absolute; inset: 0; overflow: auto; overscroll-behavior-y: contain; padding: 24px max(20px, env(safe-area-inset-right)) 32px max(20px, env(safe-area-inset-left)); scrollbar-gutter: stable; }
-.demo-page-inner { width: min(100%, 1120px); margin: auto; }
+.demo-page-inner { --card-radius: 18px; --card-padding: 24px; --card-header-gap: 20px; width: min(100%, 1120px); margin: auto; }
 .demo-page-inner > :deep(:first-child) { margin-top: 0; }
+.demo-page-inner :deep(.my-sample-id[data-my-card]) { flex: none; padding: 4px 8px; border-radius: 6px; background: var(--fill); color: var(--text-secondary); font: 500 10px/16px var(--font); letter-spacing: .06em; }
 .demo-catalog { max-width: 960px; margin: auto; }
 .demo-intro { margin: 0 4px 28px; }
 .demo-intro h2 { margin: 0 0 8px; font-size: 26px; font-weight: var(--font-weight-title, 700); }
@@ -198,4 +199,5 @@ onBeforeUnmount(() => {
 .demo-placeholder p { margin: 0 0 28px; color: var(--text-secondary); font-size: 14px; }
 @media (min-width: 900px) { .demo-catalog-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
 @media (max-width: 760px) { .demo-page { padding: 20px max(14px, env(safe-area-inset-right)) 24px max(14px, env(safe-area-inset-left)); } }
+@media (max-width: 600px) { .demo-page-inner { --card-radius: 16px; --card-padding: 20px; } }
 </style>
