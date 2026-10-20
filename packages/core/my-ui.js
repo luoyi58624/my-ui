@@ -225,6 +225,7 @@
     const parts = value.split("-").map(Number), [year, month, day] = parts;
     if (year >= 1 && year <= 9999 && day >= 1 && day <= daysInMonth(year, month)) return parts;
   }
+  /** @param {number[]} parts 日期分量。 */
   const dateKey = ([year, month, day]) => `${pad(year, 4)}-${pad(month)}-${pad(day)}`;
   const todayKey = () => { const now = new Date(); return dateKey([now.getFullYear(), now.getMonth() + 1, now.getDate()]); };
   const dateSerial = (value) => {
@@ -266,10 +267,15 @@
     const [hour, minute, second = 0] = value.split(":").map(Number);
     if (hour < 24 && minute < 60 && second < 60) return [hour, minute, second];
   };
+  /** @param {number[]} parts 时间分量。 */
   const timeNumber = ([hour, minute, second]) => hour * 3600 + minute * 60 + second;
   const unitStep = (value) => Number.isInteger(value) && value >= 1 && value <= 60 ? value : 1;
   const nearestNumber = (options, value) => options.reduce((best, option) => Math.abs(option.value - value) <= Math.abs(best - value) ? option.value : best, options[0]?.value);
-  /** 生成时分秒列；步长从零开始，边界仅保留确实存在的可选时刻。 */
+  /**
+   * 生成时分秒列；步长从零开始，边界仅保留确实存在的可选时刻。
+   * @param {string} value 当前时间。
+   * @param {{min?: string, max?: string, minuteStep?: number, secondStep?: number, showSeconds?: boolean}} [options] 时间范围与步长。
+   */
   function timePickerState(value, { min, max, minuteStep = 1, secondStep = 1, showSeconds = false } = {}) {
     const lower = timeNumber(timeParts(min) ?? [0, 0, 0]), upper = timeNumber(timeParts(max) ?? [23, 59, 59]);
     const minutes = unitStep(minuteStep), seconds = unitStep(secondStep), groups = new Map();
@@ -308,7 +314,7 @@
     return Array.from({ length: 42 }, (_, index) => serialDate(start + index));
   }
   /** 范围排序且不跨过禁用日期，遇到不可达终点就从本次点击重新开始。 */
-  function calendarSelection(current, value, range, disabled = () => false) {
+  function calendarSelection(current, value, range, disabled = (_date) => false) {
     if (!dateParts(value) || disabled(value)) return current;
     if (!range) return value;
     const start = Array.isArray(current) && current.length === 1 && dateParts(current[0]) && !disabled(current[0]) ? current[0] : undefined;
@@ -684,13 +690,12 @@
       value === undefined ||
       value === null ||
       (value === false && !key.startsWith("aria-"))
-    )
-      node.removeAttribute(key);
-    else
-      node.setAttribute(
-        key,
-        value === true && !key.startsWith("aria-") ? "" : String(value),
-      );
+    ) {
+      if (node.hasAttribute(key)) node.removeAttribute(key);
+    } else {
+      const next = value === true && !key.startsWith("aria-") ? "" : String(value);
+      if (node.getAttribute(key) !== next) node.setAttribute(key, next);
+    }
   }
   function attrs(node, values) {
     for (const [key, value] of Object.entries(values)) attr(node, key, value);
@@ -698,11 +703,20 @@
   }
   function scope(node, component) {
     const key = "data-my-" + kebab(component);
-    node.setAttribute(key, "");
-    for (const child of node.querySelectorAll("*")) child.setAttribute(key, "");
+    if (!node.hasAttribute(key)) node.setAttribute(key, "");
+    // 新插槽和动态内容仍需补标记，已标记的子树不再反复写属性。
+    for (const child of node.querySelectorAll(":not([" + key + "])")) child.setAttribute(key, "");
     return node;
   }
-  function el(tag = "div", classes = "", text) {
+  /**
+   * 按标签保留节点类型，避免把图片、按钮属性写到普通元素上。
+   * @template {keyof HTMLElementTagNameMap} [T='div']
+   * @param {T} [tag]
+   * @param {string} [classes]
+   * @param {unknown} [text]
+   * @returns {HTMLElementTagNameMap[T]}
+   */
+  function el(tag = /** @type {T} */ ("div"), classes = "", text) {
     const node = document.createElement(tag);
     node.className = names(classes);
     if (text !== undefined) node.textContent = String(text ?? "");
@@ -778,6 +792,7 @@
     };
     append(value);
   }
+  const unitlessStyles = new Set(("animation-iteration-count aspect-ratio border-image-outset border-image-slice border-image-width column-count fill-opacity flex flex-grow flex-shrink flood-opacity font-size-adjust font-weight grid-area grid-column grid-column-end grid-column-start grid-row grid-row-end grid-row-start line-clamp line-height opacity order orphans scale stop-opacity stroke-dasharray stroke-dashoffset stroke-miterlimit stroke-opacity stroke-width tab-size widows z-index zoom").split(" "));
   function styles(node, value) {
     if (Array.isArray(value)) {
       value.forEach((item) => styles(node, item));
@@ -798,15 +813,7 @@
           property,
           typeof item === "number" &&
             !property.startsWith("--") &&
-            ![
-              "opacity",
-              "z-index",
-              "font-weight",
-              "flex",
-              "order",
-              "line-height",
-              "scale",
-            ].includes(property)
+            !unitlessStyles.has(property.replace(/^-(webkit|moz|ms|o)-/, ""))
             ? item + "px"
             : String(item),
         );
@@ -868,6 +875,7 @@
       slotNames: new Set(options.slotNames ?? Object.keys(options.slots ?? {})),
       slots: options.slots ?? {},
       attributes: options.attributes ?? {},
+      attributeListeners: new Map(),
       exposed: {},
     };
     if ("modelValue" in properties) c.p.value = properties.modelValue;
@@ -988,8 +996,12 @@
     };
     c.applyAttrs = (target = c.element) => {
       c.builtinClasses ??= new Set((c.classTarget ?? c.element).classList);
-      for (const cleanup of c.attributeCleanups ?? []) cleanup();
-      c.attributeCleanups = [];
+      for (const [key, entry] of c.attributeListeners) {
+        if (entry.target !== target || typeof c.attributes[key] !== "function" && !Array.isArray(c.attributes[key])) {
+          entry.stop();
+          c.attributeListeners.delete(key);
+        }
+      }
       for (const [key, value] of Object.entries(c.attributes)) {
         if (key === "class") {
           for (const cls of String(value ?? "")
@@ -998,15 +1010,23 @@
             (c.classTarget ?? c.element).classList.add(cls);
         } else if (key === "style") styles(c.styleTarget ?? c.element, value);
         else if (/^on[A-Z]/.test(key)) {
-          const event = key.slice(2).toLowerCase();
+          if (typeof value !== "function" && !Array.isArray(value)) continue;
+          const previous = c.attributeListeners.get(key);
+          if (previous) { previous.value = value; continue; }
+          let eventName = key.slice(2), modifier;
+          const settings = {};
+          while ((modifier = eventName.match(/(Once|Passive|Capture)$/))) {
+            settings[modifier[1].toLowerCase()] = true;
+            eventName = eventName.slice(0, -modifier[1].length);
+          }
+          const event = eventName.toLowerCase();
+          const entry = { target, value, stop: () => target.removeEventListener(event, listener, settings) };
           const listener = (event) => {
-            for (const handler of Array.isArray(value) ? value : [value])
+            for (const handler of Array.isArray(entry.value) ? entry.value : [entry.value])
               if (typeof handler === "function") handler(event);
           };
-          target.addEventListener(event, listener);
-          c.attributeCleanups.push(() =>
-            target.removeEventListener(event, listener),
-          );
+          target.addEventListener(event, listener, settings);
+          c.attributeListeners.set(key, entry);
         } else attr(target, key, value);
       }
     };
@@ -1025,6 +1045,13 @@
     };
     /** 更新属性而不重建组件，原生输入光标、焦点和插槽节点保持不变。 */
     c.update = (patch = {}, attributes, slotNames) => {
+      // Vue 的 v-model 回写若只有相同的标量，不再重复绘制；对象仍允许原地深层修改。
+      if (c.externalSlots && Object.keys(patch).every(key => {
+        const value = patch[key] === undefined ? definition.defaults?.[key] : patch[key];
+        return (value === null || typeof value !== "object") && Object.is(c.p[key], value);
+      }) && (!attributes || (Object.keys(attributes).length === Object.keys(c.attributes).length &&
+        Object.keys(attributes).every(key => Object.is(attributes[key], c.attributes[key]) && (attributes[key] === null || typeof attributes[key] !== "object")))) &&
+        (!slotNames || slotNames.length === c.slotNames.size && slotNames.every(name => c.slotNames.has(name)))) return;
       for (const [key, value] of Object.entries(patch))
         c.p[key] = value === undefined ? definition.defaults?.[key] : value;
       if ("modelValue" in patch) c.p.value = patch.modelValue;
@@ -1037,13 +1064,15 @@
           if (name && !nextClasses.has(name) && !c.builtinClasses?.has(name))
             (c.classTarget ?? c.element).classList.remove(name);
         }
-        const oldStyle = document.createElement("span"),
-          nextStyle = document.createElement("span");
-        styles(oldStyle, c.attributes.style);
-        styles(nextStyle, attributes.style);
-        for (const key of oldStyle.style)
-          if (!nextStyle.style.getPropertyValue(key))
-            (c.styleTarget ?? c.element).style.removeProperty(key);
+        if (c.attributes.style !== attributes.style) {
+          const oldStyle = document.createElement("span"),
+            nextStyle = document.createElement("span");
+          styles(oldStyle, c.attributes.style);
+          styles(nextStyle, attributes.style);
+          for (const key of oldStyle.style)
+            if (!nextStyle.style.getPropertyValue(key))
+              (c.styleTarget ?? c.element).style.removeProperty(key);
+        }
         for (const key of Object.keys(c.attributes)) {
           if (
             key !== "class" &&
@@ -1064,7 +1093,8 @@
       c.disposed = true;
       definition.destroy?.(c);
       c.cleanups.forEach((stop) => stop());
-      c.attributeCleanups?.forEach((stop) => stop());
+      c.attributeListeners.forEach(entry => entry.stop());
+      c.attributeListeners.clear();
       for (const child of [...c.children]) child.destroy();
       c.outlets.clear();
       c.nativeSlots.clear();
@@ -1076,7 +1106,9 @@
     queueMicrotask(() => {
       if (!c.disposed) {
         definition.connected?.(c);
-        c.paint();
+        // 分组与外部插槽在连接后补上下文，普通无插槽控件只需补新节点的标记。
+        if (definition.connected || c.outlets.size || ["Form", "FormField", "Radio", "Checkbox", "ChoiceControl", "RadioGroup", "CheckboxGroup", "Collapse", "CollapseItem"].includes(name)) c.paint();
+        else scope(c.element, name);
       }
     });
     return c;
@@ -1550,7 +1582,7 @@
       const max =
         Number.isFinite(c.p.max) && c.p.max >= 1 ? Math.floor(c.p.max) : 99;
       const value =
-        number === undefined
+        typeof c.p.value === "number" && !Number.isFinite(c.p.value) ? "" : number === undefined
           ? String(c.p.value ?? "").trim()
           : number > max
             ? max + "+"
@@ -1734,7 +1766,8 @@
       if (!open && c.element.contains(document.activeElement)) {
         const active = document.activeElement, items = focusable(document), index = items.indexOf(active);
         const next = items.slice(index + 1).find(node => !c.element.contains(node)) ?? items.slice(0, Math.max(0, index)).reverse().find(node => !c.element.contains(node));
-        if (next) next.focus({ preventScroll: true }); else active.blur();
+        if (next) next.focus({ preventScroll: true });
+        else if (active instanceof HTMLElement || active instanceof SVGElement) active.blur();
       }
       c.element.inert = !open;
       attrs(c.element, { role: open ? type === "error" ? "alert" : "status" : undefined, "aria-hidden": !open || undefined });
@@ -1794,7 +1827,7 @@
         let entry = c.entries[index];
         if (!entry) {
           const element = el("li", "step"), body = el(c.interactive ? "button" : "div", "step-body"), mark = el("span", "step-mark"), copy = el("span", "step-copy"), label = el("span", "step-label"), description = el("span", "step-description"), statusText = el("span", "sr-only");
-          if (c.interactive) body.type = "button";
+          if (body instanceof HTMLButtonElement) body.type = "button";
           attr(body, "data-step-index", index); attr(mark, "aria-hidden", true);
           copy.append(label, description, statusText); body.append(mark, copy); element.append(body); c.element.append(element);
           entry = { element, body, mark, label, description, statusText }; c.entries.push(entry);
@@ -2913,9 +2946,14 @@
       frame = 0,
       generation = 0,
       copied = new Set();
+    let inheritedFrom, inheritanceDirty = true, measuredKey = "", measuredWidth = 0;
+    let observedAncestors = [];
     const api = { host, panel, visible: () => visible };
     const inherit = (source) => {
-      if (!source) return;
+      if (!source || source === inheritedFrom && !inheritanceDirty) return;
+      inheritedFrom = source;
+      inheritanceDirty = false;
+      measuredKey = "";
       const computed = getComputedStyle(source),
         baseline = getComputedStyle(document.body),
         next = new Set();
@@ -2938,8 +2976,15 @@
         if (!next.has(key)) host.style.removeProperty(key);
       copied = next;
     };
+    const invalidateMeasurements = (records) => {
+      if (records.some(record => record.type === "attributes")) inheritanceDirty = true;
+      // 内容宽度采用 auto/fit-content 等值时，新增内容需要重新测量。
+      if (records.some(record => panel.contains(record.target))) measuredKey = "";
+    };
     api.place = () => {
       if (!visible) return;
+      // 显式更新位置时也消费尚未派发的祖先变化，不能延后一帧才继承新样式。
+      if (mutation) invalidateMeasurements(mutation.takeRecords());
       const anchor = config.anchor(),
         context = anchorContext(anchor),
         bounds = viewportRect();
@@ -2955,7 +3000,8 @@
         config.container?.() ??
         document.body;
       if (host.parentElement !== container) container.append(host);
-      inherit(context);
+      observeContext(context);
+      inherit(context ?? document.body);
       const css = getComputedStyle(panel),
         number = (key, fallback) => {
           const value = parseFloat(css.getPropertyValue(key));
@@ -3002,27 +3048,29 @@
         return;
       }
       const previousScroll = panel.scrollTop;
-      styles(host, {
-        left: bounds.left + margin,
-        top: bounds.top + margin,
-        width: Math.max(0, bounds.right - bounds.left - 2 * margin),
-      });
-      panel.style.maxHeight =
-        Math.min(heightLimit, bounds.bottom - bounds.top - 2 * margin) + "px";
-      panel.style.width =
-        config.matchWidth?.() && context
-          ? context.getBoundingClientRect().width + "px"
-          : "var(--floating-width,236px)";
-      const desiredWidth = Math.min(
-        Math.ceil(
-          parseFloat(getComputedStyle(panel).width) || panel.offsetWidth,
-        ),
-        bounds.right - bounds.left - 2 * margin,
-      );
+      const contextWidth = config.matchWidth?.() && context ? context.getBoundingClientRect().width : null;
+      const widthKey = JSON.stringify([bounds.right - bounds.left, margin, contextWidth, css.getPropertyValue("--floating-width"), css.fontSize]);
+      // 只有宽度约束改变时才进入测量布局；滚动、内容更新与重复定位复用宽度。
+      if (widthKey !== measuredKey) {
+        styles(host, {
+          left: bounds.left + margin,
+          top: bounds.top + margin,
+          width: Math.max(0, bounds.right - bounds.left - 2 * margin),
+        });
+        panel.style.maxHeight =
+          Math.min(heightLimit, bounds.bottom - bounds.top - 2 * margin) + "px";
+        panel.style.width = contextWidth !== null
+          ? contextWidth + "px" : "var(--floating-width,236px)";
+        measuredWidth = Math.min(
+          Math.ceil(parseFloat(getComputedStyle(panel).width) || panel.offsetWidth),
+          bounds.right - bounds.left - 2 * margin,
+        );
+        measuredKey = widthKey;
+      }
       const result = resolveFloatingPosition({
         anchor: rect,
         viewport: bounds,
-        width: desiredWidth,
+        width: measuredWidth,
         height: Math.min(panel.scrollHeight, heightLimit),
         placement: config.placement?.() ?? "bottom-start",
         gap: number("--floating-gap", anchor instanceof HTMLElement ? 8 : 4),
@@ -3059,9 +3107,9 @@
           source.height + "px",
         );
       }
-      host.dataset.side = result.side;
-      host.dataset.motion = config.motion?.() ?? "expand";
-      host.classList.add("my-ready");
+      attr(host, "data-side", result.side);
+      attr(host, "data-motion", config.motion?.() ?? "expand");
+      if (!host.classList.contains("my-ready")) host.classList.add("my-ready");
       api.position = result;
       config.placed?.(result);
       if (parentMoving) schedule();
@@ -3073,11 +3121,37 @@
           api.place();
         });
     };
+    const resizeViewport = () => {
+      // 媒体查询可能只改变局部主题或字体，窗口变化也需要重新读取继承值。
+      inheritanceDirty = true;
+      schedule();
+    };
+    const observeContext = (context) => {
+      if (!resize || !mutation) return;
+      const ancestors = [];
+      for (let node = context ?? document.body; node; node = node.parentElement) ancestors.push(node);
+      if (ancestors.length === observedAncestors.length && ancestors.every((node, index) => node === observedAncestors[index])) return;
+      observedAncestors = ancestors;
+      inheritanceDirty = true;
+      resize.disconnect();
+      mutation.disconnect();
+      resize.observe(panel);
+      mutation.observe(panel, { childList: true, subtree: true, characterData: true });
+      // 锚点更换或移动后重绑祖先，其他区域的文字变化不会触发全部浮层。
+      for (const node of ancestors) {
+        resize.observe(node);
+        mutation.observe(node, { childList: true, attributes: true,
+          attributeFilter: ["inert", "hidden", "style", "class", "data-theme", "data-theme-preference"] });
+      }
+    };
     const scroll = (event) => {
-      if (panel.contains(event.target) || event.target === panel) return;
-      if (config.contains?.(event.target)) {
-        if (event.target.contains?.(anchorContext(config.anchor()))) schedule();
-        return;
+      // window 的滚动事件目标不是 DOM 节点，仍须执行外部滚动的关闭或跟随。
+      if (event.target instanceof Node) {
+        if (panel.contains(event.target)) return;
+        if (config.contains?.(event.target)) {
+          if (event.target.contains(anchorContext(config.anchor()))) schedule();
+          return;
+        }
       }
       if (config.anchor() instanceof HTMLElement) schedule();
       else config.close?.();
@@ -3087,9 +3161,11 @@
       frame = 0;
       resize?.disconnect();
       mutation?.disconnect();
-      window.removeEventListener("resize", schedule);
+      resize = mutation = undefined;
+      observedAncestors = [];
+      window.removeEventListener("resize", resizeViewport);
       window.removeEventListener("scroll", scroll, true);
-      window.visualViewport?.removeEventListener("resize", schedule);
+      window.visualViewport?.removeEventListener("resize", resizeViewport);
       window.visualViewport?.removeEventListener("scroll", schedule);
     };
     api.open = () => {
@@ -3099,6 +3175,8 @@
       }
       visible = true;
       generation++;
+      inheritanceDirty = true;
+      measuredKey = "";
       animation?.cancel();
       host.inert = false;
       panel.inert = false;
@@ -3120,22 +3198,17 @@
       else panel.removeAttribute("data-cascade");
       animation = cssMotion(panel, "floating-motion", true);
       resize = new ResizeObserver(schedule);
-      resize.observe(panel);
-      const context = anchorContext(config.anchor());
-      if (context) resize.observe(context);
-      mutation = new MutationObserver(schedule);
-      mutation.observe(document.body, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ["inert"],
+      mutation = new MutationObserver(records => {
+        invalidateMeasurements(records);
+        schedule();
       });
-      window.addEventListener("resize", schedule, { passive: true });
+      observeContext(anchorContext(config.anchor()));
+      window.addEventListener("resize", resizeViewport, { passive: true });
       window.addEventListener("scroll", scroll, {
         capture: true,
         passive: true,
       });
-      window.visualViewport?.addEventListener("resize", schedule, {
+      window.visualViewport?.addEventListener("resize", resizeViewport, {
         passive: true,
       });
       window.visualViewport?.addEventListener("scroll", schedule, {
@@ -3292,7 +3365,7 @@
       if (index >= 0) modalLayers.splice(index, 1);
       refreshModals();
       root.inert = true;
-      if (top && previous?.isConnected && !previous.closest("[inert]"))
+      if (top && (previous instanceof HTMLElement || previous instanceof SVGElement) && previous.isConnected && !previous.closest("[inert]"))
         previous.focus({ preventScroll: true });
     };
   }
@@ -3871,7 +3944,36 @@
       }
       c.changed();
     };
+    /** @typedef {{value: string, label: string, description?: string, icon?: string, disabled?: boolean, children?: MenuItem[]}} MenuItem */
+    /**
+     * 每层独立持有内容、定位与返回焦点，避免级联状态落到临时 DOM 属性上。
+     * @typedef {object} MenuLevel
+     * @property {MenuItem[]} options
+     * @property {string} label
+     * @property {HTMLElement | {x: number, y: number, contextElement?: HTMLElement}} anchor
+     * @property {ReturnType<typeof create>[]} rows
+     * @property {{item: MenuItem, container: HTMLElement, child?: ReturnType<typeof create>, check?: SVGElement}[]} entries
+     * @property {Set<HTMLElement>} outlets
+     * @property {string} [active]
+     * @property {MenuLevel} [parent]
+     * @property {ReturnType<typeof makeFloating>} [floating]
+     * @property {HTMLElement} [content]
+     * @property {HTMLElement} [list]
+     * @property {() => void} [stopKeydown]
+     * @property {'selected' | 'first' | 'last'} [pendingFocus]
+     * @property {boolean} [positioned]
+     * @property {boolean} [stacked]
+     * @property {MenuItem} [returnItem]
+     * @property {{left: number, top: number, bottom: number, side: string, parent: {top: number, bottom: number, reserve: number}, source: {left: number, top: number, height: number}}} [pin]
+     * @property {number} [reserve]
+     * @property {number} [ownShift]
+     * @property {number} [childShift]
+     * @property {string} [branch]
+     * @property {HTMLButtonElement} [returnButton]
+     */
+    /** @param {Pick<MenuLevel, 'parent' | 'stacked' | 'returnItem' | 'pin'>} [settings] 子层关联与叠放位置。 */
     const buildLevel = (options, label, anchor, settings = {}) => {
+      /** @type {MenuLevel} */
       const level = {
         options,
         label,
@@ -4520,6 +4622,8 @@
         { suffix: () => svgIcon("chevrons-up-down") },
       );
       c.element.append(c.input.element);
+      // 内部输入只产生搜索词，不能冒充外层组件的选值事件。
+      c.on(c.input.element, "my:change", event => event.stopPropagation());
       c.attributeTarget = c.input.input;
       c.hiddenInput = document.createElement("input");
       c.hiddenInput.type = "hidden";
@@ -4536,12 +4640,25 @@
       c.status = el("p", "combobox-status");
       c.floating.panel.append(c.list, c.status);
       c.list.id = c.id + "-options";
+      c.rowsByValue = new Map();
+      c.setActive = (value, keyboard) => {
+        if (c.active === value && c.keyboardActive === keyboard) return;
+        const previous = c.rowsByValue.get(c.active);
+        if (previous) state(previous.child.element, { "is-active": false });
+        c.active = value;
+        c.keyboardActive = keyboard;
+        const next = c.rowsByValue.get(value);
+        if (next) state(next.child.element, { "is-active": keyboard });
+        attr(c.input.input, "aria-activedescendant", c.opened && !c.p.loading && value
+          ? c.id + "-option-" + encodeURIComponent(value) : undefined);
+      };
       c.open = () => {
         if (c.opened || c.p.disabled || c.input.input.readOnly) return;
         for (const menu of menuControllers) menu.close();
         c.opened = true;
         c.query = c.current?.label ?? "";
         c.searching = false;
+        c.keyboardActive = false;
         c.active = c.p.value;
         c.paint();
         c.floating.open();
@@ -4554,6 +4671,9 @@
         c.paint();
       };
       c.search = () => {
+        // 输入法结束后可能紧跟同值 input，只对新的搜索词发送一次通知。
+        if (c.searching && c.searchedQuery === c.query) return;
+        c.searchedQuery = c.query;
         c.searching = true;
         c.active = undefined;
         if (!c.query && c.p.value) {
@@ -4618,7 +4738,7 @@
           ? []
           : c.matches.filter((item) => !item.disabled);
         const index = enabled.findIndex((item) => item.value === c.active);
-        c.active = !before
+        const next = !before
           ? event.key === "ArrowUp"
             ? enabled.at(-1)?.value
             : c.active
@@ -4626,10 +4746,8 @@
               (index + (event.key === "ArrowDown" ? 1 : -1) + enabled.length) %
                 enabled.length
             ]?.value;
-        c.keyboardActive = true;
-        c.paint();
-        const node = c.rows?.find((entry) => entry.option.value === c.active)
-          ?.child.element;
+        c.setActive(next, true);
+        const node = c.rowsByValue.get(c.active)?.child.element;
         if (node) {
           const rect = node.getBoundingClientRect(),
             bounds = c.floating.panel.getBoundingClientRect();
@@ -4661,6 +4779,7 @@
       if (option) c.cached = option;
       else if (c.cached?.value !== c.p.value) c.cached = undefined;
       c.current = option ?? (c.p.filter === false ? c.cached : undefined);
+      if (c.opened && !c.searching && !c.composing) c.query = c.current?.label ?? "";
       const normalize = (value) =>
         String(value).normalize("NFKC").toLocaleLowerCase();
       const query = c.query.trim();
@@ -4683,7 +4802,7 @@
             ?.value ?? c.matches.find((item) => !item.disabled)?.value;
       c.input.update(
         {
-          ...c.p,
+          ...Object.fromEntries(Object.entries(c.p).filter(([key]) => !/^on[A-Z]/.test(key))),
           id: c.p.id ?? c.id,
           name: undefined,
           value: c.opened ? c.query : (c.current?.label ?? ""),
@@ -4710,6 +4829,8 @@
         value: c.p.value ?? "",
         disabled: c.p.disabled,
       });
+      // 未展开时只同步输入与表单值，选项节点在首次打开时才创建。
+      if (!c.opened) return;
       const signature = JSON.stringify([c.matches, c.p.loading]);
       if (signature !== c.signature) {
         c.signature = signature;
@@ -4739,14 +4860,11 @@
             event.preventDefault(),
           );
           child.on(child.element, "pointermove", () => {
-            if (!option.disabled) {
-              c.active = option.value;
-              c.keyboardActive = false;
-              c.paint();
-            }
+            if (!option.disabled) c.setActive(option.value, false);
           });
           return { option, child, leading, check };
         });
+        c.rowsByValue = new Map(c.rows.map(entry => [entry.option.value, entry]));
       }
       attrs(c.list, {
         role: "listbox",

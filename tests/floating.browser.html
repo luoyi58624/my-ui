@@ -114,7 +114,8 @@ createApp({ setup() {
       await pause(340); reports.push({ name: '键盘导航和先关闭后回调', passed: true })
 
       await opened(() => menu.value.show({ x: 40, y: 150, contextElement: source }))
-      const inputSource = document.querySelector('button[aria-label="适配输入：Alpha"]')
+      const inputSource = document.querySelector('.my-select-trigger')
+      assert(inputSource && document.getElementById(inputSource.getAttribute('aria-labelledby'))?.textContent === '适配输入', 'Select 缺少触发器或辅助名称')
       await opened(() => inputSource.click())
       assert(visible().length === 1, '多个菜单同时展开')
       const list = visible()[0], panel = list.querySelector(".my-floating-panel")

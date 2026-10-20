@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>组件更新与浮层效率回归</title>
+<style>main{margin:24px;max-width:760px}#fixture{width:360px;margin:24px 0}pre{white-space:pre-wrap;font:12px/1.6 monospace}</style>
+<main><h1>组件更新与浮层效率</h1><button id="run">运行定向回归</button><div id="fixture"></div><pre id="result">尚未运行</pre></main>
+<script type="module">
+import { createApp, h, nextTick, ref } from 'vue'
+import { Badge, Combobox, Input } from '/packages/vue/index.ts'
+const fixture = document.querySelector('#fixture'), reports = []
+let app, owned = []
+const assert = (value, message) => { if (!value) throw Error(message) }
+const pause = ms => new Promise(resolve => setTimeout(resolve, ms))
+const tick = async () => { await nextTick(); await nextTick(); await new Promise(requestAnimationFrame) }
+const add = (name, props = {}, options = {}) => {
+  const controller = MyUI.create(name, props, options)
+  owned.push(controller); fixture.append(controller.element); return controller
+}
+const edit = (input, value) => { input.value = value; input.dispatchEvent(new Event('input', { bubbles: true })) }
+const key = (input, value) => input.dispatchEvent(new KeyboardEvent('keydown', { key: value, bubbles: true, cancelable: true }))
+const cleanup = () => { app?.unmount(); app = undefined; owned.forEach(item => item.destroy()); owned = []; fixture.replaceChildren() }
+const check = async (name, action) => {
+  try { await action(); reports.push({ name, passed: true }) }
+  catch (error) { reports.push({ name, passed: false, error: String(error.stack || error) }) }
+  finally { cleanup() }
+}
+document.querySelector('#run').onclick = async () => {
+  document.querySelector('#run').disabled = true
+  document.querySelector('#result').textContent = '运行中'
+  reports.length = 0
+  await check('原生 Combobox 搜索不提交标签，选择与清空各提交一次', async () => {
+    const changes = [], events = [], searches = []
+    const combo = add('Combobox', { label: '城市', value: 'hz', clearable: true,
+      options: [{ value: 'hz', label: '杭州' }, { value: 'sh', label: '上海' }],
+      onChange: value => changes.push(value), onSearch: value => searches.push(value) })
+    combo.element.addEventListener('my:change', event => events.push(event.detail))
+    await tick(); combo.input.input.focus(); edit(combo.input.input, '上'); await tick()
+    assert(changes.length === 0 && events.length === 0 && combo.p.value === 'hz', '搜索词泄漏为选中值')
+    assert(searches.at(-1) === '上', '搜索回调缺失')
+    key(combo.input.input, 'Enter'); await tick()
+    assert(JSON.stringify(changes) === '["sh"]' && JSON.stringify(events) === '["sh"]', '选值回调重复或错误')
+    combo.open(); edit(combo.input.input, ''); await tick()
+    assert(JSON.stringify(changes) === '["sh",""]' && JSON.stringify(events) === '["sh",""]', '清空回调重复')
+  })
+  await check('300 项 Combobox 延迟建行，悬停与方向键只更新活动项', async () => {
+    const options = Array.from({ length: 300 }, (_, index) => ({ value: String(index), label: '选项 ' + index }))
+    const combo = add('Combobox', { label: '大列表', options })
+    await tick(); assert(combo.list.childElementCount === 0, '关闭状态提前创建了选项')
+    combo.open(); await tick(); await pause(150)
+    assert(combo.list.childElementCount === 300, '打开后选项不完整')
+    const nodes = [...combo.list.children], paint = combo.paint
+    let paints = 0, attributes = 0, scopeWrites = 0
+    const original = Element.prototype.setAttribute
+    combo.paint = (...args) => { paints++; return paint(...args) }
+    Element.prototype.setAttribute = function(name, value) {
+      attributes++; if (name.startsWith('data-my-')) scopeWrites++
+      return original.call(this, name, value)
+    }
+    try {
+      for (let index = 0; index < 10; index++) nodes[50].dispatchEvent(new PointerEvent('pointermove', { bubbles: true }))
+      key(combo.input.input, 'ArrowDown')
+    } finally { Element.prototype.setAttribute = original }
+    assert(paints === 0 && scopeWrites === 0 && attributes <= 3, '活动项移动触发整表重画或重复标记：' + JSON.stringify({ paints, scopeWrites, attributes }))
+    assert(combo.active === '51' && document.getElementById(combo.input.input.getAttribute('aria-activedescendant')) === nodes[51], '方向键活动项与辅助关系不同步')
+    assert(nodes[51].classList.contains('my-is-active') && !nodes[50].classList.contains('my-is-active'), '活动项视觉状态不同步')
+    assert(nodes.every((node, index) => node === combo.list.children[index]), '活动项切换重建列表')
+    options[51].label = '原地更新'; combo.update({ options }); await tick()
+    assert(combo.list.textContent.includes('原地更新'), '优化丢失原地修改的选项')
+  })
+  await check('Vue Input 首次初始化与一次输入各只更新一次，保留光标与外部重置', async () => {
+    const original = MyUI.create, value = ref('初始'), counts = []
+    let updates = 0
+    MyUI.create = (name, props, options) => original(name, props, name === 'Input' && options.externalSlots
+      ? { ...options, invalidate: () => { updates++; options.invalidate?.() } } : options)
+    try {
+      app = createApp(() => h(Input, { label: '名字', modelValue: value.value, 'onUpdate:modelValue': next => { value.value = next } }))
+      app.mount(fixture); await tick(); counts.push(updates)
+      const input = fixture.querySelector('input'); input.focus(); updates = 0
+      edit(input, '新的内容'); input.setSelectionRange(1, 2); await tick(); counts.push(updates)
+      assert(counts[0] === 1 && counts[1] === 1, '发生多余更新：' + counts.join('/'))
+      assert(value.value === '新的内容' && document.activeElement === input && input.selectionStart === 1 && input.selectionEnd === 2, '输入值、焦点或选区丢失')
+      updates = 0; value.value = '外部重置'; await tick()
+      assert(input.value === '外部重置' && updates === 1, '外部更新被错误跳过')
+    } finally { MyUI.create = original }
+  })
+  await check('Vue 深层选项和动态插槽仍保持响应', async () => {
+    const options = ref([{ value: 'a', label: 'Alpha' }]), label = ref('初始插槽'), value = ref('a')
+    app = createApp(() => {
+      const content = h('span', { id: 'slot-value' }, label.value)
+      return h('div', [
+      h(Combobox, { label: '选择', options: options.value, modelValue: value.value, 'onUpdate:modelValue': next => { value.value = next } }),
+      h(Badge, { value: 1 }, () => content),
+    ]) }); app.mount(fixture); await tick()
+    const input = fixture.querySelector('input[role=combobox]'); input.focus(); await tick()
+    options.value[0].label = 'Beta'; label.value = '更新插槽'; await tick()
+    assert(document.querySelector('.my-combobox-option').textContent.includes('Beta'), '深层选项更新丢失')
+    assert(fixture.querySelector('#slot-value').textContent === '更新插槽', '插槽更新丢失')
+    key(input, 'Escape'); await tick(); assert(input.value === 'Beta', '关闭后标签未更新')
+  })
+  await check('数值样式区分单位，动态删除样式仍有效', async () => {
+    const input = add('Input', { label: '样式', value: '' }, { attributes: { style: { flexGrow: 1, flexShrink: 0, opacity: 0.5, zIndex: 2, marginTop: 4, '--sample': 7 } } })
+    const style = input.element.style
+    assert(style.flexGrow === '1' && style.flexShrink === '0' && style.opacity === '0.5' && style.zIndex === '2', '无单位属性错误地附加 px')
+    assert(style.marginTop === '4px' && style.getPropertyValue('--sample') === '7', '长度或自定义属性单位错误')
+    input.update({}, { style: { flexGrow: 2 } })
+    assert(style.flexGrow === '2' && !style.marginTop && !style.opacity, '旧样式没有清理')
+  })
+  await check('Capture、Once、Passive 与替换监听正确，普通更新不反复绑定', async () => {
+    const calls = [], captured = () => calls.push('capture'), once = () => calls.push('once')
+    const attributes = { onKeydownCapture: captured, onKeydownOnce: once, onWheelPassive: event => event.preventDefault() }
+    const input = add('Input', { label: '事件', value: '' }, { attributes })
+    await tick(); input.input.addEventListener('keydown', () => calls.push('bubble'))
+    key(input.input, 'a'); assert(calls.join(',') === 'capture,once,bubble', '事件阶段或修饰符错误')
+    let binds = 0
+    const original = EventTarget.prototype.addEventListener
+    EventTarget.prototype.addEventListener = function(...args) { binds++; return original.apply(this, args) }
+    try { for (let index = 0; index < 5; index++) input.update({ value: String(index) }) }
+    finally { EventTarget.prototype.addEventListener = original }
+    assert(binds === 0, '普通更新重新绑定监听')
+    calls.length = 0; key(input.input, 'b'); assert(calls.join(',') === 'capture,bubble', 'Once 在重画后复活')
+    const wheel = new WheelEvent('wheel', { cancelable: true }); input.input.dispatchEvent(wheel)
+    assert(!wheel.defaultPrevented, 'Passive 未生效')
+    input.update({}, { onKeydownCapture: () => calls.push('new') }); calls.length = 0; key(input.input, 'c')
+    assert(calls.join(',') === 'new,bubble', '替换监听仍调用旧函数')
+    input.update({}, {}); input.update({}, attributes); calls.length = 0; key(input.input, 'd')
+    assert(calls.includes('once'), '移除并重新添加 Once 失败')
+    input.update({}, { onKeydownOnce: undefined }); key(input.input, 'ignored')
+    input.update({}, { onKeydownOnce: once }); calls.length = 0; key(input.input, 'restored')
+    assert(calls.includes('once'), '空监听消耗了稍后启用的 Once')
+    input.destroy(); calls.length = 0; key(input.input, 'e'); assert(calls.join(',') === 'bubble', '销毁后组件监听没有释放')
+  })
+  await check('Badge 的 NaN、无穷值与零隐藏，合法数字和圆点可恢复', async () => {
+    const badge = add('Badge', { value: NaN })
+    const indicator = badge.element.querySelector('.my-badge-indicator')
+    for (const value of [NaN, Infinity, -Infinity, 0]) {
+      badge.update({ value }); assert(indicator.hidden && getComputedStyle(indicator).display === 'none', '非法值或零仍可见：' + value)
+    }
+    badge.update({ value: 0, showZero: true }); assert(!indicator.hidden && indicator.textContent === '0', '合法零值不能恢复')
+    badge.update({ value: NaN, dot: true }); assert(!indicator.hidden && !indicator.textContent, '圆点模式被数字校验破坏')
+  })
+  await check('浮层重复定位复用继承，其他区域文字变化不触发定位', async () => {
+    const anchor = document.createElement('button'), sibling = document.createElement('div')
+    anchor.textContent = '锚点'; sibling.innerHTML = '<span>计数 0</span>'; fixture.append(anchor, sibling)
+    const floating = add('Floating', { value: true, anchor }, { slots: { default: '浮层内容' } })
+    await tick(); await pause(400)
+    const original = window.getComputedStyle, place = floating.floating.place
+    let reads = 0, placements = 0
+    window.getComputedStyle = (...args) => { if (args[0] === anchor) reads++; return original(...args) }
+    try { for (let index = 0; index < 10; index++) place() }
+    finally { window.getComputedStyle = original }
+    assert(reads === 0, '稳定定位仍重复扫描锚点主题')
+    floating.floating.place = () => { placements++; return place() }
+    for (let index = 0; index < 10; index++) { sibling.firstChild.textContent = '计数 ' + index; await tick() }
+    await pause(40); assert(placements === 0, '无关区域更新触发定位：' + placements)
+  })
+  await check('浮层跟随宽度、主题、更换锚点与新祖先，移除锚点后关闭', async () => {
+    const parent = document.createElement('div'), other = document.createElement('div')
+    const anchor = document.createElement('button'), replacement = document.createElement('button')
+    parent.style.setProperty('--primary', '#123456'); other.style.setProperty('--primary', '#654321')
+    anchor.textContent = '旧锚点'; replacement.textContent = '新锚点'; anchor.style.width = '120px'; replacement.style.width = '180px'
+    parent.append(anchor); other.append(replacement); fixture.append(parent, other)
+    const floating = add('Floating', { value: true, anchor, matchWidth: true }, { slots: { default: '内容' } })
+    await tick(); await pause(400)
+    const host = floating.floating.host, panel = floating.floating.panel
+    assert(Math.abs(panel.offsetWidth - 120) <= 1, '初始宽度不匹配')
+    anchor.style.width = '150px'; await tick(); await tick()
+    assert(Math.abs(panel.offsetWidth - 150) <= 1, '锚点宽度改变未更新')
+    parent.style.setProperty('--primary', '#abcdef'); floating.exposed.updatePosition()
+    assert(getComputedStyle(host).getPropertyValue('--primary').trim() === '#abcdef', '显式定位没有消费新主题')
+    floating.update({ anchor: replacement }); await tick()
+    assert(Math.abs(panel.offsetWidth - 180) <= 1 && getComputedStyle(host).getPropertyValue('--primary').trim() === '#654321', '更换锚点没有刷新定位或继承')
+    other.style.setProperty('--primary', '#fedcba'); await tick(); await tick()
+    assert(getComputedStyle(host).getPropertyValue('--primary').trim() === '#fedcba', '新祖先没有被观察')
+    parent.append(replacement); await tick(); await tick()
+    assert(getComputedStyle(host).getPropertyValue('--primary').trim() === '#abcdef', '移动锚点没有刷新祖先')
+    replacement.remove(); await tick(); await tick()
+    assert(!floating.floating.visible() && host.inert, '锚点移除后浮层仍可交互')
+  })
+  await check('浮层内容决定宽度时，同步定位也能扩展和收缩缓存尺寸', async () => {
+    const anchor = document.createElement('button'), content = document.createElement('span')
+    anchor.textContent = '内容宽度'; content.textContent = '短'; fixture.append(anchor)
+    const floating = add('Floating', { value: true, anchor }, {
+      attributes: { style: { '--floating-width': 'max-content' } }, slots: { default: content },
+    })
+    await tick(); await pause(400)
+    const panel = floating.floating.panel, before = panel.offsetWidth
+    content.textContent = '变化后的内容需要重新计算浮层宽度'
+    floating.exposed.updatePosition()
+    assert(panel.offsetWidth > before + 100, '同步定位没有消费内容变化，沿用了旧宽度')
+    content.textContent = '短'; floating.exposed.updatePosition()
+    assert(Math.abs(panel.offsetWidth - before) <= 1, '缩短内容后宽度缓存没有收缩')
+  })
+  document.querySelector('#result').textContent = JSON.stringify({ passed: reports.every(item => item.passed), total: reports.length, reports }, null, 2)
+  document.querySelector('#run').disabled = false
+}
+</script></html>

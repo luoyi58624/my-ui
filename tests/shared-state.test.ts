@@ -328,3 +328,39 @@ test('存储键编码隔离字段与 store，错误的 pick 提供明确错误',
   assert.notEqual(sharedStateKey('中文', '字段'), sharedStateKey('中文', '字段', 'another:'))
   assert.throws(() => useTestStore(memory().storage, { pick: ['missing'] }), /共享字段不存在/)
 })
+
+test('同轮编辑只编码最终字段值，不反复编码未变的万项缓存', async () => {
+  const cache = memory(), { store } = useTestStore(cache.storage)
+  await store.$shared!.ready
+  store.detail.tags = Array.from({ length: 10000 }, (_, index) => String(index))
+  await store.$shared!.flush()
+  cache.writes.length = 0
+  const stringify = JSON.stringify
+  const encoded: unknown[] = []
+  JSON.stringify = ((...args: Parameters<typeof JSON.stringify>) => {
+    encoded.push(args[0])
+    return stringify(...args)
+  }) as typeof JSON.stringify
+  try {
+    for (let index = 0; index < 20; index++) store.count++
+    await store.$shared!.flush()
+  } finally { JSON.stringify = stringify }
+  assert.deepEqual(encoded, [20])
+  assert.deepEqual(cache.writes, [[key('count'), '20']])
+})
+
+test('初始读取期间改动再恢复默认值仍算本地编辑，不能被旧缓存覆盖', async () => {
+  const cache = memory(), gate = deferred<string | null>()
+  cache.values.set(key('count'), '9')
+  cache.read((field, value) => field === key('count') ? gate.promise : Promise.resolve(value))
+  const { store } = useTestStore(cache.storage)
+  await pause()
+  store.count = 1
+  store.count = 0
+  gate.resolve('9')
+  cache.read(undefined)
+  await store.$shared!.ready
+  await store.$shared!.flush()
+  assert.equal(store.count, 0)
+  assert.equal(cache.values.get(key('count')), '0')
+})

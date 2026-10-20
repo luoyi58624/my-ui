@@ -1,4 +1,4 @@
-import { markRaw, onScopeDispose, shallowRef } from 'vue'
+import { markRaw, onScopeDispose, shallowRef, watch } from 'vue'
 import type { PiniaPlugin, StateTree } from 'pinia'
 import { createWebStateStorage } from './web'
 import type { SharedStateControls, SharedStatePluginOptions, SharedStateStorage, SharedStoreOptions } from './types'
@@ -56,6 +56,7 @@ export function createSharedStatePlugin(config: SharedStatePluginOptions = {}): 
     }
     const seen = new Map(defaults)
     const dirty = new Map<string, string>()
+    const pending = new Set<string>()
     const revisions = new Map<string, number>()
     const reads = new Map<string, number>()
     const invalid = new Map<string, Error>()
@@ -78,13 +79,15 @@ export function createSharedStatePlugin(config: SharedStatePluginOptions = {}): 
     }
 
     async function pull(field: string): Promise<void> {
-      if (disposed || dirty.has(field) || invalid.has(field)) return
+      if (disposed || pending.has(field) || dirty.has(field) || invalid.has(field)) return
       const generation = (reads.get(field) ?? 0) + 1
       reads.set(field, generation)
       const revision = revisions.get(field)
       const raw = await backend.getItem(sharedStateKey(settings.key ?? store.$id, field, config.prefix))
       // 本地编辑与较新的读取优先，初始缓存或后台旧通知不能覆盖它们。
-      if (disposed || dirty.has(field) || invalid.has(field) || revisions.get(field) !== revision || reads.get(field) !== generation) return
+      if (disposed || pending.has(field) || dirty.has(field) || invalid.has(field) || revisions.get(field) !== revision || reads.get(field) !== generation) return
+      // 已验证过的原文无需再次解析和编码，尤其避免每次保存都扫描未改动的大字段。
+      if ((raw ?? defaults.get(field)) === seen.get(field)) return
       const value = raw === null ? defaults.get(field)! : encode(JSON.parse(raw))
       if (seen.get(field) === value) return
       seen.set(field, value)
@@ -119,9 +122,26 @@ export function createSharedStatePlugin(config: SharedStatePluginOptions = {}): 
       if (failure?.status === 'rejected') throw failure.reason
     }
 
+    function encodePending(): void {
+      for (const field of pending) {
+        pending.delete(field)
+        try {
+          const value = encode(store.$state[field])
+          invalid.delete(field)
+          seen.set(field, value)
+          dirty.set(field, value)
+        } catch (error) {
+          dirty.delete(field)
+          invalid.set(field, report(error))
+        }
+      }
+    }
+
     async function save(): Promise<void> {
       // 每个顶层字段独立排队，既合并连续编辑，也避免整份 store 相互覆盖。
-      while (!disposed && dirty.size) {
+      encodePending()
+      while (!disposed && (dirty.size || pending.size)) {
+        encodePending()
         for (const [field, value] of [...dirty]) {
           if (disposed) return
           await backend.setItem(sharedStateKey(settings.key ?? store.$id, field, config.prefix), value)
@@ -138,30 +158,23 @@ export function createSharedStatePlugin(config: SharedStatePluginOptions = {}): 
       writing = task
       void task.then(() => {
         writing = undefined
-        if (!dirty.size && !invalid.size) lastError.value = null
-        if (!disposed && dirty.size) void enqueue()
+        if (!dirty.size && !pending.size && !invalid.size) lastError.value = null
+        if (!disposed && (dirty.size || pending.size)) void enqueue()
       }, error => { writing = undefined; report(error) })
       return task
     }
 
-    const stopChanges = store.$subscribe(() => {
+    // 同步记录字段版本以挡住迟到读取；序列化放到保存队列，同一轮只编码一次。
+    const stopChanges = fields.map(field => watch(() => store.$state[field], () => {
       if (applying || disposed) return
-      for (const field of fields) {
-        try {
-          const value = encode(store.$state[field])
-          invalid.delete(field)
-          if (seen.get(field) === value) continue
-          seen.set(field, value)
-          revisions.set(field, (revisions.get(field) ?? 0) + 1)
-          dirty.set(field, value)
-        } catch (error) { invalid.set(field, report(error)) }
-      }
-      if (!initializing && dirty.size) void enqueue()
-    }, { detached: true, flush: 'sync' })
+      revisions.set(field, (revisions.get(field) ?? 0) + 1)
+      pending.add(field)
+      if (!initializing) void enqueue()
+    }, { deep: true, flush: 'sync' }))
 
     const ready = readAll().catch(report).then(() => {
       initializing = false
-      if (!disposed && dirty.size) void enqueue()
+      if (!disposed && (dirty.size || pending.size)) void enqueue()
     })
 
     async function refresh() {
@@ -169,7 +182,7 @@ export function createSharedStatePlugin(config: SharedStatePluginOptions = {}): 
       await ready
       try {
         await readAll()
-        if (!invalid.size && !dirty.size) lastError.value = null
+        if (!invalid.size && !dirty.size && !pending.size) lastError.value = null
       } catch (error) { throw report(error) }
     }
 
@@ -177,8 +190,10 @@ export function createSharedStatePlugin(config: SharedStatePluginOptions = {}): 
       if (disposed) return
       await ready
       try {
+        encodePending()
         if (invalid.size) throw invalid.values().next().value
-        while (!disposed && (writing || dirty.size)) await (writing ?? enqueue())
+        while (!disposed && (writing || dirty.size || pending.size)) await (writing ?? enqueue())
+        if (invalid.size) throw invalid.values().next().value
         if (!disposed) await backend.flush?.()
         lastError.value = null
       } catch (error) { throw report(error) }
@@ -196,7 +211,7 @@ export function createSharedStatePlugin(config: SharedStatePluginOptions = {}): 
     }
     onScopeDispose(() => {
       disposed = true
-      stopChanges()
+      stopChanges.forEach(stop => stop())
       if (unlisten) disconnect(unlisten)
       if (typeof window !== 'undefined') {
         window.removeEventListener('focus', resume)

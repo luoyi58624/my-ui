@@ -247,8 +247,8 @@ async function selectAction(action: Option) {
         </div>
       </section>
     </template>
-    <template #primitives>
-      <FeedbackPrimitives @notify="notify" />
+    <template #primitives="{ active }">
+      <FeedbackPrimitives :active="active" @notify="notify" />
     </template>
     <template #notice-steps>
       <NoticeStepsShowcase @notify="notify" />

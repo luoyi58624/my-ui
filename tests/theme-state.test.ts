@@ -18,13 +18,15 @@ function createThemePage(storage:SharedStateStorage){
   return {pinia,store:useThemeStore(pinia)}
 }
 async function withEnvironment(run:(api:any)=>Promise<void>){
-  const previous=new Map(['window','document','localStorage','MutationObserver'].map(key=>[key,Object.getOwnPropertyDescriptor(globalThis,key)]))
+  const previous=new Map(['window','document','localStorage','MutationObserver','isTauri'].map(key=>[key,Object.getOwnPropertyDescriptor(globalThis,key)]))
   const saved=new Map<string,string>(),values=new Map<string,string>(),calls:any[]=[],observers=new Set<()=>void>()
-  const root={dataset:{theme:'light'},style:{setProperty:(key:string,value:string)=>values.set(key,value)}}
+  const root={dataset:{theme:'light'},style:{setProperty:(key:string,value:string)=>values.set(key,value),getPropertyValue:(key:string)=>values.get(key)??''}}
   const doc=Object.assign(new EventTarget(),{documentElement:root,visibilityState:'visible'})
   let respond=(_:boolean):Promise<void>=>Promise.resolve()
   const media={matches:false,addEventListener(){},removeEventListener(){}}
-  const runtime=Object.assign(new EventTarget(),{matchMedia:()=>media,__TAURI__:{core:{invoke:(command:string,args:any)=>{calls.push({command,...args});return respond(args.dark)}}}})
+  const runtime=Object.assign(new EventTarget(),{matchMedia:()=>media,__TAURI__:{core:{invoke:(command:string,args:any)=>{calls.push({command,...args.appearance});return respond(args.appearance.dark)}}}})
+  Object.defineProperty(runtime,'__TAURI_INTERNALS__',{get:()=>runtime.__TAURI__?.core})
+  Object.defineProperty(globalThis,'isTauri',{configurable:true,get:()=>Boolean(runtime.__TAURI__)})
   class Observer{constructor(private callback:()=>void){}observe(){observers.add(this.callback)}disconnect(){observers.delete(this.callback)}}
   const storage={getItem:(key:string)=>saved.get(key)??null,setItem:(key:string,value:string)=>saved.set(key,value)}
   for(const [key,value]of Object.entries({window:runtime,document:doc,localStorage:storage,MutationObserver:Observer}))Object.defineProperty(globalThis,key,{configurable:true,value})
@@ -74,7 +76,7 @@ test('兼容旧设置且纯 HTML 字段键与 Pinia 共享协议一致',()=>with
 
 test('原生系统外观跟随实际明暗主题，重复配置不会反复调用桥接',()=>withEnvironment(async api=>{
   const stop=installNativeAppearance();await settle();api.mutate('dark');await settle();api.mutate('dark');await settle();api.mutate('light');await settle()
-  assert.deepEqual(api.calls,[false,true,false].map(dark=>({command:'set_app_theme',dark})))
+  assert.deepEqual(api.calls,[false,true,false].map(dark=>({command:'plugin:native-components|set_window_appearance',dark})))
   stop();api.mutate('dark');await settle();assert.equal(api.calls.length,3)
 }))
 

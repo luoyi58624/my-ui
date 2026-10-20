@@ -62,7 +62,8 @@ createApp({setup(){
       await check('可见图例、外部标签和错误描述只关联一次',async()=>{
         const ordinary=document.querySelector('[data-test="radios"]'),external=document.querySelector('[data-test="slot-radio"]')
         assert(ordinary.tagName==='FIELDSET'&&ordinary.querySelector('legend').textContent==='原生单选组','缺少可见组名')
-        assert(!external.querySelector(':scope>legend')&&external.getAttribute('aria-labelledby')==='external-label'&&external.getAttribute('aria-describedby')==='choice-hint','外部标签没有透传或重复图例')
+        const legend=external.querySelector(':scope>legend')
+        assert(legend.hidden&&getComputedStyle(legend).display==='none'&&external.getAttribute('aria-labelledby')==='external-label'&&external.getAttribute('aria-describedby')==='choice-hint','外部标签没有透传或重复图例')
       })
       await check('原生表单可读取单选值、复选值和独立布尔控件',async()=>{
         checked.value=true;single.value='b';multiple.value=['a','c'];await flush();const data=new FormData(get('selection-form'))
@@ -74,7 +75,7 @@ createApp({setup(){
         input('list-radio','c').closest('label').click();input('list-check','a').click();await flush();assert(legacySingle.value==='c'&&!legacyMulti.value.includes('a'),'列表选择未同步')
       })
       await check('Choices 列表保留首尾 16px、中间 14px 和一致分割线',async()=>{
-        const rows=[...document.querySelectorAll("[data-test=\"list-radio\"]>.my-choice-control")]
+        const rows=[...document.querySelectorAll("[data-test=\"list-radio\"] .my-choice-control")]
         assert(parseFloat(getComputedStyle(rows[0]).paddingTop)===16&&parseFloat(getComputedStyle(rows[1]).paddingTop)===14&&parseFloat(getComputedStyle(rows.at(-1)).paddingBottom)===16,'列表内边距发生变化')
         const widths=rows.slice(1).map(row=>getComputedStyle(row,'::before').borderTopWidth)
         assert(new Set(widths).size===1&&parseFloat(widths[0])>0,'分割线丢失或粗细不一致')

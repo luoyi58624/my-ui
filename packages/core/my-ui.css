@@ -2528,6 +2528,10 @@ button[data-my-stepper]:disabled {
   outline: none;
   transition-property: none;
 }
+/* 行插槽不延迟继承的可见性，否则减少动态效果时首帧无法聚焦。 */
+.my-row-slot[data-my-menu-panel] {
+  transition-property: none;
+}
 .my-menu-panel-content[data-my-menu-panel] {
   position: relative;
   border-radius: inherit;

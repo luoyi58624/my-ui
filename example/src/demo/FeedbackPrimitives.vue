@@ -1,8 +1,13 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, onDeactivated, ref, watch } from 'vue'
 import { Button, Card, Divider, Icon, Progress, Tag, Tooltip } from '@my-ui/vue'
 import PlaybackProgress from './PlaybackProgress.vue'
 import SliderShowcase from './SliderShowcase.vue'
+
+const props = withDefaults(defineProps<{
+  /** 页面隐藏时暂停演示任务，保留进度供返回后继续操作。 */
+  active?: boolean
+}>(), { active: true })
 
 const emit = defineEmits<{
   /** 将快捷操作的结果交给页面统一提示。 */
@@ -23,6 +28,8 @@ function toggle() {
 }
 function reset() { stop(); value.value = 0 }
 onBeforeUnmount(stop)
+onDeactivated(stop)
+watch(() => props.active, active => { if (!active) stop() }, { flush: 'sync' })
 </script>
 
 <template>
@@ -75,7 +82,7 @@ onBeforeUnmount(stop)
         </div>
       </div>
     </Card>
-    <PlaybackProgress />
+    <PlaybackProgress :active="active" />
     <SliderShowcase />
   </div>
 </template>

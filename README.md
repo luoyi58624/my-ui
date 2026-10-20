@@ -336,7 +336,7 @@ bun run build
 
 开发地址默认 `http://127.0.0.1:5178/`，原生入口为 `/native.html`。示例采用顶部导航与四个底部 Tab 的移动 App 布局。首页按用途分组，以 List 导航进入独立组件示例；“发现、消息、我的”暂为 Demo 占位页。Web 和桌面 App 使用 Vue Router 在当前窗口导航，Android 的每个列表入口创建独立 Activity。返回保留父页面的滚动与输入状态，底部同级切换不增加返回历史，Android 弹窗仍优先响应系统返回。
 
-`example/src/router.ts` 定义 Vue Router，`DemoRoot.vue` 使用 KeepAlive 保留页面和统一弹层宿主；`DemoLayout.vue` 负责目录、安全区与示例展示，`demo/catalog.ts` 维护目录数据，`App.vue` 用同名插槽组织内容。`navigation.ts` 接入独立的 `tauri-plugin-native-router` 插件，组件库不依赖 Tauri。Android 子页地址为 `index.html?pageWindow=1#/example/组件标识`；旧的 `#combobox`、`#slider-options` 等链接仍可直接定位。原生 Activity 与共享状态示例位于首页的“完整示例”分组。CSS 保存后即时更新；修改 JS 核心会完整刷新示例，避免旧实例残留。构建结果同时提供 Vue 页面、原生页面和原样的 CSS/JS。
+`example/src/router.ts` 定义 Vue Router，`DemoRoot.vue` 使用 KeepAlive 保留页面和统一弹层宿主；`DemoLayout.vue` 负责目录、安全区与示例展示，`demo/catalog.ts` 维护目录数据，`App.vue` 用同名插槽组织内容。`navigation.ts` 接入 `tauri-plugin-native-components/router`，组件库不依赖 Tauri。Android 子页地址为 `index.html?pageWindow=1#/example/组件标识`；旧的 `#combobox`、`#slider-options` 等链接仍可直接定位。原生 Activity 与共享状态示例位于首页的“完整示例”分组。CSS 保存后即时更新；修改 JS 核心会完整刷新示例，避免旧实例残留。构建结果同时提供 Vue 页面、原生页面和原样的 CSS/JS。
 
 主题偏好由 `stores/theme.ts` 的共享 Pinia store 管理，明暗模式、配色和字重均跨窗口持久化同步；任意窗口修改后，其他窗口与新窗口都会应用。旧的 `my-ui:theme` 设置继续作为迁移来源和首帧快照。`native-appearance.ts` 同步实际明暗主题到 Android 系统栏文字/图标及桌面窗口装饰，主页面和子页面使用相同逻辑。纯 HTML 在 App 内通过独立的 `native-theme.js` 接入同一存储，不加载 Vue；普通离线 HTML 仍只依赖组件 CSS/JS。
 
@@ -344,13 +344,24 @@ bun run build
 
 Android 同步应用级夜间配置；选择“跟随系统”时解除应用覆盖，页面通过系统媒体查询更新明暗主题，系统栏同步实际配色。Activity 已声明处理 `uiMode`，切换时保留当前页面和状态。系统返回动画沿用平台默认行为。
 
-Android 的预测性返回会先让上页进入 `onStart` 并可见，手势提交后才调用 `onResume`。如果 WebView 一直等到 `onResume` 才解除暂停，静置后的侧滑预览可能只显示背景；普通原生 Activity + WebView 在本机也能复现。`OverlayActivity` 在 `onStart` 恢复 WebView，在 `onStop` 暂停，补齐取消返回时可能出现的 `Start → Stop` 路径；Wry 原有的 `onPause/onResume` 调用继续保留。不使用截图覆盖、定时刷新或页面重载。
+Android 的预测性返回会先让上页进入 `onStart` 并可见，手势提交后才调用 `onResume`。如果 WebView 一直等到 `onResume` 才解除暂停，静置后的侧滑预览可能只显示背景；普通原生 Activity + WebView 在本机也能复现。插件的 `NativeWindow` 在 `onStart` 恢复 WebView，在 `onStop` 暂停；宿主 `AppActivity` 只转发回调，补齐取消返回时可能出现的 `Start → Stop` 路径；Wry 原有的 `onPause/onResume` 调用继续保留。不使用截图覆盖、定时刷新或页面重载。
 
 该时序已通过 OPPO PLJ110（Android 17 / System WebView 151.0.7922.199）的原生对照验证，不代表所有厂商和 WebView 版本均已验证。后台绘制资源的具体回收阈值尚未确认，不能将约 20 秒视为平台保证。此前的 `BackPreview` 截图方案已移除，避免截图遮挡实时页面。[Android 生命周期说明](https://developer.android.com/guide/components/activities/activity-lifecycle)；[相似问题报告（不是本项目根因的证明）](https://github.com/react-native-webview/react-native-webview/issues/3427)。
 
 `tests/demo-layout.browser.html` 使用真实示例入口检查全部目录跳转、详情返回与前进、滚动和输入保留、旧链接、弹层返回、键盘、320px 窄屏与桌面布局。
 
-`bun run check` 检查 Vue 封装和示例类型；`bun run preview` 在 4178 端口预览 `dist/`。构建后的 `dist/native.html` 与 `dist/lib/` 可直接离线使用，`dist/lib/` 同时保留原生类型声明。
+`bun run check` 检查 Vue 封装、示例和原生 JavaScript 核心；`bun run check:core` 可单独检查核心。核心通过 JSDoc 和 `checkJs` 检查，仍然可以直接复制使用，无需编译。`bun run preview` 在 4178 端口预览 `dist/`。构建后的 `dist/native.html` 与 `dist/lib/` 可直接离线使用，`dist/lib/` 同时保留原生类型声明。
+
+浏览器回归使用 Node.js、Playwright 和本机 Chrome，自动启动并关闭独立测试服务，必须指定模块，不默认运行全量：
+
+```powershell
+bun run test:state
+bun run test:browser update-efficiency native-core identity-combobox floating
+bun run test:browser menu-cascade --viewport=390x844
+bun run test:browser demo-layout
+```
+
+需要其他浏览器时设置 `BROWSER_EXECUTABLE_PATH`，或先执行 `bunx playwright install chromium` 后设置 `$env:BROWSER_CHANNEL = 'chromium'`。`--reduced-motion` 可检查减少动态效果的环境。失败会返回非零退出码和具体断言；`update-efficiency` 覆盖事件隔离、局部更新、监听复用与浮层失效条件，共享状态测试同时检查批量编码和迟到读取竞态。
 
 ## PC 桌面应用
 
@@ -395,7 +406,7 @@ bun run build:android    # 构建自包含 arm64 优化 APK
 
 **移动端适配**（只写在示例层，组件库保持中立）：`example/src/mobile.ts` 按 UA 加 `my-mobile-native` 类并拦截长按选中与系统 callout（输入框、可复制文本除外）；`mobile.css` 处理 edge-to-edge 下的状态栏与手势条安全区；viewport 使用 `viewport-fit=cover`。字重统一走主题系统的 `settings.fontWeight`，不另设一套变量。
 
-**统一页面跳转**：独立插件源码位于 `D:/project/tauri/plugins/tauri-plugin-native-router/`，前端包名 `tauri-plugin-native-router`，Rust 包名 `tauri-plugin-native-router`。Bun 通过本地 `file:` 依赖安装，Cargo 引用 `example/node_modules/tauri-plugin-native-router`；将来可换成实际 GitHub 来源，目前没有发布。Web、桌面端使用传入的 Vue Router，Android `push` 创建宿主的 `NativePageActivity`；暂不实现 iOS 原生导航。
+**统一页面跳转**：导航已并入 `D:/project/tauri/plugins/tauri-plugin-native-components/`，前端通过 `tauri-plugin-native-components/router` 使用，Rust 只注册一个 `native-components` 插件。Bun 通过本地 `file:` 依赖安装，Cargo 引用 `example/node_modules/tauri-plugin-native-components`；将来可换成实际 GitHub 来源，目前没有发布。Web、桌面端使用传入的 Vue Router，Android `push` 创建宿主的 `NativePageActivity`；暂不实现 iOS 原生导航。
 
 ```ts
 import { navigation } from './navigation'
@@ -405,11 +416,11 @@ await navigation.replace('/home') // 在当前容器替换路由，不增加返�
 await navigation.back('/home')
 ```
 
-`navigation.ts` 保留示例内部的 `openPage`、`closePage` 薄包装，默认回退到 `/home`。共享状态页使用 `/shared-state`，纯 HTML 示例在 `/html` 中承载并保留返回入口，离线的 `native.html` 依旧能单独打开。插件合并同一目标进行中的原生创建请求，失败可重试；仅接受应用内地址。Android 导航要求 API 32 以上，命令为 `plugin:native-router|push`、`plugin:native-router|back`，仅向 Android 的 `main` 与 `native-page-*` 授权，首页不能被返回命令误关。
+`navigation.ts` 保留示例内部的 `openPage`、`closePage` 薄包装，默认回退到 `/home`。共享状态页使用 `/shared-state`，纯 HTML 示例在 `/html` 中承载并保留返回入口，离线的 `native.html` 依旧能单独打开。插件合并同一目标进行中的原生创建请求，失败可重试；仅接受应用内地址。Android 导航要求 API 32 以上，命令为 `plugin:native-components|push`、`plugin:native-components|back`，仅向 Android 的 `main` 与 `native-page-*` 授权，首页不能被返回命令误关。
 
-Android 首页使用 `singleTop`，子页保持 `standard`。此前首页的 `singleTask` 会在点击桌面图标重新进入时销毁其上方子页，导致回到首页；现已通过真机的“进入子页 → Home → 启动器重新打开 → 返回”检查，恢复时保留同一个子 Activity 实例。主题、系统栏、弹层返回与既有 WebView 生命周期处理继续由示例宿主管理，没有一起塞入导航插件。
+Android 首页使用 `singleTop`，子页保持 `standard`。此前首页的 `singleTask` 会在点击桌面图标重新进入时销毁其上方子页，导致回到首页；现已通过真机的“进入子页 → Home → 启动器重新打开 → 返回”检查，恢复时保留同一个子 Activity 实例。设备圆角、系统栏、弹层返回与既有 WebView 生命周期处理统一由插件的 `NativeWindow` 管理。宿主 `AppActivity.kt` 仅转发生成的 TauriActivity 回调；`NativePageActivity.kt` 只声明子页 WebView 的所有权。
 
-`DeviceRoundedCorners.kt` 在两个 Activity 共用的宿主中读取 Android 12+ 的 `WindowInsets.getRoundedCorner()`，以物理像素裁剪整个窗口，覆盖 WebView、原生导航头与底栏；页面滑入时沿用设备圆角，不改写系统转场动画。窗口旋转或尺寸变化后重新读取，不提供半径的设备保持原样。Android 13+ 支持四角不同半径；Android 12 / 12L 只在四角半径一致时启用，避免旧版 Outline 对不对称路径不支持裁剪。
+插件内部的 `DeviceRoundedCorners.kt` 为各 Activity 读取 Android 12+ 的 `WindowInsets.getRoundedCorner()`，以物理像素裁剪整个窗口，覆盖 WebView、原生导航头与底栏；页面滑入时沿用设备圆角，不改写系统转场动画。窗口旋转或尺寸变化后重新读取，不提供半径的设备保持原样。Android 13+ 支持四角不同半径；Android 12 / 12L 只在四角半径一致时启用，避免旧版 Outline 对不对称路径不支持裁剪。
 
 **跨页共享状态**：首页「完整示例 → 原生页面与共享状态」可以修改备注和计数，再打开另一页。两页通过 Pinia 共享插件同步，「从本地更新」演示绕过 Pinia 修改存储后通知页面。重新打开或重启应用会恢复已保存的数据。每个原生子页都有独立的 WebView、Vue 实例和普通局部状态，只有显式共享的数据跨页同步。
 
@@ -449,6 +460,10 @@ Android 示例的系统返回优先交给当前 WebView 的最上层弹层：级
 
 从 `tauri-plugin-native-components/vue` 引入 `AppBar`、`BottomNavigation`、`Tabs`，同时引入 `tauri-plugin-native-components/style.css`。组件按职责命名，通过 Vue 属性、事件和插槽封装平台能力。Android 使用 MaterialToolbar 和 BottomNavigationView，保留官方水波纹；Web 和其他桌面/移动平台显示 Vue 对应内容。CSS 提供尺寸和颜色，插件不生成示例主题。
 
-`Tabs` 同时管理底栏和各 Tab 的原生页面，`nativeView` 指向宿主注册的 Android 页面工厂。当前首页保留 Tauri WebView 和组件目录，其他三个 Tab 使用 `DemoNativeTab.kt` 中的独立 Android View；切换保留实例与计数。详情页继续由 `tauri-plugin-native-router` 新建 Activity，各 Tab 不额外打开 Activity 或 WebView。Web/桌面的对应内容保留在 Vue 插槽中。
+`Tabs` 同时管理底栏和各 Tab 的原生页面，`nativeView` 指向宿主注册的 Android 页面工厂。当前首页保留 Tauri WebView 和组件目录，其他三个 Tab 使用 `DemoNativeTab.kt` 中的独立 Android View；切换保留实例与计数。详情页继续由 同一个原生组件插件新建 Activity，各 Tab 不额外打开 Activity 或 WebView。Web/桌面的对应内容保留在 Vue 插槽中。
 
 `DemoAppBar.vue` 将结构化标题、返回和主题操作接入原生导航头；Web 弹层出现时通过 `suspended` 显示 Web 对应内容，退出后恢复原生视图。原生组件绑定发起调用的窗口，不借用 Tauri 的全局 Activity，不改动现有 WebView 生命周期策略。
+
+`Page` 封装固定 `navbar` 插槽、默认内容的主滚动区域和下拉刷新。使用 `refreshable`、`v-model:refreshing`、`@refresh`，业务在请求结束后将 `refreshing` 设为 false。Android 使用原生 `SwipeRefreshLayout`；Web 和原生接入失败时使用 Web 刷新。首次启用时为 WebView 增加一次刷新容器，后续页面切换保持 WebView 实例。通过 `suspended` 暂停弹窗下的手势，navbar 内的原生组件自动继承该状态。
+
+「原生页面与共享状态」中的「体验下拉刷新」打开独立的 `#/page-refresh` 动态列表：支持顶部下拉、导航栏刷新按钮、刷新完成后更新列表，以及弹窗期间暂停刷新。`Page` 的 `refresh()`、`scrollTo(options)`、`scrollElement` 可用于业务操作；KeepAlive 返回保留滚动。当前默认插槽承载 Web 内容，自有滚动容器和 iframe 不自动接管。

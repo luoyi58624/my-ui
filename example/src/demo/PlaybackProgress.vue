@@ -1,6 +1,11 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, onDeactivated, ref, watch } from 'vue'
 import { Button, Card, Divider, Progress, Slider } from '@my-ui/vue'
+
+const props = withDefaults(defineProps<{
+  /** 页面隐藏时停止模拟播放，返回后保留当前位置。 */
+  active?: boolean
+}>(), { active: true })
 
 const position = ref(36), buffer = ref(72), playing = ref(false)
 const elapsed = computed(() => formatTime(position.value * 3))
@@ -20,6 +25,8 @@ function toggle() {
 }
 function reset() { stop(); position.value = 36; buffer.value = 72 }
 onBeforeUnmount(stop)
+onDeactivated(stop)
+watch(() => props.active, active => { if (!active) stop() }, { flush: 'sync' })
 </script>
 
 <template>

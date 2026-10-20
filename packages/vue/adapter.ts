@@ -44,6 +44,7 @@ export function useNative(name: string, props: object, emit: unknown) {
   let controller: NativeController | undefined;
   let lastAttributes: Record<string, unknown> = {};
   let lastSlots = "";
+  let lastSlotFunctions: Record<string, unknown> = {};
   const outletKeys = new WeakMap<Element, number>();
   let nextOutletKey = 0;
   const nativeProps = () => {
@@ -65,15 +66,20 @@ export function useNative(name: string, props: object, emit: unknown) {
   }
   function sync() {
     if (!controller) return;
+    const changedSlots = Object.keys(slots).some(key => slots[key] !== lastSlotFunctions[key]);
     lastAttributes = { ...attributes };
     lastSlots = Object.keys(slots).join("|");
+    lastSlotFunctions = { ...slots };
     controller.update(nativeProps(), lastAttributes, Object.keys(slots));
+    // 父级预先生成的插槽节点不读取本组件的响应式数据，函数替换时也要刷新 Teleport。
+    if (changedSlots) revision.value++;
   }
   watch(props, sync, { deep: true, flush: "post" });
   onUpdated(() => {
     const keys = Object.keys(attributes);
     if (
       Object.keys(slots).join("|") !== lastSlots ||
+      Object.keys(slots).some(key => slots[key] !== lastSlotFunctions[key]) ||
       keys.length !== Object.keys(lastAttributes).length ||
       keys.some((key) => attributes[key] !== lastAttributes[key])
     )
@@ -82,14 +88,17 @@ export function useNative(name: string, props: object, emit: unknown) {
   function attach(element: Element | null) {
     if (!element || controller?.element === element) return;
     controller?.destroy();
+    lastAttributes = { ...attributes };
+    lastSlots = Object.keys(slots).join("|");
+    lastSlotFunctions = { ...slots };
     controller = api.create(name, nativeProps(), {
       element,
+      attributes: lastAttributes,
       externalSlots: true,
       slotNames: Object.keys(slots),
       emit: events,
       invalidate: () => revision.value++,
     });
-    sync();
   }
   onBeforeUnmount(() => {
     controller?.destroy();

@@ -19,7 +19,7 @@ if(params.has('frame')){
   const route=async hash=>{win.location.hash=hash;await pause(160)};
   const open=async id=>{doc.querySelector('[data-demo-link="'+id+'"]').click();await until(()=>page()?.dataset.demoPage==='example/'+id,'无法进入 '+id);await pause(70)};
   const back=async()=>{doc.querySelector('.demo-top [aria-label="返回组件列表"]').click();await until(()=>page()?.dataset.demoPage==='home','无法返回列表');await pause(70)};
-  const check=async(name,run)=>{await run();reports.push({name,passed:true})};
+  const check=async(name,run)=>{document.querySelector('#result').textContent='运行中：'+name;await run();reports.push({name,passed:true})};
   document.querySelector('#run').onclick=async()=>{
     document.querySelector('#run').disabled=true;document.querySelector('#result').textContent='运行中';reports.length=0;fixture.replaceChildren();
     try{
@@ -52,6 +52,28 @@ if(params.has('frame')){
         await open('input');const input=page().querySelector('input');input.value='保留本次输入';input.dispatchEvent(new win.Event('input',{bubbles:true}));await pause(40);await back();await open('combobox');await back();await open('input');
         assert(page().querySelector('input')===input&&input.value==='保留本次输入','返回重建或清空输入');
         for(const hidden of doc.querySelectorAll('.demo-page[inert]'))assert(hidden.getAttribute('aria-hidden')==='true'&&win.getComputedStyle(hidden).display==='none','隐藏页面仍可参与交互');await back();
+      });
+      await check('返回目录暂停播放和模拟上传，重新进入保留进度与实例',async()=>{
+        await open('primitives');const detail=page(),clock=detail.querySelector('.playback-time'),progress=detail.querySelector('.transfer-demo [role="progressbar"]');
+        const play=()=>detail.querySelector('.playback-actions button'),upload=()=>detail.querySelector('.transfer-actions button');
+        play().click();upload().click();await pause(550);await back();
+        const time=clock.textContent,value=progress.getAttribute('aria-valuenow');await pause(700);
+        assert(clock.textContent===time&&progress.getAttribute('aria-valuenow')===value,'隐藏示例仍在推进播放或上传');
+        await open('primitives');assert(page()===detail&&page().querySelector('.playback-time')===clock,'暂停时重建了示例');
+        assert(play().textContent.trim()==='播放'&&!upload().textContent.includes('暂停'),'返回后没有保持暂停');
+        play().click();await pause(550);assert(clock.textContent!==time,'重新播放无法继续');await back();
+      });
+      await check('文档隐藏与 KeepAlive 停用也会暂停，返回不会自动启动任务',async()=>{
+        await open('primitives');const detail=page(),clock=detail.querySelector('.playback-time'),play=detail.querySelector('.playback-actions button');
+        const descriptor=Object.getOwnPropertyDescriptor(doc,'hidden');
+        try{
+          play.click();Object.defineProperty(doc,'hidden',{configurable:true,value:true});doc.dispatchEvent(new win.Event('visibilitychange'));await pause(60);
+          const time=clock.textContent;await pause(650);assert(clock.textContent===time&&play.textContent.trim()==='播放','文档隐藏后仍在播放');
+        }finally{if(descriptor)Object.defineProperty(doc,'hidden',descriptor);else Reflect.deleteProperty(doc,'hidden');doc.dispatchEvent(new win.Event('visibilitychange'))}
+        await pause(60);play.click();win.location.hash='/shared-state';await until(()=>doc.querySelector('.native-page'),'未进入共享页');await pause(60);
+        const time=clock.textContent;await pause(650);assert(clock.textContent===time&&play.textContent.trim()==='播放','KeepAlive 停用后仍在播放');
+        win.history.back();await until(()=>page()?.dataset.demoPage==='example/primitives','返回缓存示例失败');await pause(80);
+        assert(page()===detail&&clock.textContent===time,'返回重建页面或自动启动播放');await back();
       });
       await check('浏览器返回与前进同步详情，旧组件链接仍能定位',async()=>{
         await open('image');win.history.back();await until(()=>page().dataset.demoPage==='home','浏览器返回没有回目录');win.history.forward();await until(()=>page().dataset.demoPage==='example/image','浏览器前进没有恢复详情');await back();
@@ -89,7 +111,7 @@ if(params.has('frame')){
         const html=doc.querySelector('.html-page iframe');await until(()=>html.contentDocument?.querySelector('.my-button'),'纯 HTML 组件没有加载');
         assert(win.location.hash==='#/html','HTML 示例没有使用 Vue Router');doc.querySelector('.html-page .nc-app-bar button').click();await until(()=>page()?.dataset.demoPage==='example/native-html','HTML 示例返回失败');await back();
       });
-      document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,total:12,reports},null,2);
+      document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,total:14,reports},null,2);
     }catch(error){document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,error:String(error.stack||error),reports},null,2)}
     finally{document.querySelector('#run').disabled=false;window.__demoLayoutReports=reports}
   };
