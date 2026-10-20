@@ -409,6 +409,8 @@ await navigation.back('/home')
 
 Android 首页使用 `singleTop`，子页保持 `standard`。此前首页的 `singleTask` 会在点击桌面图标重新进入时销毁其上方子页，导致回到首页；现已通过真机的“进入子页 → Home → 启动器重新打开 → 返回”检查，恢复时保留同一个子 Activity 实例。主题、系统栏、弹层返回与既有 WebView 生命周期处理继续由示例宿主管理，没有一起塞入导航插件。
 
+`DeviceRoundedCorners.kt` 在两个 Activity 共用的宿主中读取 Android 12+ 的 `WindowInsets.getRoundedCorner()`，以物理像素裁剪整个窗口，覆盖 WebView、原生导航头与底栏；页面滑入时沿用设备圆角，不改写系统转场动画。窗口旋转或尺寸变化后重新读取，不提供半径的设备保持原样。Android 13+ 支持四角不同半径；Android 12 / 12L 只在四角半径一致时启用，避免旧版 Outline 对不对称路径不支持裁剪。
+
 **跨页共享状态**：首页「完整示例 → 原生页面与共享状态」可以修改备注和计数，再打开另一页。两页通过 Pinia 共享插件同步，「从本地更新」演示绕过 Pinia 修改存储后通知页面。重新打开或重启应用会恢复已保存的数据。每个原生子页都有独立的 WebView、Vue 实例和普通局部状态，只有显式共享的数据跨页同步。
 
 返回命令通过当前子页的 JNI 句柄调用 `Activity.finish()`，不依赖 Android 上不会结束 Activity 的窗口 `close()`；系统返回继续使用原生返回栈，销毁时显式释放子页 WebView。两个 WebView 的 TS 模块、Vue 状态和全局变量仍各有一份，跨页数据通过共享存储同步；本次打开时间和滚动位置各自保留。

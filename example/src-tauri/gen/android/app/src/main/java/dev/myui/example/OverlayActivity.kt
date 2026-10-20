@@ -35,6 +35,7 @@ abstract class OverlayActivity : TauriActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        DeviceRoundedCorners.applyTo(window)
         appDarkMode?.let(::applySystemBars)
     }
 
