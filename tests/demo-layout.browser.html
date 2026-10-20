@@ -17,20 +17,21 @@ if(params.has('frame')){
   const page=()=>doc.querySelector('.demo-page:not([inert])');
   const pick=async index=>{tab(index).click();await pause(90)};
   const route=async hash=>{win.location.hash=hash;await pause(160)};
-  const open=async id=>{doc.querySelector('[data-demo-link="'+id+'"]').click();await until(()=>page()?.dataset.demoPage==='example/'+id,'无法进入 '+id);await pause(70)};
-  const back=async()=>{doc.querySelector('.demo-top [aria-label="返回组件列表"]').click();await until(()=>page()?.dataset.demoPage==='home','无法返回列表');await pause(70)};
+  const open=async id=>{const link=doc.querySelector('[data-demo-link="'+id+'"]'),catalog=link.closest('[data-demo-page]').dataset.demoPage;if(page()?.dataset.demoPage!==catalog)await pick(catalog==='native'?1:0);link.click();await until(()=>page()?.dataset.demoPage==='example/'+id,'无法进入 '+id);await pause(70)};
+  const back=async()=>{const catalog=page().dataset.demoPage==='example/native-navigation'?'native':'home';doc.querySelector('.demo-top [aria-label^="返回"]').click();await until(()=>page()?.dataset.demoPage===catalog,'无法返回列表');await pause(70)};
   const check=async(name,run)=>{document.querySelector('#result').textContent='运行中：'+name;await run();reports.push({name,passed:true})};
   document.querySelector('#run').onclick=async()=>{
     document.querySelector('#run').disabled=true;document.querySelector('#result').textContent='运行中';reports.length=0;fixture.replaceChildren();
     try{
       frame=document.createElement('iframe');frame.src='/tests/demo-layout.browser.html?frame=1#actions';frame.title='移动 App 示例';fixture.append(frame);
       await until(()=>frame.contentDocument?.querySelectorAll('.nc-tabs-navigation button').length===4,'示例加载失败');doc=frame.contentDocument;win=frame.contentWindow;await pause(180);
-      const ids=[...doc.querySelectorAll('[data-demo-link]')].map(node=>node.dataset.demoLink);
-      await check('首页使用分组 List 导航，另外三个 Tab 为 Demo，首屏不加载组件示例',async()=>{
-        assert(page().dataset.demoPage==='home','首页未展示目录');assert(ids.length===27&&new Set(ids).size===ids.length,'目录不完整或重复');
+      const ids=[...doc.querySelectorAll('[data-demo-page="home"] [data-demo-link]')].map(node=>node.dataset.demoLink);
+      await check('首页与原生分别展示目录，消息和我的保留 Demo，首屏不加载组件示例',async()=>{
+        assert(page().dataset.demoPage==='home','首页未展示目录');assert(ids.length===26&&new Set(ids).size===ids.length,'目录不完整或重复');
         assert(doc.querySelectorAll('.demo-detail').length===0,'首屏提前挂载全部示例');
-        assert([...doc.querySelectorAll('.nc-tabs-navigation button')].map(node=>node.textContent.trim()).join(',')==='首页,发现,消息,我的','底部导航不正确');
-        for(let index=1;index<4;index++){await pick(index);assert(page().querySelector('.demo-placeholder')&&page().textContent.includes('Demo 页面'),'不是 Demo 占位页');assert(!page().querySelector('.my-card'),'其他 Tab 混入组件演示')}
+        assert([...doc.querySelectorAll('.nc-tabs-navigation button')].map(node=>node.textContent.trim()).join(',')==='首页,原生,消息,我的','底部导航不正确');
+        await pick(1);assert(page().dataset.demoPage==='native'&&page().querySelectorAll('[data-demo-link]').length===5&&!page().querySelector('.demo-placeholder'),'原生目录不完整');
+        for(let index=2;index<4;index++){await pick(index);assert(page().querySelector('.demo-placeholder')&&page().textContent.includes('Demo 页面'),'不是 Demo 占位页');assert(!page().querySelector('.my-card'),'其他 Tab 混入组件演示')}
         await pick(0);
       });
       await check('整行点击进入独立示例，详情隐藏底栏，顶栏显示返回按钮',async()=>{
@@ -45,7 +46,7 @@ if(params.has('frame')){
         await pick(1);await pick(2);await pick(3);await pick(0);assert(Math.abs(page().scrollTop-630)<2,'Tab 切换丢失目录位置');assert(win.history.length===length,'同级切换增加历史');
         await pick(0);assert(page().scrollTop===0,'重复点击首页未回到顶部');
       });
-      await check('27 个目录入口全部有独立内容，返回不会跳到其他示例',async()=>{
+      await check('26 个首页目录入口全部有独立内容，返回不会跳到其他示例',async()=>{
         for(const id of ids){await open(id);assert(page().querySelector('.demo-page-inner').children.length>0,'空示例 '+id);assert(page().querySelector('[data-my-component],.my-card'),'缺失真实组件 '+id);assert(doc.querySelectorAll('.demo-page:not([inert])').length===1,'多个页面可交互 '+id);await back()}
       });
       await check('打开过的示例保留输入与实例，隐藏内容离开焦点与辅助树',async()=>{
@@ -92,7 +93,7 @@ if(params.has('frame')){
         }
       });
       await check('键盘切换 Tab，未知与非法链接安全回到目录',async()=>{
-        await pick(0);tab(0).focus();tab(0).dispatchEvent(new win.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true,cancelable:true}));await pause(90);assert(page().dataset.demoPage==='discover'&&doc.activeElement===tab(1),'方向键切换或焦点失效');
+        await pick(0);tab(0).focus();tab(0).dispatchEvent(new win.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true,cancelable:true}));await pause(90);assert(page().dataset.demoPage==='native'&&doc.activeElement===tab(1),'方向键切换或焦点失效');
         await route('not-a-demo');assert(page().dataset.demoPage==='home','未知链接没有回目录');await route('%E0%A4%A');assert(page().dataset.demoPage==='home','非法编码没有回目录');await route('home');
       });
       await check('直接访问详情时，顶栏返回也能回到列表',async()=>{

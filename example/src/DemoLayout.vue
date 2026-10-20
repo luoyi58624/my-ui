@@ -5,7 +5,7 @@ import { Button, CellGroup, Icon, ListRow } from '@my-ui/vue'
 import { Tabs, type NavigationItem } from 'tauri-plugin-native-components/vue'
 import DemoAppBar from './DemoAppBar.vue'
 import { useNativeBarsSuspended } from './native-components'
-import { demoExamples, demoGroups } from './demo/catalog'
+import { demoExamples, demoGroups, nativeDemoGroups } from './demo/catalog'
 import { closePage, isChildPage, navigation, openPage } from './navigation'
 
 const emit = defineEmits<{
@@ -15,11 +15,11 @@ const emit = defineEmits<{
 
 const pages: (NavigationItem & { title: string; demo?: number; icon: 'home' | 'grid' | 'message' | 'user' })[] = [
   { value: 'home', label: '首页', title: '组件示例', icon: 'home' },
-  { value: 'discover', label: '发现', title: '发现', icon: 'grid', demo: 1 },
+  { value: 'native', label: '原生', title: '原生组件', icon: 'grid' },
   { value: 'messages', label: '消息', title: '消息', icon: 'message', demo: 2 },
   { value: 'profile', label: '我的', title: '我的', icon: 'user', demo: 3 },
 ]
-const counts = ref<Record<string, number>>({ discover: 0, messages: 0, profile: 0 })
+const counts = ref<Record<string, number>>({ messages: 0, profile: 0 })
 const nativePages = computed(() => pages.map(page => ({ ...page, ...(page.demo ? { nativeView: 'demo', nativeProps: { title: page.title, demo: page.demo, count: counts.value[page.value] } } : {}) })))
 const active = ref('home'), visited = ref(new Set<string>())
 const example = computed(() => demoExamples.find(item => active.value === 'example/' + item.id))
@@ -34,7 +34,7 @@ const updateVisibility = () => { visible.value = !document.hidden }
 document.addEventListener('visibilitychange', updateVisibility)
 onActivated(() => { activated.value = true })
 onDeactivated(() => { activated.value = false })
-let navigationVersion = 0, returning = false
+let navigationVersion = 0, returning = false, lastEntry: string | undefined
 
 function setPageElement(value: string, element: Element | ComponentPublicInstance | null) {
   if (element instanceof HTMLElement) elements.set(value, element)
@@ -60,8 +60,10 @@ async function selectPage(value: string, reset = false, anchor?: string) {
     ? target.getBoundingClientRect().top - page.getBoundingClientRect().top + page.scrollTop - 20
     : reset ? 0 : positions.get(value) ?? 0
   page.scrollTo({ top: Math.max(0, top), behavior: 'instant' })
-  if (previousExample && value === 'home') {
-    page.querySelector<HTMLElement>('[data-demo-link="' + previousExample.id + '"]')?.focus({ preventScroll: true })
+  const entry = previousExample ?? demoExamples.find(item => item.id === lastEntry)
+  if (entry?.catalog === value) {
+    page.querySelector<HTMLElement>('[data-demo-link="' + entry.id + '"]')?.focus({ preventScroll: true })
+    lastEntry = undefined
   } else if (id) titleElement.value?.focus()
 }
 
@@ -80,7 +82,10 @@ function tabAction(event: { tab: string; value: string }) {
 function openExample(id: string) {
   const item = demoExamples.find(item => item.id === id)
   if (!item) return
-  void openPage('/example/' + id, { title: item.title }).catch(reportError)
+  const page = elements.get(active.value)
+  if (page?.offsetHeight) positions.set(active.value, page.scrollTop)
+  lastEntry = id
+  void openPage(item.path ?? '/example/' + id, { title: item.title }).catch(reportError)
 }
 
 function reportError(error: unknown) {
@@ -91,20 +96,21 @@ function reportError(error: unknown) {
 function goBack() {
   if (returning) return
   returning = true
-  void closePage().catch(reportError)
+  void closePage('/' + (example.value?.catalog ?? 'home')).catch(reportError)
 }
 
 function followRoute() {
   if (route.name !== 'demo') {
     const previous = elements.get(active.value)
-    if (previous) positions.set(active.value, previous.scrollTop)
+    if (previous?.offsetHeight) positions.set(active.value, previous.scrollTop)
     return
   }
   returning = false
   let anchor = ''
   try { anchor = decodeURIComponent(route.path.replace(/^\//, '')) } catch { /* 非法片段回到首页。 */ }
   const item = demoExamples.find(item => anchor === 'example/' + item.id || anchor === item.id || item.anchors?.includes(anchor))
-  const value = item ? 'example/' + item.id : pages.find(page => page.value === anchor)?.value ?? 'home'
+  if (item?.path) { void navigation.replace(item.path).catch(reportError); return }
+  const value = item ? 'example/' + item.id : anchor === 'discover' ? 'native' : pages.find(page => page.value === anchor)?.value ?? 'home'
   void selectPage(value, false, item && !anchor.startsWith('example/') ? anchor : undefined)
 }
 
@@ -118,7 +124,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="demo-app" :class="{ 'demo-app-detail': example }">
     <div class="demo-top">
-      <DemoAppBar ref="titleElement" :title="title" :back="!!example" :back-label="isChildPage() ? '返回上一页' : '返回组件列表'" class="demo-app-bar" @back="goBack" />
+      <DemoAppBar ref="titleElement" :title="title" :back="!!example" :back-label="isChildPage() ? '返回上一页' : example?.catalog === 'native' ? '返回原生组件' : '返回组件列表'" class="demo-app-bar" @back="goBack" />
     </div>
     <Tabs class="demo-tabs" :model-value="active" :items="nativePages" :navigation-visible="!example" :suspended="suspended" @select="navigate" @action="tabAction" @error="console.error">
     <main class="demo-main" :aria-label="title">
@@ -126,10 +132,10 @@ onBeforeUnmount(() => {
         :ref="element => setPageElement(page.value, element)" class="demo-page"
         :data-demo-page="page.value" :aria-label="page.title"
         :inert="active !== page.value" :aria-hidden="active !== page.value ? true : undefined">
-        <div v-if="page.value === 'home'" class="demo-catalog">
-          <div class="demo-intro"><h2>组件目录</h2><p>选择组件，查看示例与交互。</p></div>
+        <div v-if="page.value === 'home' || page.value === 'native'" class="demo-catalog">
+          <div class="demo-intro"><h2>{{ page.value === 'native' ? '原生组件' : '组件目录' }}</h2><p>{{ page.value === 'native' ? '体验导航、页面切换与下拉刷新。' : '选择组件，查看示例与交互。' }}</p></div>
           <div class="demo-catalog-groups">
-            <section v-for="group in demoGroups" :key="group.title" class="demo-catalog-group" :aria-label="group.title">
+            <section v-for="group in page.value === 'native' ? nativeDemoGroups : demoGroups" :key="group.title" class="demo-catalog-group" :aria-label="group.title">
               <h3>{{ group.title }}<span>{{ group.items.length }}</span></h3>
               <CellGroup :label="group.title">
                 <ListRow v-for="item in group.items" :key="item.id" :data-demo-link="item.id"

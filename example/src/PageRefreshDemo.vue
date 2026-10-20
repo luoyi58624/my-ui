@@ -21,7 +21,7 @@ function refresh() {
     refreshing.value = false
   }, 1200)
 }
-function back() { void closePage().catch(reason => { error.value = String(reason) }) }
+function back() { void closePage('/native').catch(reason => { error.value = String(reason) }) }
 function openDialog() { void popup.showAlert({ title: '稍作停留', message: '关闭后可以继续下拉刷新，列表位置会保留。', confirmText: '继续浏览' }) }
 onBeforeUnmount(() => { clearTimeout(timer) })
 </script>

@@ -19,6 +19,6 @@ onBeforeUnmount(() => { stopLayers?.(); document.documentElement.classList.remov
 </script>
 
 <template>
-  <RouterView v-slot="{ Component }"><KeepAlive><component :is="Component" /></KeepAlive></RouterView>
+  <RouterView v-slot="{ Component, route: pageRoute }"><KeepAlive><component :is="Component" :key="pageRoute.name" /></KeepAlive></RouterView>
   <Popup />
 </template>

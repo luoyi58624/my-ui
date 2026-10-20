@@ -16,7 +16,7 @@ import com.luoyi.nativecomponents.NativeTabViews
 import com.luoyi.nativecomponents.NavigationIcon
 import org.json.JSONObject
 
-/** 为底部三个 Demo Tab 注册真正的安卓页面视图，示例业务留在宿主中。 */
+/** 为主导航与 Tabs 示例注册安卓页面视图，示例业务留在宿主中。 */
 object DemoNativeTabs {
     fun register() { NativeTabViews.register("demo") { activity, action -> DemoNativeTab(activity, action) } }
 }
@@ -57,14 +57,14 @@ private class DemoNativeTab(activity: Activity, action: (String) -> Unit) : Nati
             else view.setTypeface(view.typeface, if (weight >= 600) Typeface.BOLD else Typeface.NORMAL)
             view.includeFontPadding = false
         }
-        badge.text = "DEMO ${props.optInt("demo")}"; text(badge, 11, muted, appearance.getInt("fontWeight"))
+        badge.text = props.optString("badge", "DEMO ${props.optInt("demo")}"); text(badge, 11, muted, appearance.getInt("fontWeight"))
         badge.letterSpacing = .15f
         title.text = props.optString("title", props.getString("label")); text(title, 24, appearance.getInt("text"), appearance.getInt("titleWeight"))
         title.layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(10); bottomMargin = px(10) }
-        description.text = "这是预留的 Demo 页面。"; text(description, 14, muted, appearance.getInt("fontWeight"))
+        description.text = props.optString("description", "这是预留的 Demo 页面。"); text(description, 14, muted, appearance.getInt("fontWeight"))
         description.layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = px(28) }
         count = props.optInt("count")
-        counter.text = "点一下 · $count"; home.text = "浏览组件"
+        counter.text = "点一下 · $count"; home.text = props.optString("homeLabel", "浏览组件")
         for (button in listOf(counter, home)) {
             text(button, 14, primary, appearance.getInt("fontWeight"))
             button.isAllCaps = false

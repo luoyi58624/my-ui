@@ -26,9 +26,6 @@ async function updateCache() {
   catch (error) { emit('notify', error instanceof Error ? error.message : String(error)) }
 }
 
-function openRefreshPage() {
-  void openPage('/page-refresh', { title: '最新动态' }).catch(error => emit('notify', String(error)))
-}
 </script>
 
 <template>
@@ -42,10 +39,6 @@ function openRefreshPage() {
     </div>
     <p class="native-navigation-note">{{ available ? '在新页面修改后返回，这里也会更新。系统返回保留首页的滚动位置。' : '在当前窗口进入另一页；返回后保留原来的输入与滚动位置。' }}</p>
     <p v-if="shared.$shared?.error" class="native-navigation-error" role="alert">本地同步失败：{{ shared.$shared.error.message }}</p>
-  </Card>
-  <Card title="Page 页面与下拉刷新" description="固定导航栏、独立滚动内容和刷新状态" sample="PAGE">
-    <p class="native-navigation-note">打开动态列表，在内容顶部下拉，也可以点击导航栏的刷新按钮。</p>
-    <div class="native-navigation-actions"><Button @click="openRefreshPage">体验下拉刷新 <Icon name="arrow-right" /></Button></div>
   </Card>
 </template>
 

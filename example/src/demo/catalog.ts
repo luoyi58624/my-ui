@@ -1,12 +1,14 @@
 import type { IconName } from '@my-ui/vue'
 
-/** 首页导航项与独立示例插槽共用的页面定义。 */
+/** 目录导航项与独立示例共用的页面定义。 */
 export interface DemoExample {
   id: string
   title: string
   description: string
   icon: IconName
   anchors?: string[]
+  /** 独立全屏示例使用自己的路由，其余示例由目录插槽承载。 */
+  path?: string
 }
 
 /** 组件目录按用途分组，旧链接仍可定位到相应示例。 */
@@ -45,10 +47,25 @@ export const demoGroups: { title: string; items: DemoExample[] }[] = [
   ] },
   { title: '完整示例', items: [
     { id: 'scenarios', title: '表单与内容场景', description: '组合组件完成实际交互', icon: 'briefcase' },
-    { id: 'native-navigation', title: '原生页面与共享状态', description: 'Activity 跳转与持久化数据', icon: 'arrow-right' },
     { id: 'native-html', title: '原生 HTML 示例', description: '直接使用 CSS 与 JavaScript', icon: 'grid' },
   ] },
 ]
 
-/** 全部示例共用同一份路由数据，避免入口与内容失配。 */
-export const demoExamples = demoGroups.flatMap(group => group.items)
+/** 原生组件及页面能力统一放在第二个导航目录。 */
+export const nativeDemoGroups: { title: string; items: DemoExample[] }[] = [
+  { title: '原生组件', items: [
+    { id: 'native-app-bar', title: 'AppBar 顶部导航', description: '标题、返回与页面操作', icon: 'arrow-right', path: '/native/app-bar' },
+    { id: 'native-bottom-navigation', title: 'BottomNavigation 底部导航', description: '标签切换、选中状态与角标', icon: 'home', path: '/native/bottom-navigation' },
+    { id: 'native-tabs', title: 'Tabs 页面切换', description: '切换页面，保留各页状态', icon: 'grid', path: '/native/tabs' },
+    { id: 'page-refresh', title: 'Page 页面与下拉刷新', description: '固定导航、内容滚动与下拉更新', icon: 'sliders', path: '/page-refresh' },
+  ] },
+  { title: '页面与共享', items: [
+    { id: 'native-navigation', title: '原生页面与共享状态', description: '页面跳转、系统返回与共享数据', icon: 'layer' },
+  ] },
+]
+
+/** 路由和返回入口共用目录归属，旧示例链接继续可用。 */
+export const demoExamples = [
+  ...demoGroups.flatMap(group => group.items.map(item => ({ ...item, catalog: 'home' as const }))),
+  ...nativeDemoGroups.flatMap(group => group.items.map(item => ({ ...item, catalog: 'native' as const }))),
+]
