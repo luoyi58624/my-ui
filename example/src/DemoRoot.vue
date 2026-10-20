@@ -22,3 +22,8 @@ onBeforeUnmount(() => { stopLayers?.(); document.documentElement.classList.remov
   <RouterView v-slot="{ Component, route: pageRoute }"><KeepAlive><component :is="Component" :key="pageRoute.name" /></KeepAlive></RouterView>
   <Popup />
 </template>
+
+<style>
+/* 独立打开指南或代码页时也使用同一个全屏应用容器。 */
+html.my-demo-app, html.my-demo-app body { height: 100%; overflow: hidden; padding: 0; scrollbar-gutter: auto; }
+</style>

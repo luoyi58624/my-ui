@@ -17,11 +17,13 @@
   "dependencies": {
     "@my-ui/vue": "workspace:*",
     "@tauri-apps/plugin-store": "2.5.0",
+    "@wdns/vue-code-block": "2.4.1",
+    "highlight.js": "11.12.0",
     "pinia": "4.1.0",
-    "vue-router": "4.6.4",
-    "vue": "3.5.43",
     "tauri-plugin-android-system-font-weight": "file:../../../tauri/plugins/tauri-plugin-android-system-font-weight",
-    "tauri-plugin-native-components": "file:../../../tauri/plugins/tauri-plugin-native-components"
+    "tauri-plugin-native-components": "file:../../../tauri/plugins/tauri-plugin-native-components",
+    "vue": "3.5.43",
+    "vue-router": "4.6.4"
   },
   "devDependencies": {
     "@tauri-apps/cli": "2.12.3"

@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { Button, CellGroup, Icon, ListRow } from '@my-ui/vue'
 import { Tabs, type NavigationItem } from 'tauri-plugin-native-components/vue'
 import DemoAppBar from './DemoAppBar.vue'
+import ExampleCode from './demo/ExampleCode.vue'
 import { useNativeBarsSuspended } from './native-components'
 import { demoExamples, demoGroups, nativeDemoGroups } from './demo/catalog'
 import { closePage, isChildPage, navigation, openPage } from './navigation'
@@ -124,7 +125,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="demo-app" :class="{ 'demo-app-detail': example }">
     <div class="demo-top">
-      <DemoAppBar ref="titleElement" :title="title" :back="!!example" :back-label="isChildPage() ? '返回上一页' : example?.catalog === 'native' ? '返回原生组件' : '返回组件列表'" class="demo-app-bar" @back="goBack" />
+      <DemoAppBar ref="titleElement" :title="title" :back="!!example" :code-id="example?.id" :back-label="isChildPage() ? '返回上一页' : example?.catalog === 'native' ? '返回原生组件' : '返回组件列表'" class="demo-app-bar" @back="goBack" />
     </div>
     <Tabs class="demo-tabs" :model-value="active" :items="nativePages" :navigation-visible="!example" :suspended="suspended" @select="navigate" @action="tabAction" @error="console.error">
     <main class="demo-main" :aria-label="title">
@@ -133,7 +134,7 @@ onBeforeUnmount(() => {
         :data-demo-page="page.value" :aria-label="page.title"
         :inert="active !== page.value" :aria-hidden="active !== page.value ? true : undefined">
         <div v-if="page.value === 'home' || page.value === 'native'" class="demo-catalog">
-          <div class="demo-intro"><h2>{{ page.value === 'native' ? '原生组件' : '组件目录' }}</h2><p>{{ page.value === 'native' ? '体验导航、页面切换与下拉刷新。' : '选择组件，查看示例与交互。' }}</p></div>
+          <div class="demo-intro"><h2>{{ page.value === 'native' ? '原生组件' : '组件目录' }}</h2><p>{{ page.value === 'native' ? '体验导航、页面切换与下拉刷新。' : '选择组件，查看交互效果与用法代码。' }}</p></div>
           <div class="demo-catalog-groups">
             <section v-for="group in page.value === 'native' ? nativeDemoGroups : demoGroups" :key="group.title" class="demo-catalog-group" :aria-label="group.title">
               <h3>{{ group.title }}<span>{{ group.items.length }}</span></h3>
@@ -158,7 +159,10 @@ onBeforeUnmount(() => {
         :ref="element => setPageElement('example/' + item.id, element)" class="demo-page demo-detail"
         :data-demo-page="'example/' + item.id" :aria-label="item.title"
         :inert="example?.id !== item.id" :aria-hidden="example?.id !== item.id ? true : undefined">
-        <div class="demo-page-inner"><slot :name="item.id" :active="activated && visible && route.name === 'demo' && example?.id === item.id" /></div>
+        <div class="demo-page-inner">
+          <slot :name="item.id" :active="activated && visible && route.name === 'demo' && example?.id === item.id" />
+          <ExampleCode :id="item.id" />
+        </div>
       </section>
     </main>
     </Tabs>
@@ -166,7 +170,6 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-:global(html.my-demo-app), :global(html.my-demo-app body) { height: 100%; overflow: hidden; padding: 0; scrollbar-gutter: auto; }
 .demo-app { display: grid; grid-template-rows: calc(57px + env(safe-area-inset-top)) minmax(0, 1fr); height: 100dvh; background: var(--background); }
 .demo-top { padding-top: env(safe-area-inset-top); border-bottom: 1px solid var(--border); background: var(--card-background); z-index: 40; }
 .demo-top :deep(.nc-app-bar) { height: 56px; width: min(100%, 1160px); margin: auto; border: 0; }

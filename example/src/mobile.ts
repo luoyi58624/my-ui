@@ -8,12 +8,12 @@ const isMobileWebView = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
 if (isMobileWebView) {
   document.documentElement.classList.add('my-mobile-native')
 
-  // 输入框、文本域、可编辑区域内保留长按菜单（选择/粘贴）；其余位置长按不弹系统菜单。
+  // 输入区与示例代码保留长按选择和复制，其余位置不弹系统菜单。
   window.addEventListener('contextmenu', (event) => {
     const target = event.target
     const editable =
       target instanceof Element &&
-      target.closest('input, textarea, [contenteditable=""], [contenteditable="true"]')
+      target.closest('input, textarea, [contenteditable=""], [contenteditable="true"], .demo-code')
     if (!editable) event.preventDefault()
   })
 }

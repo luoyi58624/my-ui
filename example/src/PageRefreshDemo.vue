@@ -2,7 +2,8 @@
 import { onBeforeUnmount, ref } from 'vue'
 import { AppBar, Page, type NavigationAction, type PageHandle } from 'tauri-plugin-native-components/vue'
 import { Button, popup } from '@my-ui/vue'
-import { closePage } from './navigation'
+import { closePage, openPage } from './navigation'
+import { codeAction } from './demo/code/examples'
 import { useNativeBarsSuspended } from './native-components'
 
 const page = ref<PageHandle>(), refreshing = ref(false), count = ref(0), error = ref('')
@@ -22,13 +23,17 @@ function refresh() {
   }, 1200)
 }
 function back() { void closePage('/native').catch(reason => { error.value = String(reason) }) }
+function onAction(value: string) {
+  if (value === 'code') void openPage('/code/page-refresh').catch(reason => { error.value = String(reason) })
+  else page.value?.refresh()
+}
 function openDialog() { void popup.showAlert({ title: '稍作停留', message: '关闭后可以继续下拉刷新，列表位置会保留。', confirmText: '继续浏览' }) }
 onBeforeUnmount(() => { clearTimeout(timer) })
 </script>
 
 <template>
   <Page ref="page" class="refresh-demo" refreshable v-model:refreshing="refreshing" :suspended="suspended" @refresh="refresh" @error="error = String($event)">
-    <template #navbar><AppBar title="最新动态" back :actions="actions" @back="back" @action="page?.refresh()" /></template>
+    <template #navbar><AppBar title="最新动态" back :actions="[codeAction, ...actions]" @back="back" @action="onAction" /></template>
     <div class="refresh-demo-content">
       <div class="refresh-demo-intro"><span>保持好奇</span><h1>今天，也有新发现</h1><p>{{ updated }}</p></div>
       <div class="refresh-demo-actions"><Button variant="outline" :disabled="refreshing" @click="page?.refresh()">{{ refreshing ? '正在更新…' : '刷新动态' }}</Button><Button variant="text" @click="openDialog">打开弹窗</Button></div>

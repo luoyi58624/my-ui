@@ -13,6 +13,10 @@ export interface DemoExample {
 
 /** 组件目录按用途分组，旧链接仍可定位到相应示例。 */
 export const demoGroups: { title: string; items: DemoExample[] }[] = [
+  { title: '开始使用', items: [
+    { id: 'quick-start', title: '快速开始', description: '引入 my-ui，了解组件的基础用法', icon: 'spark', path: '/guide/quick-start' },
+    { id: 'native-integration', title: '集成原生', description: '接入原生导航、Page 与下拉刷新', icon: 'layer', path: '/guide/native' },
+  ] },
   { title: '基础展示', items: [
     { id: 'button', title: 'Button 按钮', description: '操作层级、图标与按压反馈', icon: 'check' },
     { id: 'tag', title: 'Tag 标签', description: '状态展示与单选、多选标签', icon: 'heart' },

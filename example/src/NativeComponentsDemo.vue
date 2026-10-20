@@ -2,7 +2,8 @@
 import { computed, ref } from 'vue'
 import { Button, Icon, type IconName } from '@my-ui/vue'
 import { AppBar, BottomNavigation, Page, Tabs, type NavigationAction, type NavigationItem } from 'tauri-plugin-native-components/vue'
-import { closePage } from './navigation'
+import { closePage, openPage } from './navigation'
+import { codeAction } from './demo/code/examples'
 import { useNativeBarsSuspended } from './native-components'
 
 const props = defineProps<{ kind: 'app-bar' | 'bottom-navigation' | 'tabs' }>()
@@ -24,6 +25,10 @@ const nativeItems = computed(() => items.map((item, index) => ({ ...item, native
 } })))
 
 function back() { void closePage('/native').catch(error => { message.value = String(error) }) }
+function onAction(value: string) {
+  if (value === 'code') void openPage('/code/native-' + props.kind).catch(error => { message.value = String(error) })
+  else message.value = '已点击页面操作'
+}
 function tabAction(event: { tab: string; value: string }) {
   if (event.value === 'increment') counts.value[event.tab]++
   else if (event.value === 'home') back()
@@ -34,7 +39,7 @@ function tabAction(event: { tab: string; value: string }) {
   <Page class="native-component-demo" :suspended="suspended" :data-component-demo="kind">
     <template #navbar>
       <AppBar :title="title" :subtitle="kind === 'app-bar' && subtitle ? '标题、返回与操作' : undefined" back back-label="返回原生组件"
-        :center="kind !== 'app-bar' || centered" :actions="kind === 'app-bar' ? actions : []" @back="back" @action="message = '已点击页面操作'" @error="message = String($event)" />
+        :center="kind !== 'app-bar' || centered" :actions="[codeAction, ...(kind === 'app-bar' ? actions : [])]" @back="back" @action="onAction" @error="message = String($event)" />
     </template>
     <div class="native-component-stage">
       <Tabs v-if="kind === 'tabs'" v-model="tab" class="native-component-tabs" :items="nativeItems" :suspended="suspended" label="示例页面" @action="tabAction" @error="message = String($event)">

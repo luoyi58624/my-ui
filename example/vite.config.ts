@@ -9,7 +9,12 @@ export default defineConfig(({ mode }) => ({
   clearScreen: false,
   publicDir: exampleRoot + 'public',
   resolve: {
-    alias: { '/packages': projectRoot + 'packages', 'tauri-plugin-native-components': exampleRoot + 'node_modules/tauri-plugin-native-components' },
+    alias: [
+      { find: '/packages', replacement: projectRoot + 'packages' },
+      { find: 'tauri-plugin-native-components', replacement: exampleRoot + 'node_modules/tauri-plugin-native-components' },
+      // 使用库自带的常用语言集合，避免代码示例加载全部语法。
+      { find: /^highlight\.js$/, replacement: 'highlight.js/lib/common' },
+    ],
     dedupe: ['vue'],
   },
   // 本地插件直接分发 Vue 源码，避免开发预构建缓存旧组件出口。

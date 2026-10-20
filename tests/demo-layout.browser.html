@@ -25,9 +25,10 @@ if(params.has('frame')){
     try{
       frame=document.createElement('iframe');frame.src='/tests/demo-layout.browser.html?frame=1#actions';frame.title='移动 App 示例';fixture.append(frame);
       await until(()=>frame.contentDocument?.querySelectorAll('.nc-tabs-navigation button').length===4,'示例加载失败');doc=frame.contentDocument;win=frame.contentWindow;await pause(180);
-      const ids=[...doc.querySelectorAll('[data-demo-page="home"] [data-demo-link]')].map(node=>node.dataset.demoLink);
+      const links=[...doc.querySelectorAll('[data-demo-page="home"] [data-demo-link]')].map(node=>node.dataset.demoLink);
+      const ids=links.filter(id=>!['quick-start','native-integration'].includes(id));
       await check('首页与原生分别展示目录，消息和我的保留 Demo，首屏不加载组件示例',async()=>{
-        assert(page().dataset.demoPage==='home','首页未展示目录');assert(ids.length===26&&new Set(ids).size===ids.length,'目录不完整或重复');
+        assert(page().dataset.demoPage==='home','首页未展示目录');assert(links.length===28&&new Set(links).size===links.length&&ids.length===26,'目录不完整或重复');
         assert(doc.querySelectorAll('.demo-detail').length===0,'首屏提前挂载全部示例');
         assert([...doc.querySelectorAll('.nc-tabs-navigation button')].map(node=>node.textContent.trim()).join(',')==='首页,原生,消息,我的','底部导航不正确');
         await pick(1);assert(page().dataset.demoPage==='native'&&page().querySelectorAll('[data-demo-link]').length===5&&!page().querySelector('.demo-placeholder'),'原生目录不完整');
