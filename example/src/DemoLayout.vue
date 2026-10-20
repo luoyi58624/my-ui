@@ -133,7 +133,7 @@ onBeforeUnmount(() => {
             <section v-for="group in demoGroups" :key="group.title" class="demo-catalog-group" :aria-label="group.title">
               <h3>{{ group.title }}<span>{{ group.items.length }}</span></h3>
               <CellGroup :label="group.title">
-                <ListRow v-for="item in group.items" :key="item.id" :data-demo-link="item.id" :delay-touch-active="50"
+                <ListRow v-for="item in group.items" :key="item.id" :data-demo-link="item.id"
                   :title="item.title" :description="item.description" @click="openExample(item.id)">
                   <template #leading><span class="demo-catalog-icon"><Icon :name="item.icon" /></span></template>
                 </ListRow>
@@ -184,7 +184,7 @@ onBeforeUnmount(() => {
 .demo-catalog-group { min-width: 0; }
 .demo-catalog-group h3 { display: flex; align-items: center; gap: 8px; margin: 0 6px 10px; font-size: 13px; color: var(--text-secondary); font-weight: var(--font-weight-subtitle, 600); }
 .demo-catalog-group h3 span { font-size: 11px; opacity: .7; font-variant-numeric: tabular-nums; }
-.demo-catalog-group :deep(.my-group-body) { background: var(--card-background); }
+.demo-catalog-group :deep(.my-group-body) { background: var(--card-background); border: 0; border-radius: 22px; box-shadow: var(--shadow); }
 .demo-catalog-group :deep(.my-list-row) { min-height: 76px; --list-padding-inline: 16px; }
 .demo-catalog-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; color: var(--primary); background: var(--fill); }
 .demo-catalog-icon svg { width: 19px; height: 19px; }

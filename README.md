@@ -102,21 +102,23 @@ const actions = [
 
 ## 按压反馈与交互卡片
 
-Button、交互型 Card 和 ListRow 支持 `delayTouchActive`：只延迟触摸按压的视觉反馈，单位毫秒，默认 `0`。鼠标和键盘保持即时响应，业务点击仍由正常点击触发。手指提前抬起、移动、开始滚动或窗口失焦时取消等待，不会在结束后补播动画。
+按压核心提供 `delayTouchDown`、`delayTouchUp`，单位毫秒，两个核心默认值均为 `0`。Button、交互型 Card、ListRow 按下默认立即响应（`delayTouchDown: 0`），抬起后默认保留反馈 100ms（`delayTouchUp: 100`），让轻触也能看清。鼠标、手写笔和键盘不使用触摸延迟，业务点击保持原时序。
+
+手指在按下等待期间提前抬起，不会补播反馈；移动、滚动、取消、失焦、禁用或卸载都会立即撤销等待与保留状态。正常抬起后丢失隐式指针捕获，不会提前打断保留时间；再次按下会取消旧计时器。
 
 ```vue
-<Card interactive title="清理存储" :delay-touch-active="50" @activate="openStorage">
+<Card interactive title="清理存储" @activate="openStorage">
   <Icon name="inbox" />
   <h3>清理存储</h3>
   <p>36.8 GB / 128 GB</p>
 </Card>
-<ListRow title="应用管理" :delay-touch-active="50" @click="openApps" />
-<Button :delay-touch-active="50" @click="save">保存</Button>
+<ListRow title="应用管理" @click="openApps" />
+<Button :delay-touch-up="0" @click="save">保存</Button>
 ```
 
-Card 的 `interactive` 默认关闭；开启后整张卡片缩小并平滑改变背景色，支持 Enter 与空格。内部按钮、链接和输入控件独立操作。`--card-press-scale` 默认 `.92`，大卡片可以调为 `.97`；`--card-press-background` 可覆盖按压背景，未设置时自动根据 CSS 明暗配色混合。
+Card 的 `interactive` 默认关闭；开启后整张卡片缩小并平滑改变背景色，使用 `200ms ease-out`，支持 Enter 与空格。内部按钮、链接和输入控件独立操作。`--card-press-scale` 默认 `.96`，大卡片示例使用 `.985`；`--card-press-background` 可覆盖按压背景，未设置时自动根据 CSS 明暗配色混合。
 
-原生接口使用同名属性：`MyUI.create('Card', { interactive: true, delayTouchActive: 50 })`。声明式组件通过 `data-options` 配置；普通 `<button class="my-button" data-delay-touch-active="50">保存</button>` 也支持延迟反馈。
+原生接口使用同名属性：`MyUI.create('Card', { interactive: true, delayTouchDown: 0, delayTouchUp: 100 })`。声明式组件通过 `data-options` 配置；普通 `<button class="my-button" data-delay-touch-down="0" data-delay-touch-up="100">保存</button>` 也支持反馈配置。需要滚动观察窗口时可单独设置 `delayTouchDown: 50`。
 
 ## Upload 文件上传
 

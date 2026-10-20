@@ -37,7 +37,7 @@
     return event
   }
   const add = (props = {}, options = {}) => {
-    const c = MyUI.create('Button', { label: '保存', ...props }, options)
+    const c = MyUI.create('Button', { label: '保存', delayTouchUp: 0, ...props }, options)
     owned.push(c); fixture.append(c.element)
     return c
   }
@@ -140,7 +140,7 @@
     })
     await check('Vue 薄封装共用触屏反馈，按下和抬起不触发 Vue 更新', async () => {
       let updates = 0, clicks = 0
-      app = createApp({ setup() { onUpdated(() => updates++); return () => h(Button, { onClick: () => clicks++ }, () => 'Vue 按钮') } })
+      app = createApp({ setup() { onUpdated(() => updates++); return () => h(Button, { delayTouchUp: 0, onClick: () => clicks++ }, () => 'Vue 按钮') } })
       app.mount(fixture); await nextTick(); await nextTick()
       const button = fixture.querySelector('button'), before = updates
       pointer(button, 'pointerdown'); assert(pressed(button), 'Vue 按压未立即生效')

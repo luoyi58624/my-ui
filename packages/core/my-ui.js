@@ -1089,13 +1089,20 @@
       binding.configure(options);
       return binding;
     }
-    let config = options, stops = [], timer;
+    let config = options, stops = [], timer, upTimer;
     const reset = () => {
       clearTimeout(timer);
+      clearTimeout(upTimer);
       timer = undefined;
+      upTimer = undefined;
       stops.forEach((stop) => stop());
       stops = [];
       button.removeAttribute("data-my-pressed");
+    };
+    // 核心不预设反馈时长；具体组件通过两个 getter 提供自己的默认值。
+    const delay = (name) => {
+      const value = Number(config[name]?.() ?? 0);
+      return Number.isFinite(value) ? Math.min(2147483647, Math.max(0, value)) : 0;
     };
     const listen = (target, type, handler, options) => {
       target.addEventListener(type, handler, options);
@@ -1111,20 +1118,31 @@
       if (!direct || event.button !== 0 || event.isPrimary === false || !available()) return;
       const bounds = button.getBoundingClientRect();
       const { pointerId, clientX, clientY } = event;
-      const finish = (event) => { if (event.pointerId === pointerId) reset(); };
+      let released = false;
+      const finish = (event) => { if (!released && event.pointerId === pointerId) reset(); };
+      const release = (event) => {
+        if (released || event.pointerId !== pointerId) return;
+        released = true;
+        clearTimeout(timer);
+        timer = undefined;
+        const duration = event.pointerType === "touch" && button.hasAttribute("data-my-pressed")
+          ? delay("delayTouchUp") : 0;
+        if (duration > 0) upTimer = setTimeout(reset, duration);
+        else reset();
+      };
       const options = { capture: true, passive: true };
       listen(document, "pointermove", (event) => {
-        if (event.pointerId !== pointerId) return;
+        if (released || event.pointerId !== pointerId) return;
         // 使用按下时的边界，避免缩小后的按钮把边缘触点误判成移出。
         if (Math.hypot(event.clientX - clientX, event.clientY - clientY) > 10 ||
             event.clientX < bounds.left || event.clientX > bounds.right ||
             event.clientY < bounds.top || event.clientY > bounds.bottom) reset();
       }, options);
-      listen(document, "pointerup", finish, options);
+      listen(document, "pointerup", release, options);
       listen(document, "pointercancel", finish, options);
       listen(button, "lostpointercapture", finish);
       listen(document, "pointerdown", (event) => {
-        if (event.pointerId !== pointerId) reset();
+        if (released || event.pointerId !== pointerId) reset();
       }, options);
       listen(document, "scroll", reset, options);
       listen(window, "blur", reset);
@@ -1135,9 +1153,8 @@
         else reset();
       };
       // 只延迟真实触摸，等待期间同样监听取消；短于延迟的轻触不补播按压动画。
-      const value = event.pointerType === "touch" ? Number(config.delayTouchActive?.() ?? 0) : 0;
-      const delay = Number.isFinite(value) ? Math.min(2147483647, Math.max(0, value)) : 0;
-      if (delay > 0) timer = setTimeout(activate, delay);
+      const duration = event.pointerType === "touch" ? delay("delayTouchDown") : 0;
+      if (duration > 0) timer = setTimeout(activate, duration);
       else activate();
     };
     const enter = (event) => {
@@ -1191,11 +1208,12 @@
   });
   register("Button", {
     tag: "button",
-    defaults: { variant: "primary", type: "button", delayTouchActive: 0 },
+    defaults: { variant: "primary", type: "button", delayTouchDown: 0, delayTouchUp: 100 },
     init(c) {
       c.element.classList.add("my-button");
       c.pressFeedback = bindPressFeedback(c.element, {
-        delayTouchActive: () => c.p.delayTouchActive,
+        delayTouchDown: () => c.p.delayTouchDown,
+        delayTouchUp: () => c.p.delayTouchUp,
       });
       c.cleanups.add(() => c.pressFeedback.destroy());
       c.body = el("span", "button-content");
@@ -1554,7 +1572,7 @@
   });
   register("Card", {
     tag: "article",
-    defaults: { delayTouchActive: 0 },
+    defaults: { delayTouchDown: 0, delayTouchUp: 100 },
     init(c) {
       c.element.classList.add("my-card");
       // 内部按钮、链接或输入控件独立操作，不激活整张卡片。
@@ -1565,7 +1583,8 @@
         return !control || control === c.element;
       };
       c.pressFeedback = bindPressFeedback(c.element, {
-        delayTouchActive: () => c.p.delayTouchActive,
+        delayTouchDown: () => c.p.delayTouchDown,
+        delayTouchUp: () => c.p.delayTouchUp,
         accepts: (event) => !!c.p.interactive && ownTarget(event),
       });
       c.cleanups.add(() => c.pressFeedback.destroy());
@@ -2425,11 +2444,12 @@
   // ── 列表、分段和导航 ────────────────────────────────────────────────────
   register("ListRow", {
     tag: "button",
-    defaults: { delayTouchActive: 0 },
+    defaults: { delayTouchDown: 0, delayTouchUp: 100 },
     init(c) {
       c.element.classList.add("my-list-row");
       c.pressFeedback = bindPressFeedback(c.element, {
-        delayTouchActive: () => c.p.delayTouchActive,
+        delayTouchDown: () => c.p.delayTouchDown,
+        delayTouchUp: () => c.p.delayTouchUp,
       });
       c.cleanups.add(() => c.pressFeedback.destroy());
       c.leading = el("span", "leading-content");
@@ -6985,7 +7005,8 @@
       }
       button.classList.add("my-primary");
       bindPressFeedback(button, {
-        delayTouchActive: () => button.getAttribute("data-delay-touch-active") ?? 0,
+        delayTouchDown: () => button.getAttribute("data-delay-touch-down") ?? 0,
+        delayTouchUp: () => button.getAttribute("data-delay-touch-up") ?? 100,
       });
     }
     return result;

@@ -16,8 +16,10 @@ const props = withDefaults(defineProps<{
   /** 禁止当前操作。 */
   disabled?: boolean
   /** 触摸按压激活前的等待毫秒数，默认 0；鼠标与键盘不延迟。 */
-  delayTouchActive?: number
-}>(), { delayTouchActive: 0 })
+  delayTouchDown?: number
+  /** 触摸抬起后保留按压反馈的毫秒数，默认 100；滚动和取消立即撤销。 */
+  delayTouchUp?: number
+}>(), { delayTouchDown: 0, delayTouchUp: 100 })
 const emit = defineEmits<{
   /** 导航行被激活时的原生点击事件。 */
   click: [event: MouseEvent]

@@ -3538,13 +3538,12 @@ img[data-my-avatar] {
   transform: scale(1);
   transform-origin: center;
   transition:
-    transform 220ms cubic-bezier(0.23, 1, 0.32, 1),
-    background-color 180ms cubic-bezier(0.215, 0.61, 0.355, 1);
+    transform 200ms ease-out,
+    background-color 200ms ease-out;
 }
 .my-tappable-card[data-my-card]:is(:active:not([data-my-press-input]), [data-my-pressed]) {
-  transform: scale(var(--card-press-scale, 0.92));
-  background-color: var(--card-press-background, color-mix(in srgb, var(--card-background) 88%, var(--text)));
-  transition-duration: 120ms, 120ms;
+  transform: scale(var(--card-press-scale, 0.96));
+  background-color: var(--card-press-background, color-mix(in srgb, var(--card-background) 91.5%, var(--text)));
 }
 @media (hover: hover) and (pointer: fine) {
   .my-tappable-card[data-my-card]:not([data-my-press-input]):hover:not(:active) {
