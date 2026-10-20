@@ -62,7 +62,10 @@ async function selectPage(value: string, reset = false, anchor?: string) {
     : reset ? 0 : positions.get(value) ?? 0
   page.scrollTo({ top: Math.max(0, top), behavior: 'instant' })
   const entry = previousExample ?? demoExamples.find(item => item.id === lastEntry)
-  if (entry?.catalog === value) {
+  if (lastEntry === 'showcase' && value === 'home') {
+    page.querySelector<HTMLElement>('[data-showcase-entry]')?.focus({ preventScroll: true })
+    lastEntry = undefined
+  } else if (entry?.catalog === value) {
     page.querySelector<HTMLElement>('[data-demo-link="' + entry.id + '"]')?.focus({ preventScroll: true })
     lastEntry = undefined
   } else if (id) titleElement.value?.focus()
@@ -87,6 +90,13 @@ function openExample(id: string) {
   if (page?.offsetHeight) positions.set(active.value, page.scrollTop)
   lastEntry = id
   void openPage(item.path ?? '/example/' + id, { title: item.title }).catch(reportError)
+}
+
+function openShowcase() {
+  const page = elements.get(active.value)
+  if (page?.offsetHeight) positions.set(active.value, page.scrollTop)
+  lastEntry = 'showcase'
+  void openPage('/showcase', { title: '完整交互示例' }).catch(reportError)
 }
 
 function reportError(error: unknown) {
@@ -134,7 +144,10 @@ onBeforeUnmount(() => {
         :data-demo-page="page.value" :aria-label="page.title"
         :inert="active !== page.value" :aria-hidden="active !== page.value ? true : undefined">
         <div v-if="page.value === 'home' || page.value === 'native'" class="demo-catalog">
-          <div class="demo-intro"><h2>{{ page.value === 'native' ? '原生组件' : '组件目录' }}</h2><p>{{ page.value === 'native' ? '体验导航、页面切换与下拉刷新。' : '选择组件，查看交互效果与用法代码。' }}</p></div>
+          <div class="demo-intro">
+            <div><h2>{{ page.value === 'native' ? '原生组件' : '组件目录' }}</h2><p>{{ page.value === 'native' ? '体验导航、页面切换与下拉刷新。' : '选择组件，查看交互效果与用法代码。' }}</p></div>
+            <Button v-if="page.value === 'home'" data-showcase-entry variant="outline" icon="layer" @click="openShowcase">完整交互示例 <Icon name="arrow-right" /></Button>
+          </div>
           <div class="demo-catalog-groups">
             <section v-for="group in page.value === 'native' ? nativeDemoGroups : demoGroups" :key="group.title" class="demo-catalog-group" :aria-label="group.title">
               <h3>{{ group.title }}<span>{{ group.items.length }}</span></h3>
@@ -179,16 +192,20 @@ onBeforeUnmount(() => {
 .demo-page-inner > :deep(:first-child) { margin-top: 0; }
 .demo-page-inner :deep(.my-sample-id[data-my-card]) { flex: none; padding: 4px 8px; border-radius: 6px; background: var(--fill); color: var(--text-secondary); font: 500 10px/16px var(--font); letter-spacing: .06em; }
 .demo-catalog { max-width: 960px; margin: auto; }
-.demo-intro { margin: 0 4px 28px; }
-.demo-intro h2 { margin: 0 0 8px; font-size: 26px; font-weight: var(--font-weight-title, 700); }
+.demo-intro { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin: 4px 2px 32px; }
+.demo-intro h2 { margin: 0 0 8px; font-size: 25px; line-height: 1.4; font-weight: var(--font-weight-title, 700); }
 .demo-intro p { margin: 0; color: var(--text-secondary); font-size: 14px; line-height: 1.6; }
+.demo-intro > .my-button { flex-shrink: 0; gap: 8px; padding-inline: 14px; font-size: 13px; border-color: var(--border); background: var(--card-background); }
+.demo-intro > .my-button :deep(svg) { width: 17px; height: 17px; }
 .demo-catalog-groups { display: grid; gap: 28px; }
 .demo-catalog-group { min-width: 0; }
-.demo-catalog-group h3 { display: flex; align-items: center; gap: 8px; margin: 0 6px 10px; font-size: 13px; color: var(--text-secondary); font-weight: var(--font-weight-subtitle, 600); }
-.demo-catalog-group h3 span { font-size: 11px; opacity: .7; font-variant-numeric: tabular-nums; }
-.demo-catalog-group :deep(.my-group-body) { background: var(--card-background); border: 0; border-radius: 22px; box-shadow: var(--shadow); }
-.demo-catalog-group :deep(.my-list-row) { min-height: 76px; --list-padding-inline: 16px; }
-.demo-catalog-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; color: var(--primary); background: var(--fill); }
+.demo-catalog-group h3 { display: flex; align-items: center; gap: 8px; margin: 0 2px 10px; font-size: 14px; color: var(--text); font-weight: var(--font-weight-subtitle, 600); }
+.demo-catalog-group h3 span { color: var(--text-secondary); font-size: 12px; font-weight: var(--font-weight, 400); font-variant-numeric: tabular-nums; }
+.demo-catalog-group :deep(.my-group-body) { background: var(--card-background); border: 0; border-radius: 18px; box-shadow: var(--shadow); }
+.demo-catalog-group :deep(.my-list-row) { min-height: 78px; --list-padding-inline: 18px; --list-padding-block: 17px; }
+.demo-catalog-group :deep(.my-list-row-copy small) { font-size: 13px; line-height: 19px; }
+.demo-catalog-group :deep(.my-trailing-icon) { width: 16px; height: 16px; color: var(--text-secondary); }
+.demo-catalog-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; color: var(--primary); background: var(--fill); }
 .demo-catalog-icon svg { width: 19px; height: 19px; }
 .demo-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100%; text-align: center; padding: 24px; }
 .demo-placeholder-icon { display: grid; place-items: center; width: 72px; height: 72px; border-radius: 24px; color: var(--primary); background: var(--fill); margin-bottom: 24px; }
@@ -197,7 +214,18 @@ onBeforeUnmount(() => {
 .demo-placeholder h2 { margin: 10px 0; font-size: 24px; }
 .demo-placeholder > .my-button { margin-top: 10px; }
 .demo-placeholder p { margin: 0 0 28px; color: var(--text-secondary); font-size: 14px; }
-@media (min-width: 900px) { .demo-catalog-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
+@media (min-width: 900px) {
+  /* 分类逐行排列，条目在组内分列，避免不同长度的分类留下整块空白。 */
+  .demo-catalog-group :deep(.my-group-body) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .demo-catalog-group :deep(.my-group-body > .my-list-row) { padding-block: 18px; min-height: 82px; }
+  .demo-catalog-group :deep(.my-list-row:nth-child(-n+2)::before) { display: none; }
+  .demo-catalog-group :deep(.my-list-row:nth-child(even)) { border-left: 1px solid var(--border); }
+  .demo-catalog-group :deep(.my-list-row:last-child:nth-child(odd)) { grid-column: 1 / -1; }
+}
 @media (max-width: 760px) { .demo-page { padding: 20px max(14px, env(safe-area-inset-right)) 24px max(14px, env(safe-area-inset-left)); } }
-@media (max-width: 600px) { .demo-page-inner { --card-radius: 16px; --card-padding: 20px; } }
+@media (max-width: 600px) {
+  .demo-page-inner { --card-radius: 16px; --card-padding: 20px; }
+  .demo-intro { align-items: flex-start; flex-direction: column; gap: 16px; margin-bottom: 28px; }
+  .demo-intro h2 { font-size: 23px; }
+}
 </style>

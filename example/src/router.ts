@@ -7,6 +7,7 @@ export const router = createRouter({
     { path: '/', redirect: () => location.pathname.endsWith('/native-page.html') ? '/shared-state' : '/home' },
     { path: '/shared-state', name: 'shared-state', component: () => import('./NativePage.vue') },
     { path: '/html', name: 'html', component: () => import('./NativeHtmlPage.vue') },
+    { path: '/showcase', name: 'showcase', component: () => import('./App.vue'), props: { showcase: true } },
     { path: '/guide/quick-start', name: 'quick-start', component: () => import('./GuidePage.vue'), props: { kind: 'quick-start' } },
     { path: '/guide/native', name: 'native-integration', component: () => import('./GuidePage.vue'), props: { kind: 'native' } },
     { path: '/code/:id', name: 'example-code', component: () => import('./ExampleCodePage.vue') },

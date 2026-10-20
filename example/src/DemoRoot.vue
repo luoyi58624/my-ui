@@ -26,10 +26,6 @@ onBeforeUnmount(() => { stopLayers?.(); document.documentElement.classList.remov
 <style>
 /* 独立打开指南或代码页时也使用同一个全屏应用容器。 */
 html.my-demo-app, html.my-demo-app body { height: 100%; overflow: hidden; padding: 0; scrollbar-gutter: auto; }
-/* 明确中英文字体，避免嵌入式浏览器将 system-ui 映射到不同的默认字体。 */
-:root {
-  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans SC', 'Noto Sans CJK SC', Arial, sans-serif;
-}
 #app :is(.nc-bar, .nc-page) { font-family: var(--font); }
 /* 导航栏保持操作字重，页面正文使用正文的字重。 */
 #app :is(.nc-tabs-web, .nc-page-scroll) { font-weight: var(--font-weight, 400); }

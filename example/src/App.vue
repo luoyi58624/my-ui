@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, h, reactive, ref } from 'vue'
+import { computed, defineAsyncComponent, h, reactive, ref } from 'vue'
 import DemoLayout from './DemoLayout.vue'
 import { openPage } from './navigation'
 import NativeNavigationShowcase from './demo/NativeNavigationShowcase.vue'
@@ -25,6 +25,13 @@ import {
   ListRow, Menu, Navigation, Popover, Segmented, Select, popup,
   Slider, Stepper, Tag, Toast, type Option, type IconName,
 } from '@my-ui/vue'
+
+const props = defineProps<{
+  /** 按需加载旧版整页示例，组件和交互与独立示例共用。 */
+  showcase?: boolean
+}>()
+const ShowcaseLayout = defineAsyncComponent(() => import('./ShowcaseLayout.vue'))
+const layout = computed(() => props.showcase ? ShowcaseLayout : DemoLayout)
 
 const toast = ref<InstanceType<typeof Toast>>()
 function notify(message: string) { toast.value?.show(message) }
@@ -129,7 +136,7 @@ async function selectAction(action: Option) {
 </script>
 
 <template>
-  <DemoLayout @navigation-error="notify">
+  <component :is="layout" @navigation-error="notify">
     <template #button>
       <section id="buttons">
         <Card title="操作按钮" description="柔和而明确的操作层级" sample="BUTTONS">
@@ -273,7 +280,7 @@ async function selectAction(action: Option) {
         <a class="native-example-link" href="./native.html" @click.prevent="openHtmlExample">打开原生 HTML 示例 <Icon name="arrow-right" /></a>
       </Card>
     </template>
-  </DemoLayout>
+  </component>
   <Toast ref="toast" />
 </template>
 

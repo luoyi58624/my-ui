@@ -328,6 +328,8 @@ await storage.flush?.()
 
 ## 本地展示与验证
 
+首页的“完整交互示例”入口打开 `#/showcase`，按需加载旧版整页展示。`ShowcaseLayout.vue` 保留原来的头图、分类导航和连续布局，与独立示例共用 `App.vue` 的组件插槽及交互；返回目录保留滚动与入口焦点，离开整页时暂停播放和模拟上传。桌面目录按分类逐行排列、条目在组内分列，手机使用单列列表。
+
 ```powershell
 bun install
 bun run dev
