@@ -418,9 +418,9 @@ await navigation.back('/home')
 
 `navigation.ts` 保留示例内部的 `openPage`、`closePage` 薄包装，默认回退到 `/home`。共享状态页使用 `/shared-state`，纯 HTML 示例在 `/html` 中承载并保留返回入口，离线的 `native.html` 依旧能单独打开。插件合并同一目标进行中的原生创建请求，失败可重试；仅接受应用内地址。Android 导航要求 API 32 以上，命令为 `plugin:native-components|push`、`plugin:native-components|back`，仅向 Android 的 `main` 与 `native-page-*` 授权，首页不能被返回命令误关。
 
-Android 首页使用 `singleTop`，子页保持 `standard`。此前首页的 `singleTask` 会在点击桌面图标重新进入时销毁其上方子页，导致回到首页；现已通过真机的“进入子页 → Home → 启动器重新打开 → 返回”检查，恢复时保留同一个子 Activity 实例。设备圆角、系统栏、弹层返回与既有 WebView 生命周期处理统一由插件的 `NativeWindow` 管理。宿主 `AppActivity.kt` 仅转发生成的 TauriActivity 回调；`NativePageActivity.kt` 只声明子页 WebView 的所有权。
+Android 首页使用 `singleTop`，子页保持 `standard`。此前首页的 `singleTask` 会在点击桌面图标重新进入时销毁其上方子页，导致回到首页；现已通过真机的“进入子页 → Home → 启动器重新打开 → 返回”检查，恢复时保留同一个子 Activity 实例。系统栏、弹层返回与既有 WebView 生命周期处理统一由插件的 `NativeWindow` 管理。宿主 `AppActivity.kt` 仅转发生成的 TauriActivity 回调；`NativePageActivity.kt` 只声明子页 WebView 的所有权。
 
-插件内部的 `DeviceRoundedCorners.kt` 为各 Activity 读取 Android 12+ 的 `WindowInsets.getRoundedCorner()`，以物理像素裁剪整个窗口，覆盖 WebView、原生导航头与底栏；页面滑入时沿用设备圆角，不改写系统转场动画。窗口旋转或尺寸变化后重新读取，不提供半径的设备保持原样。Android 13+ 支持四角不同半径；Android 12 / 12L 只在四角半径一致时启用，避免旧版 Outline 对不对称路径不支持裁剪。
+页面圆角和转场使用 Android 系统默认行为。插件不再读取设备圆角裁剪 DecorView，也不为圆角修改窗口像素格式。
 
 **跨页共享状态**：「原生 → 原生页面与共享状态」可以修改备注和计数，再打开另一页。两页通过 Pinia 共享插件同步，「从本地更新」演示绕过 Pinia 修改存储后通知页面。重新打开或重启应用会恢复已保存的数据。每个原生子页都有独立的 WebView、Vue 实例和普通局部状态，只有显式共享的数据跨页同步。
 
