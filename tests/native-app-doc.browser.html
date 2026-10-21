@@ -40,12 +40,14 @@ if (mode) {
         const { previewGroups } = await import('/example/src/demo/code/source.ts');
         const groups = await previewGroups('native-app');
         assert(groups.map(group => group.name).join() === 'app-container,app-pages', '示例和代码分组错误');
+        assert(!root().querySelector('.app-api').textContent.includes('#navbar'), 'App 文档仍提供 navbar 插槽');
         for (const group of groups) {
           const block = root().querySelector('[data-example="' + group.name + '"]');
           assert(block.querySelector('.doc-example-preview') && block.querySelector('.demo-code-files'), '预览没有配套代码');
           for (const file of group.files) {
             const source = await file.source();
             assert(source.length > 50 && !source.includes('<iframe') && !source.includes('<DemoExample'), '展示了文档外壳而非实际源码');
+            assert(!source.includes('#navbar'), 'App 示例仍使用 navbar 插槽');
           }
           block.querySelector('summary').click();
           await until(() => block.querySelector('code'));

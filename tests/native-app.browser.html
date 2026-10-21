@@ -20,7 +20,7 @@ if(params.has('frame')){
   document.querySelector('#run').onclick=async()=>{document.querySelector('#run').disabled=true;try{
     await load();
     await check('默认只创建首个页面，自定义底栏通过插槽选择页面',async()=>{
-      assert(Object.keys(win.mounts).join()==='home','提前创建了未访问页面');await select('messages');assert(tab('messages').classList.contains('nc-app-view-active'),'底栏没有切换页面');assert(win.location.hash==='#/fixture','Tab 切换写入了路由记录');
+      assert(Object.keys(win.mounts).join()==='home','提前创建了未访问页面');assert(!doc.querySelector('.nc-app > .nc-page-navbar')&&tab('home').querySelector('.nc-app-bar'),'顶部导航没有归属各个页面');await select('messages');assert(tab('messages').classList.contains('nc-app-view-active'),'底栏没有切换页面');assert(win.location.hash==='#/fixture','Tab 切换写入了路由记录');
     });
     await check('输入、计数、滚动与组件实例在切换及重复选择后完整保留',async()=>{
       const panel=tab('messages'),input=panel.querySelector('input');input.value='消息草稿';input.dispatchEvent(new win.Event('input',{bubbles:true}));panel.querySelector('[data-count]').click();panel.scrollTop=330;await pause(40);const top=panel.scrollTop;
@@ -48,8 +48,8 @@ if(params.has('frame')){
       const bar=doc.querySelector('.nc-app-tabbar');await win.fixture.router.push({name:'app-test-detail',params:{id:'7'}});await until(()=>bar.hidden);await until(()=>win.calls.filter(call=>call.args?.surface?.kind==='layout').at(-1)?.args.surface.bottom===null);
       await win.fixture.router.replace('/fixture');await until(()=>!bar.hidden);await until(()=>win.calls.filter(call=>call.args?.surface?.kind==='layout').at(-1)?.args.surface.bottom?.modelValue==='home');assert(doc.querySelector('.nc-app-tabbar')===bar,'暂隐重建了底栏插槽');
     });
-    await check('Android 原生顶栏与任意 Web 底栏可组合，自定义插槽保持可见可交互',async()=>{
-      await load('android&custom');await until(()=>doc.querySelector('[data-native-layout="true"]'));
+    await check('Android 页面自身的顶部导航与 Web 底栏可组合，自定义插槽保持可见可交互',async()=>{
+      await load('android&custom');await until(()=>win.calls.some(call=>call.args?.surface?.kind==='appBar'&&call.args.surface.visible));assert(!doc.querySelector('.nc-app > .nc-page-navbar'),'App 仍提供顶部导航区域');
       const bar=doc.querySelector('.nc-app-tabbar'),button=doc.querySelector('[data-custom-tab="messages"]'),rect=button.getBoundingClientRect(),body=doc.querySelector('.nc-page-body').getBoundingClientRect();
       assert(rect.height>0&&body.bottom<=bar.getBoundingClientRect().top+1,'原生布局隐藏或覆盖了自定义底栏');assert(doc.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2)===button,'自定义底栏无法命中');button.click();await until(()=>win.fixture.active.value==='messages');doc.querySelector('[data-bar-count]').click();
       await win.fixture.router.push('/fixture/detail/7');await until(()=>bar.hidden);await win.fixture.router.replace('/fixture');await until(()=>!bar.hidden);assert(doc.querySelector('.nc-app-tabbar')===bar&&doc.querySelector('[data-bar-count]').textContent.endsWith('1'),'自定义底栏状态没有保留');assert(!win.calls.some(call=>call.args?.surface?.kind==='layout'&&call.args.surface.bottom),'自定义底栏被误转换成原生控件');

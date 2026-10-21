@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Button, Card, Input } from '@my-ui/vue'
-import { useApp } from 'tauri-plugin-native-components/vue'
+import { AppBar, useApp } from 'tauri-plugin-native-components/vue'
 
 defineProps<{
   /** Vue Router 通过 props: true 传入的记录编号。 */
@@ -16,6 +16,7 @@ async function back() {
 </script>
 
 <template>
+  <AppBar class="app-detail-toolbar" title="记录详情" back back-label="返回 App" @back="back" />
   <main class="app-detail-page" data-app-detail>
     <span class="app-detail-kicker">A MOMENT TO REMEMBER</span>
     <h1>第 {{ id }} 份记录</h1>
@@ -29,6 +30,7 @@ async function back() {
 </template>
 
 <style scoped>
+.app-detail-toolbar { position: sticky; top: 0; z-index: 1; }
 .app-detail-page { box-sizing: border-box; width: min(100%, 680px); margin: auto; padding: 38px 20px; }
 .app-detail-kicker { color: var(--primary); font-size: 11px; letter-spacing: 2px; }
 .app-detail-page h1 { margin: 14px 0 12px; font-size: 29px; line-height: 1.4; font-weight: var(--font-weight-title, 700); }

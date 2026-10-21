@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { Button, Card, Input, Icon } from '@my-ui/vue'
-import { useApp } from 'tauri-plugin-native-components/vue'
+import { AppBar, useApp } from 'tauri-plugin-native-components/vue'
+import { createNativeRouter } from 'tauri-plugin-native-components/router'
 
 defineProps<{
   /** 当前栏目标题。 */
@@ -11,6 +13,8 @@ defineProps<{
 }>()
 const app = useApp()
 const count = ref(0), draft = ref(''), error = ref('')
+const navigation = createNativeRouter(useRouter())
+function exit() { void navigation.back('/example/native-app').catch(reason => { error.value = String(reason) }) }
 async function openDetail() {
   try { await app.push({ name: 'app-detail', params: { id: String(count.value + 1) }, query: { from: app.value.value } }) }
   catch (reason) { error.value = String(reason) }
@@ -18,6 +22,7 @@ async function openDetail() {
 </script>
 
 <template>
+  <AppBar class="app-tab-toolbar" :title="title" back back-label="返回文档" @back="exit" />
   <main class="app-tab-page">
     <header class="app-tab-intro">
       <span class="app-tab-kicker">YOUR LITTLE SPACE</span>
@@ -42,6 +47,7 @@ async function openDetail() {
 </template>
 
 <style scoped>
+.app-tab-toolbar { position: sticky; top: 0; z-index: 1; }
 .app-tab-page { box-sizing: border-box; width: min(100%, 680px); margin: auto; padding: 26px 20px 32px; }
 .app-tab-intro { padding: 8px 0 26px; }
 .app-tab-kicker { color: var(--primary); font-size: 11px; letter-spacing: 2px; font-weight: var(--font-weight-action, 600); }

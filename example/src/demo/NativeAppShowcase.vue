@@ -46,10 +46,9 @@ async function open(path: string) {
         <tr><td>tabs</td><td>页面的 value、component 和可选的 props。</td></tr>
         <tr><td>pages</td><td>独立页面的 name、path、component；支持路由参数、props 和 meta。</td></tr>
         <tr><td>#tabbar</td><td>接收 value、select，可使用内置 BottomNavigation 或自定义底栏。</td></tr>
-        <tr><td>#navbar</td><td>接收 value、page、back，为当前页面提供标题与返回按钮。</td></tr>
         <tr><td>useApp()</td><td>获取 value、select、push 和 back，作用于当前 App。</td></tr>
       </tbody></table></div>
-      <p>App 统一处理外层页面与安全区，页面组件只编写正文。Tab 切换不增加返回记录，重复选择不重置内容；一级页面不拦截系统返回。</p>
+      <p>App 管理页面切换、底栏与安全区，顶部导航由每个页面自行编写。Tab 切换不增加返回记录，重复选择不重置内容；一级页面不拦截系统返回。</p>
     </section>
   </div>
 </template>

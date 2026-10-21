@@ -16,6 +16,7 @@ const Tab = defineComponent({
     onUnmounted(() => { w.unmounts[props.name] = (w.unmounts[props.name] || 0) + 1 })
     w.appNavigation = app
     return () => h('main', { 'data-test-tab': props.name, style: 'min-height:1300px;padding:20px;box-sizing:border-box' }, [
+      h(AppBar, { title: props.name }),
       h('input', { value: draft.value, 'aria-label': props.name + '-draft', onInput: (event: Event) => { draft.value = (event.target as HTMLInputElement).value } }),
       h('button', { 'data-count': props.name, onClick: () => count.value++ }, props.name + ' · ' + count.value),
       h('button', { 'data-open': props.name, onClick: () => app.push({ name: 'app-test-detail', params: { id: '7' } }) }, '打开详情'),
@@ -28,6 +29,7 @@ const Detail = defineComponent({
     const app = useApp(), note = ref('')
     onBeforeRouteLeave(() => { w.events.push('detail-leave') })
     return () => h('main', { 'data-test-detail': props.id, style: 'min-height:1300px;padding:20px' }, [
+      h(AppBar, { title: '详情', back: true, onBack: () => app.back() }),
       h('input', { value: note.value, 'aria-label': 'detail-note', onInput: (event: Event) => { note.value = (event.target as HTMLInputElement).value } }),
       h('button', { 'data-back': '', onClick: () => app.back() }, '返回'),
       h('button', { 'data-next': '', onClick: () => app.push({ name: 'app-test-detail', params: { id: '8' } }) }, '下一页'),
@@ -39,7 +41,6 @@ const pages: AppPage[] = [{ name: 'app-test-detail', path: '/fixture/detail/:id'
 const items = [{ value: 'home', label: '首页', icon: 'home' as const }, { value: 'messages', label: '消息', icon: 'message' as const }, { value: 'profile', label: '我的', icon: 'user' as const }]
 const Example = defineComponent({
   setup: () => () => h(App, { tabs, pages, modelValue: active.value, 'onUpdate:modelValue': value => { active.value = value }, onError: error => w.events.push(String(error)) }, {
-    navbar: ({ page, back }: any) => h(AppBar, { title: page ? '详情' : active.value, back: !!page, onBack: back }),
     tabbar: ({ value, select }: any) => [
       h('button', { 'data-bar-count': '', onClick: () => barCount.value++ }, '自定义底栏 · ' + barCount.value),
       custom
