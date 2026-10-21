@@ -4,7 +4,7 @@
 <script type="module">
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms)),mode=new URLSearchParams(location.search).get('frame');
 if(mode){
-  if(mode==='android'){Object.defineProperty(navigator,'userAgent',{value:'Android Tauri',configurable:true});window.isTauri=true;window.calls=[];window.__TAURI_INTERNALS__={invoke:async(command,args)=>{window.calls.push({command,args})}}}
+  if(mode==='android'){Object.defineProperty(navigator,'userAgent',{value:'Android Tauri',configurable:true});window.isTauri=true;window.calls=[];window.holdLayouts=false;window.releaseLayouts=[];window.__TAURI_INTERNALS__={invoke:async(command,args)=>{if(command==='plugin:app|supports_multiple_windows')return false;window.calls.push({command,args});if(window.holdLayouts&&args?.surface?.kind==='layout')await new Promise(resolve=>window.releaseLayouts.push(resolve))}}}
   document.body.innerHTML='<div id="app"></div>';const base=document.createElement('base');base.href='/example/';document.head.append(base);await import('/example/src/main.ts');
 }else{
   const reports=[],assert=(value,message)=>{if(!value)throw Error(message)},until=async(check,message='等待主 Demo 超时')=>{const start=performance.now();while(!check()){if(performance.now()-start>12000)throw Error(message);await pause(20)}};
@@ -39,7 +39,20 @@ if(mode){
       assert(win.calls.some(call=>call.args?.surface?.kind==='tabs'&&call.args.surface.items.some(item=>item.nativeView==='settings'&&item.nativeProps.groups.length===5)),'没有注册原生设置内容');
       win.dispatchEvent(new win.CustomEvent('native-components',{detail:{id:footer,action:'select',value:'home'}}));await until(()=>layout()?.top?.title==='组件示例');assert(layout().bottom.id===footer,'设置往返重建底栏');win.location.hash='/profile';await until(()=>current()?.dataset.demoPage==='settings');
     });
-    document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,total:5,reports},null,2);
+    await check('冷进入、返回和缓存恢复在原生确认前也不出现 Web 导航占位',async()=>{
+      await load('android');await until(()=>doc.querySelector('[data-native-layout="true"]'));
+      const samples=[],sample=()=>{const active=doc.querySelector('.demo-view:not([inert])'),head=active?.querySelector('.demo-top');if(head)samples.push(head.getBoundingClientRect().height)};
+      let running=true;const watch=()=>{sample();if(running)win.requestAnimationFrame(watch)};win.requestAnimationFrame(watch);
+      const release=async()=>{win.holdLayouts=false;while(win.releaseLayouts.length){win.releaseLayouts.shift()();await pause(35)}await pause(100)};
+      for(let visit=0;visit<2;visit++){
+        win.holdLayouts=true;current().querySelector('[data-demo-link="input"]').click();await until(()=>current()?.dataset.demoPage==='example/input'&&current().querySelector('input'));await pause(90);
+        assert(doc.querySelector('.demo-view:not([inert]) .demo-top').getBoundingClientRect().height===0,'原生确认前重新显示了 Web 顶栏');await release();
+        win.holdLayouts=true;doc.querySelector('.demo-view:not([inert]) .demo-top [aria-label="返回组件列表"]').click();await until(()=>current()?.dataset.demoPage==='home');await pause(90);
+        assert(bar().getBoundingClientRect().height===0,'返回时重新预留了 Web 底栏');await release();
+      }
+      running=false;assert(samples.length>10&&samples.every(height=>height===0),'中间帧出现重复导航占位：'+samples.join(','));
+    });
+    document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,total:6,reports},null,2);
   }catch(error){document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,error:String(error.stack||error),reports},null,2)}finally{document.querySelector('#run').disabled=false}};
 }
 </script></html>

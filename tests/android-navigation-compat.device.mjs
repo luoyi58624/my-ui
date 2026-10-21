@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -8,6 +8,7 @@ import { join } from 'node:path'
 const application = JSON.parse(readFileSync(new URL('../example/src-tauri/tauri.conf.json', import.meta.url))).identifier
 const serial = process.env.ANDROID_SERIAL || execFileSync('adb', ['get-serialno'], { encoding: 'utf8', windowsHide: true }).trim()
 assert(serial && serial !== 'unknown', '请连接设备或指定 ANDROID_SERIAL')
+assert(process.argv.slice(2).every(value => value === '--record'), '用法：node tests/android-navigation-compat.device.mjs [--record]')
 const adb = (...args) => execFileSync('adb', ['-s', serial, ...args], { encoding: 'utf8', windowsHide: true, maxBuffer: 16 * 1024 * 1024 }).trim()
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms))
 const until = async (check, message) => {
@@ -19,8 +20,14 @@ const screenshot = name => writeFileSync(join(output, name + '.png'), execFileSy
 const activities = () => adb('shell', 'dumpsys', 'activity', 'activities')
 const foreground = () => activities().split('\n').find(line => /topResumedActivity=|mResumedActivity:/.test(line)) || ''
 const footer = () => adb('shell', 'dumpsys', 'activity', application).match(/BottomNavigationView\{([a-f0-9]+) [^\n]*/)?.[1]
+const webViewParent = () => {
+  const lines = adb('shell', 'dumpsys', 'activity', application).split('\n'), index = lines.findIndex(line => line.includes('RustWebView{'))
+  assert(index >= 0, '主 WebView 不存在')
+  const indent = lines[index].match(/^\s*/)[0].length
+  return lines.slice(0, index).reverse().find(line => line.trim() && line.match(/^\s*/)[0].length < indent)?.match(/\{([a-f0-9]+)/)?.[1]
+}
 const launch = () => adb('shell', 'am', 'start', '-W', '-a', 'android.intent.action.MAIN', '-c', 'android.intent.category.LAUNCHER', '-n', application + '/.LauncherActivity')
-let socket, port, sequence = 0
+let socket, port, sequence = 0, recording, recordPid, video
 const requests = new Map()
 const evaluate = expression => new Promise((resolve, reject) => {
   const id = ++sequence, timer = setTimeout(() => { requests.delete(id); reject(Error('WebView 读取超时')) }, 10000)
@@ -37,6 +44,7 @@ const systemBack = () => adb('shell', 'input', 'keyevent', '4')
 
 try {
   const sdk = Number(adb('shell', 'getprop', 'ro.build.version.sdk'))
+  const logStart = Number(adb('shell', 'date', '+%s'))
   assert(sdk < 32, '本检查面向 API 32 以下设备；新版独立 Activity 使用 android-page-entry.device.mjs 验证')
   adb('shell', 'am', 'force-stop', application)
   launch()
@@ -65,10 +73,29 @@ try {
   assert.equal(await evaluate('window.__TAURI_INTERNALS__.invoke("plugin:app|supports_multiple_windows")'), false)
   assert.equal(await evaluate('history.state.back'), null)
   const bottom = footer()
+  const parent = webViewParent()
   assert(bottom, '原生底栏没有就绪')
+  assert(parent, 'WebView 父布局没有就绪')
   await evaluate('window.__compat = { app: document.querySelector(".demo-app"), bar: document.querySelector(".nc-app-tabbar"), home: document.querySelector("[data-demo-page=home]") }; __compat.home.scrollTop = 380')
   await pause(150)
   const scroll = await evaluate('__compat.home.scrollTop')
+  await evaluate(`(() => {
+    window.__compat.frames = [];
+    const sample = () => {
+      const view = location.hash === '#/shared-state' ? document.querySelector('.native-page.nc-page') : document.querySelector('.demo-view:not([inert])');
+      const head = view?.querySelector('.demo-top, .nc-page-navbar'), body = view?.querySelector('.demo-page, .nc-page-body');
+      if (head && body) __compat.frames.push({ route: location.hash, header: head.getBoundingClientRect().height, body: body.getBoundingClientRect().top, viewport: innerHeight });
+      __compat.frame = requestAnimationFrame(sample);
+    }; sample();
+  })()`)
+  if (process.argv.includes('--record')) {
+    const recorders = () => adb('shell', 'ps', '-A').split('\n').filter(line => line.includes('screenrecord')).map(line => line.trim().split(/\s+/)[1])
+    const previous = recorders()
+    video = '/sdcard/Download/my-ui-navigation-frames-' + Date.now() + '.mp4'
+    const child = spawn('adb', ['-s', serial, 'shell', 'screenrecord', '--time-limit', '30', video], { windowsHide: true, stdio: 'ignore' })
+    recording = new Promise(resolve => child.once('exit', resolve))
+    await pause(250); recordPid = recorders().find(pid => !previous.includes(pid))
+  }
 
   await openInput()
   assert(foreground().includes('.MainActivity'), '旧版导航错误创建子 Activity')
@@ -109,7 +136,19 @@ try {
   await pause(200); systemBack()
   await until(() => route('/native'), '连续返回未回到目录')
   assert.equal(footer(), bottom, '跨父路由返回重建了底栏')
+  assert.equal(webViewParent(), parent, '跨页面容器返回重新挂载了 WebView')
   reports.push({ name: '跨父路由的多层页面连续返回，仍保留详情状态', passed: true })
+  // 覆盖最后一次交接的超时窗口，不能在兜底放行之前就判为成功。
+  await pause(600)
+  const frames = await evaluate('cancelAnimationFrame(__compat.frame); __compat.frames')
+  writeFileSync(join(output, 'frames.json'), JSON.stringify(frames, null, 2))
+  assert(frames.length > 20, '逐帧采样不足')
+  const displaced = frames.filter(frame => frame.header > .5 || Math.abs(frame.body) > .5)
+  assert.deepEqual(displaced, [], '导航交接中出现重复 Web 导航占位或正文位移')
+  const timeouts = adb('logcat', '-d', '-v', 'epoch', '-s', 'NativePageFrame:W', '*:S').split('\n')
+    .filter(line => Number(line.match(/^\s*(\d+\.\d+)/)?.[1]) >= logStart && line.includes('准备超时'))
+  assert.deepEqual(timeouts, [], '绘制交接依赖超时放行，未等待到稳定帧')
+  reports.push({ name: '逐帧无重复导航占位和正文下移，原生绘制确认未超时', passed: true, frames: frames.length })
 
   // 独立验证直达链接：替换根入口再刷新，不伪造一条上一页记录。
   await evaluate('history.replaceState(null,"","#/example/button"); location.reload()')
@@ -133,6 +172,13 @@ try {
   console.error(JSON.stringify({ output, error: String(error.stack || error), reports }))
   process.exitCode = 1
 } finally {
+  if (recordPid) {
+    try { adb('shell', 'kill', '-2', recordPid) } catch { /* 本轮录屏已经结束。 */ }
+    await recording
+    adb('pull', video, join(output, 'navigation.mp4'))
+    // 模拟器可能在录屏进程退出后短暂占用文件，只重试清理本轮文件。
+    await until(() => { try { adb('shell', 'rm', '-f', video); return true } catch { return false } }, '本轮录屏文件仍被模拟器占用')
+  }
   socket?.close()
   if (port) adb('forward', '--remove', 'tcp:' + port)
 }
