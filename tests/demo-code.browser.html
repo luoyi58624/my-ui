@@ -201,7 +201,7 @@
               () => files.querySelector('code')?.textContent.includes('FormField'),
               '切换文件后代码未更新'
             )
-            const { demoExamples } = await import('/example/src/demo/catalog.ts')
+            const { demoExamples } = await import('/example/src/pages/catalog.ts')
             const { exampleCode } = await import('/example/src/commons/code/examples.ts')
             for (const item of demoExamples.filter((item) => !item.path?.startsWith('/guide/'))) {
               const files = exampleCode(item.id)

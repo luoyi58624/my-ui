@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   computed,
+  inject,
   nextTick,
   onActivated,
   onBeforeUnmount,
@@ -13,11 +14,12 @@ import { Icon } from '@my-ui/vue'
 import { Page } from 'tauri-plugin-native-components/vue'
 import DemoAppBar from './DemoAppBar.vue'
 import { closePage, openPage } from '../commons/navigation'
+import { notifyKey } from '../commons/notify'
+import { homeDocs } from '../pages/home'
+import { nativeDocs } from '../pages/native'
 
-const emit = defineEmits<{
-  /** 将导航失败交给示例页的统一提示。 */
-  navigationError: [message: string]
-}>()
+const notify = inject(notifyKey)!
+const docs = { ...homeDocs, ...nativeDocs }
 const sections = [
   { id: 'actions', label: '基础组件' },
   { id: 'controls', label: '交互控制' },
@@ -41,7 +43,11 @@ function syncHeader() {
   let current = ''
   for (const item of sections) {
     const section = page.querySelector<HTMLElement>('#showcase-' + item.id)
-    if (section && section.getBoundingClientRect().top - page.getBoundingClientRect().top <= page.clientHeight * 0.35)
+    if (
+      section &&
+      section.getBoundingClientRect().top - page.getBoundingClientRect().top <=
+        page.clientHeight * 0.35
+    )
       current = item.id
   }
   currentSection.value = current
@@ -71,7 +77,7 @@ function scrollToSection(id: string) {
   })
 }
 function reportError(error: unknown) {
-  emit('navigationError', error instanceof Error ? error.message : String(error))
+  notify(error instanceof Error ? error.message : String(error))
 }
 function back() {
   void closePage('/home').catch(reportError)
@@ -107,157 +113,169 @@ onBeforeUnmount(() => {
 <template>
   <Page class="showcase-page">
     <template #navbar>
-      <DemoAppBar title="完整交互示例" back back-label="返回组件目录" @back="back" @error="reportError" />
+      <DemoAppBar
+        title="完整交互示例"
+        back
+        back-label="返回组件目录"
+        @back="back"
+        @error="reportError"
+      />
     </template>
-  <div
-    ref="root"
-    class="showcase-layout"
-    aria-label="完整交互示例"
-    @scroll.passive="scheduleHeader"
-  >
-    <header class="masthead" :class="{ scrolled }">
+    <div
+      ref="root"
+      class="showcase-layout"
+      aria-label="完整交互示例"
+      @scroll.passive="scheduleHeader"
+    >
+      <header class="masthead" :class="{ scrolled }">
+        <div class="shell">
+          <nav class="site-nav" aria-label="页面导航">
+            <a
+              v-for="item in sections"
+              :key="item.id"
+              :href="'#/showcase#' + item.id"
+              :class="{ current: currentSection === item.id }"
+              :aria-current="currentSection === item.id ? 'location' : undefined"
+              @click.prevent="scrollToSection(item.id)"
+              >{{ item.label }}</a
+            ><a href="./native.html" @click.prevent="openHtml">原生 HTML ↗</a>
+          </nav>
+        </div>
+      </header>
       <div class="shell">
-        <nav class="site-nav" aria-label="页面导航">
-          <a
-            v-for="item in sections"
-            :key="item.id"
-            :href="'#/showcase#' + item.id"
-            :class="{ current: currentSection === item.id }"
-            :aria-current="currentSection === item.id ? 'location' : undefined"
-            @click.prevent="scrollToSection(item.id)"
-            >{{ item.label }}</a
-          ><a href="./native.html" @click.prevent="openHtml">原生 HTML ↗</a>
-        </nav>
-      </div>
-    </header>
-    <div class="shell">
-      <main id="showcase-top">
-        <section class="hero">
-          <div class="hero-copy">
-            <div class="eyebrow"><i class="dash"></i> MOBILE COMPONENT SYSTEM</div>
-            <h1>自然留白，<br /><span>轻盈交互。</span></h1>
-            <p>用克制的色彩、舒适的留白与柔和卡片，<br />原生 HTML 与 Vue 共用一套组件体验。</p>
-            <div class="hero-cta">
-              <a
-                href="#/showcase#actions"
-                class="cta-btn"
-                @click.prevent="scrollToSection('actions')"
-                >探索组件 <Icon name="arrow-right" /></a
-              ><a class="hero-note" href="./native.html" @click.prevent="openHtml"
-                >原生 HTML 示例 ↗</a
-              >
-            </div>
-          </div>
-          <div class="art" aria-hidden="true">
-            <div class="art-halo"></div>
-            <div class="sample-window">
-              <div class="sample-top">
-                <div class="sample-appicon"><Icon name="spark" /></div>
-                <div class="sample-dots"><i></i><i></i><i></i></div>
+        <main id="showcase-top">
+          <section class="hero">
+            <div class="hero-copy">
+              <div class="eyebrow"><i class="dash"></i> MOBILE COMPONENT SYSTEM</div>
+              <h1>自然留白，<br /><span>轻盈交互。</span></h1>
+              <p>用克制的色彩、舒适的留白与柔和卡片，<br />原生 HTML 与 Vue 共用一套组件体验。</p>
+              <div class="hero-cta">
+                <a
+                  href="#/showcase#actions"
+                  class="cta-btn"
+                  @click.prevent="scrollToSection('actions')"
+                  >探索组件 <Icon name="arrow-right" /></a
+                ><a class="hero-note" href="./native.html" @click.prevent="openHtml"
+                  >原生 HTML 示例 ↗</a
+                >
               </div>
-              <div class="sample-title">自在，从容。</div>
-              <div class="sample-caption">清晰而自然的视觉秩序</div>
-              <div class="sample-progress"><i></i></div>
             </div>
-            <div class="float-chip first">
-              <div class="round green"><Icon name="check" /></div>
-              <span><strong>已完成</strong><small>每一步都轻松</small></span>
+            <div class="art" aria-hidden="true">
+              <div class="art-halo"></div>
+              <div class="sample-window">
+                <div class="sample-top">
+                  <div class="sample-appicon"><Icon name="spark" /></div>
+                  <div class="sample-dots"><i></i><i></i><i></i></div>
+                </div>
+                <div class="sample-title">自在，从容。</div>
+                <div class="sample-caption">清晰而自然的视觉秩序</div>
+                <div class="sample-progress"><i></i></div>
+              </div>
+              <div class="float-chip first">
+                <div class="round green"><Icon name="check" /></div>
+                <span><strong>已完成</strong><small>每一步都轻松</small></span>
+              </div>
+              <div class="float-chip second">
+                <div class="round"><Icon name="spark" /></div>
+                <span><strong>专注细节</strong><small>简洁，却不简单</small></span>
+              </div>
             </div>
-            <div class="float-chip second">
-              <div class="round"><Icon name="spark" /></div>
-              <span><strong>专注细节</strong><small>简洁，却不简单</small></span>
-            </div>
-          </div>
-        </section>
+          </section>
 
-        <section id="showcase-actions">
-          <div class="section-title">
-            <div>
-              <div class="number">01 / 基础组件</div>
-              <h2>按钮与标签</h2>
+          <section id="showcase-actions">
+            <div class="section-title">
+              <div>
+                <div class="number">01 / 基础组件</div>
+                <h2>按钮与标签</h2>
+              </div>
+              <div class="subtitle">清晰的操作层级，自然的按压反馈。</div>
             </div>
-            <div class="subtitle">清晰的操作层级，自然的按压反馈。</div>
-          </div>
-          <div class="pair">
-            <div class="showcase-example"><slot name="button" /></div>
-            <div class="showcase-example"><slot name="tag" /></div>
-          </div>
-        </section>
-        <section id="showcase-controls" class="section-gap">
-          <div class="section-title">
-            <div>
-              <div class="number">02 / 交互控制</div>
-              <h2>输入与选择</h2>
+            <div class="pair">
+              <div class="showcase-example"><component :is="docs['button']" /></div>
+              <div class="showcase-example"><component :is="docs['tag']" /></div>
             </div>
-            <div class="subtitle">为手指设计的控件尺寸，状态变化一目了然。</div>
-          </div>
-          <div class="pair equal">
-            <div class="showcase-example"><slot name="input" /></div>
-            <div class="showcase-example"><slot name="switch" /></div>
-          </div>
-          <div class="pair equal secondary-pair">
-            <div class="showcase-example"><slot name="slider" /></div>
-            <div class="showcase-example"><slot name="selection" /></div>
-          </div>
-          <div
-            v-for="id in ['selection-collapse', 'combobox', 'picker', 'date-time-picker', 'upload']"
-            :key="id"
-            class="secondary-pair"
-          >
-            <slot :name="id" />
-          </div>
-        </section>
-        <section id="showcase-surfaces" class="section-gap">
-          <div class="section-title">
-            <div>
-              <div class="number">03 / 内容容器</div>
-              <h2>卡片与导航</h2>
+          </section>
+          <section id="showcase-controls" class="section-gap">
+            <div class="section-title">
+              <div>
+                <div class="number">02 / 交互控制</div>
+                <h2>输入与选择</h2>
+              </div>
+              <div class="subtitle">为手指设计的控件尺寸，状态变化一目了然。</div>
             </div>
-            <div class="subtitle">柔和的层次和留白，突出内容本身。</div>
-          </div>
-          <slot name="card" />
-          <div
-            v-for="id in ['shadows', 'identity', 'image', 'app-bar', 'navigation', 'list']"
-            :key="id"
-            class="secondary-pair"
-          >
-            <slot :name="id" />
-          </div>
-        </section>
-        <section id="showcase-feedback" class="section-gap">
-          <div class="section-title">
-            <div>
-              <div class="number">04 / 状态反馈</div>
-              <h2>提示与弹层</h2>
+            <div class="pair equal">
+              <div class="showcase-example"><component :is="docs['input']" /></div>
+              <div class="showcase-example"><component :is="docs['switch']" /></div>
             </div>
-            <div class="subtitle">提示、确认对话框和移动端操作面板。</div>
-          </div>
-          <slot name="native-navigation" />
-          <div
-            v-for="id in [
-              'feedback',
-              'primitives',
-              'notice-steps',
-              'popup',
-              'touch-gestures',
-              'menu'
-            ]"
-            :key="id"
-            class="secondary-pair"
-          >
-            <slot :name="id" :active="active" />
-          </div>
-        </section>
-        <section id="showcase-scenarios" class="section-gap">
-          <slot name="scenarios" /><slot name="native-html" />
-        </section>
-      </main>
-      <footer>
-        <span><strong>my-ui</strong> · 从简约出发，让体验更自在。</span
-        ><span>LOCAL SOURCE · YOUR COMPONENTS</span>
-      </footer>
+            <div class="pair equal secondary-pair">
+              <div class="showcase-example"><component :is="docs['slider']" /></div>
+              <div class="showcase-example"><component :is="docs['selection']" /></div>
+            </div>
+            <div
+              v-for="id in [
+                'selection-collapse',
+                'combobox',
+                'picker',
+                'date-time-picker',
+                'upload'
+              ]"
+              :key="id"
+              class="secondary-pair"
+            >
+              <component :is="docs[id]" />
+            </div>
+          </section>
+          <section id="showcase-surfaces" class="section-gap">
+            <div class="section-title">
+              <div>
+                <div class="number">03 / 内容容器</div>
+                <h2>卡片与导航</h2>
+              </div>
+              <div class="subtitle">柔和的层次和留白，突出内容本身。</div>
+            </div>
+            <component :is="docs['card']" />
+            <div
+              v-for="id in ['shadows', 'identity', 'image', 'app-bar', 'navigation', 'list']"
+              :key="id"
+              class="secondary-pair"
+            >
+              <component :is="docs[id]" />
+            </div>
+          </section>
+          <section id="showcase-feedback" class="section-gap">
+            <div class="section-title">
+              <div>
+                <div class="number">04 / 状态反馈</div>
+                <h2>提示与弹层</h2>
+              </div>
+              <div class="subtitle">提示、确认对话框和移动端操作面板。</div>
+            </div>
+            <component :is="docs['native-navigation']" />
+            <div
+              v-for="id in [
+                'feedback',
+                'primitives',
+                'notice-steps',
+                'popup',
+                'touch-gestures',
+                'menu'
+              ]"
+              :key="id"
+              class="secondary-pair"
+            >
+              <component :is="docs[id]" v-bind="id === 'primitives' ? { active } : {}" />
+            </div>
+          </section>
+          <section id="showcase-scenarios" class="section-gap">
+            <component :is="docs['scenarios']" /><component :is="docs['native-html']" />
+          </section>
+        </main>
+        <footer>
+          <span><strong>my-ui</strong> · 从简约出发，让体验更自在。</span
+          ><span>LOCAL SOURCE · YOUR COMPONENTS</span>
+        </footer>
+      </div>
     </div>
-  </div>
   </Page>
 </template>
 
@@ -838,7 +856,9 @@ footer strong {
   margin-top: 22px;
 }
 
-.showcase-page { height: 100dvh; }
+.showcase-page {
+  height: 100dvh;
+}
 .showcase-layout {
   height: 100%;
   overflow: auto;

@@ -6,7 +6,7 @@ function vue(name: string, source: CodeFile['source']): CodeFile {
   return { name, language: 'vue', source }
 }
 
-// 独立示例直接读取原文件；内联在 App 中的示例提供可独立使用的最小组件。
+// 文档优先读取实际页面，独立代码入口保留可复制的最小用法。
 const examples: Record<string, CodeFile[]> = {
   'native-app': [...appExampleFiles['app-basic']!],
   button: [
@@ -266,79 +266,119 @@ async function share() {
   <Popup />
 </template>`
     ),
-    vue('SharePanel.vue', () => import('../../components/SharePanel.vue?raw').then((m) => m.default))
+    vue('SharePanel.vue', () =>
+      import('../../components/SharePanel.vue?raw').then((m) => m.default)
+    )
   ],
-  card: [vue('CardShowcase.vue', () => import('../../demo/CardShowcase.vue?raw').then((m) => m.default))],
+  card: [
+    vue('pages/home/card/index.vue', () =>
+      import('../../pages/home/card/index.vue?raw').then((m) => m.default)
+    )
+  ],
   shadows: [
-    vue('ShadowShowcase.vue', () => import('../../demo/ShadowShowcase.vue?raw').then((m) => m.default))
+    vue('pages/home/shadows/index.vue', () =>
+      import('../../pages/home/shadows/index.vue?raw').then((m) => m.default)
+    )
   ],
   identity: [
-    vue('IdentityShowcase.vue', () => import('../../demo/IdentityShowcase.vue?raw').then((m) => m.default)),
+    vue('pages/home/identity/index.vue', () =>
+      import('../../pages/home/identity/index.vue?raw').then((m) => m.default)
+    ),
     {
-      name: 'assets/avatar-lan.svg',
+      name: 'commons/assets/avatar-lan.svg',
       language: 'html',
       source: () => import('../assets/avatar-lan.svg?raw').then((m) => m.default)
     }
   ],
   image: [
-    vue('ImageShowcase.vue', () => import('../../demo/ImageShowcase.vue?raw').then((m) => m.default))
+    vue('pages/home/image/index.vue', () =>
+      import('../../pages/home/image/index.vue?raw').then((m) => m.default)
+    )
   ],
   'app-bar': [
-    vue('AppBarShowcase.vue', () => import('../../demo/AppBarShowcase.vue?raw').then((m) => m.default))
+    vue('pages/home/app-bar/index.vue', () =>
+      import('../../pages/home/app-bar/index.vue?raw').then((m) => m.default)
+    )
   ],
   'selection-collapse': [
-    vue('SelectionCollapseShowcase.vue', () =>
-      import('../../demo/SelectionCollapseShowcase.vue?raw').then((m) => m.default)
+    vue('pages/home/selection-collapse/index.vue', () =>
+      import('../../pages/home/selection-collapse/index.vue?raw').then((m) => m.default)
     )
   ],
   combobox: [
-    vue('ComboboxShowcase.vue', () => import('../../demo/ComboboxShowcase.vue?raw').then((m) => m.default))
+    vue('pages/home/combobox/index.vue', () =>
+      import('../../pages/home/combobox/index.vue?raw').then((m) => m.default)
+    )
   ],
   picker: [
-    vue('PickerShowcase.vue', () => import('../../demo/PickerShowcase.vue?raw').then((m) => m.default))
+    vue('pages/home/picker/index.vue', () =>
+      import('../../pages/home/picker/index.vue?raw').then((m) => m.default)
+    )
   ],
   'date-time-picker': [
-    vue('DateTimeShowcase.vue', () => import('../../demo/DateTimeShowcase.vue?raw').then((m) => m.default))
+    vue('pages/home/date-time-picker/index.vue', () =>
+      import('../../pages/home/date-time-picker/index.vue?raw').then((m) => m.default)
+    )
   ],
   upload: [
-    vue('UploadShowcase.vue', () => import('../../demo/UploadShowcase.vue?raw').then((m) => m.default))
+    vue('pages/home/upload/index.vue', () =>
+      import('../../pages/home/upload/index.vue?raw').then((m) => m.default)
+    )
   ],
   primitives: [
-    vue('FeedbackPrimitives.vue', () =>
-      import('../../demo/FeedbackPrimitives.vue?raw').then((m) => m.default)
+    vue('pages/home/primitives/index.vue', () =>
+      import('../../pages/home/primitives/index.vue?raw').then((m) => m.default)
     ),
-    vue('PlaybackProgress.vue', () => import('../../demo/PlaybackProgress.vue?raw').then((m) => m.default)),
-    vue('SliderShowcase.vue', () => import('../../demo/SliderShowcase.vue?raw').then((m) => m.default))
+    vue('pages/home/primitives/PlaybackProgress.vue', () =>
+      import('../../pages/home/primitives/PlaybackProgress.vue?raw').then((m) => m.default)
+    ),
+    vue('pages/home/primitives/SliderExample.vue', () =>
+      import('../../pages/home/primitives/SliderExample.vue?raw').then((m) => m.default)
+    )
   ],
   'notice-steps': [
-    vue('NoticeStepsShowcase.vue', () =>
-      import('../../demo/NoticeStepsShowcase.vue?raw').then((m) => m.default)
+    vue('pages/home/notice-steps/index.vue', () =>
+      import('../../pages/home/notice-steps/index.vue?raw').then((m) => m.default)
     )
   ],
   popup: [
-    vue('PopupShowcase.vue', () => import('../../demo/PopupShowcase.vue?raw').then((m) => m.default)),
-    vue('SelectionPanel.vue', () => import('../../components/SelectionPanel.vue?raw').then((m) => m.default)),
-    vue('DrawerExample.vue', () => import('../../components/DrawerExample.vue?raw').then((m) => m.default))
+    vue('pages/home/popup/index.vue', () =>
+      import('../../pages/home/popup/index.vue?raw').then((m) => m.default)
+    ),
+    vue('SelectionPanel.vue', () =>
+      import('../../components/SelectionPanel.vue?raw').then((m) => m.default)
+    ),
+    vue('DrawerExample.vue', () =>
+      import('../../components/DrawerExample.vue?raw').then((m) => m.default)
+    )
   ],
-  menu: [vue('MenuShowcase.vue', () => import('../../demo/MenuShowcase.vue?raw').then((m) => m.default))],
+  menu: [
+    vue('pages/home/menu/index.vue', () =>
+      import('../../pages/home/menu/index.vue?raw').then((m) => m.default)
+    )
+  ],
   'touch-gestures': [
-    vue('TouchShowcase.vue', () => import('../../demo/TouchShowcase.vue?raw').then((m) => m.default))
+    vue('pages/home/touch-gestures/index.vue', () =>
+      import('../../pages/home/touch-gestures/index.vue?raw').then((m) => m.default)
+    )
   ],
   scenarios: [
-    vue('EssentialsShowcase.vue', () =>
-      import('../../demo/EssentialsShowcase.vue?raw').then((m) => m.default)
+    vue('pages/home/scenarios/index.vue', () =>
+      import('../../pages/home/scenarios/index.vue?raw').then((m) => m.default)
     ),
-    vue('ProfileFormExample.vue', () =>
-      import('../../demo/ProfileFormExample.vue?raw').then((m) => m.default)
+    vue('pages/home/scenarios/ProfileFormExample.vue', () =>
+      import('../../pages/home/scenarios/ProfileFormExample.vue?raw').then((m) => m.default)
     ),
     {
       name: 'profile.ts',
       language: 'typescript',
-      source: () => import('../../demo/profile.ts?raw').then((m) => m.default)
+      source: () => import('../../pages/home/scenarios/profile.ts?raw').then((m) => m.default)
     }
   ],
   showcase: [
-    vue('ShowcaseLayout.vue', () => import('../../components/ShowcaseLayout.vue?raw').then((m) => m.default))
+    vue('ShowcaseLayout.vue', () =>
+      import('../../components/ShowcaseLayout.vue?raw').then((m) => m.default)
+    )
   ],
   'native-html': [
     {
@@ -352,26 +392,26 @@ async function share() {
   'native-tabs': [vue('TabsExample.vue', tabsCode)],
   'page-refresh': [vue('PageExample.vue', pageCode)],
   'native-navigation': [
-    vue('NativeNavigationShowcase.vue', () =>
-      import('../../demo/NativeNavigationShowcase.vue?raw').then((m) => m.default)
+    vue('pages/native/navigation/index.vue', () =>
+      import('../../pages/native/navigation/index.vue?raw').then((m) => m.default)
     ),
     {
-      name: '../navigation.ts',
+      name: 'commons/navigation.ts',
       language: 'typescript',
       source: () => import('../navigation.ts?raw').then((m) => m.default)
     },
     {
-      name: '../native-context.ts',
+      name: 'commons/native-context.ts',
       language: 'typescript',
       source: () => import('../native-context.ts?raw').then((m) => m.default)
     },
     {
-      name: '../stores/shared.ts',
+      name: 'commons/state/shared.ts',
       language: 'typescript',
       source: () => import('../state/shared.ts?raw').then((m) => m.default)
     },
     {
-      name: '../stores/storage.ts',
+      name: 'commons/state/storage.ts',
       language: 'typescript',
       source: () => import('../state/storage.ts?raw').then((m) => m.default)
     }

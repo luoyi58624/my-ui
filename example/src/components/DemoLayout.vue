@@ -1,39 +1,54 @@
 <script setup lang="ts">
-import { provide, ref, useSlots, watch } from 'vue'
+import { inject, provide, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { App, Tabbar, type AppTab } from 'tauri-plugin-native-components/vue'
 import { navigation } from '../commons/navigation'
+import { notifyKey } from '../commons/notify'
 import DemoTabPage from './DemoTabPage.vue'
-import { demoPages } from '../demo/routes'
+import { demoPages } from '../pages/routes'
 import { demoLayoutKey, type DemoTab } from './layoutContext'
 
-const emit = defineEmits<{
-  /** 将主 Demo 的导航失败交给统一提示。 */
-  navigationError: [message: string]
-}>()
+const notify = inject(notifyKey)!
 const items: DemoTab[] = [
   { value: 'home', label: '首页', title: '组件示例', icon: 'home' },
   { value: 'native', label: '原生', title: '原生组件', icon: 'grid' },
   { value: 'messages', label: '消息', title: '消息', icon: 'message', demo: 2 },
-  { value: 'profile', label: '我的', title: '我的', icon: 'user' },
+  { value: 'profile', label: '我的', title: '我的', icon: 'user' }
 ]
-const tabs: AppTab[] = items.map(page => ({ value: page.value, component: DemoTabPage, props: { page } }))
-const active = ref('home'), route = useRoute()
-function report(reason: unknown) { emit('navigationError', reason instanceof Error ? reason.message : String(reason)) }
+const tabs: AppTab[] = items.map((page) => ({
+  value: page.value,
+  component: DemoTabPage,
+  props: { page }
+}))
+const active = ref('home'),
+  route = useRoute()
+function report(reason: unknown) {
+  notify(reason instanceof Error ? reason.message : String(reason))
+}
 function select(value: string) {
   active.value = value
   void navigation.replace('/' + value).catch(report)
 }
-provide(demoLayoutKey, { content: useSlots(), report })
-watch(() => route.meta.tab, () => {
-  if (!route.meta.tab) return
-  const value = String(route.meta.tab)
-  active.value = items.some(item => item.value === value) ? value : 'home'
-}, { immediate: true })
+provide(demoLayoutKey, { report })
+watch(
+  () => route.meta.tab,
+  () => {
+    if (!route.meta.tab) return
+    const value = String(route.meta.tab)
+    active.value = items.some((item) => item.value === value) ? value : 'home'
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
-  <App class="demo-app" :model-value="active" :tabs="tabs" :pages="demoPages" @update:model-value="select">
+  <App
+    class="demo-app"
+    :model-value="active"
+    :tabs="tabs"
+    :pages="demoPages"
+    @update:model-value="select"
+  >
     <template #tabbar="{ value, select }">
       <Tabbar :model-value="value" :items="items" @update:model-value="select" />
     </template>
@@ -41,7 +56,6 @@ watch(() => route.meta.tab, () => {
 </template>
 
 <style>
-
 .demo-app {
   height: 100dvh;
   background: var(--background);
@@ -204,8 +218,19 @@ watch(() => route.meta.tab, () => {
   }
 }
 
-.demo-view { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-.demo-view > .demo-tabs, .demo-view > .demo-main { flex: 1; height: auto; min-height: 0; }
-.demo-view > .demo-top { flex: none; }
-
+.demo-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.demo-view > .demo-tabs,
+.demo-view > .demo-main {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+.demo-view > .demo-top {
+  flex: none;
+}
 </style>

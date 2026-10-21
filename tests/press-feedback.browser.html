@@ -10,7 +10,8 @@
 <script type="module">
   import { createApp, h, nextTick, ref } from 'vue'
   import { Button, Card, ListRow } from '/packages/vue/index.ts'
-  import CardShowcase from '/example/src/demo/CardShowcase.vue'
+  import CardPage from '/example/src/pages/home/card/index.vue'
+  import { notifyKey } from '/example/src/commons/notify.ts'
 
   const fixture = document.querySelector('#fixture'), result = document.querySelector('#result')
   const reports = [], owned = []
@@ -176,7 +177,7 @@
     })
     await check('示例先展示四张 grid 卡片，再展示大卡片列表，默认立即按压且不提供模式切换', async () => {
       let last = ''
-      app = createApp({ render: () => h(CardShowcase, { onNotify: value => last = value }) }); app.mount(fixture)
+      app = createApp({ render: () => h(CardPage) }); app.provide(notifyKey, value => last = value); app.mount(fixture)
       await nextTick(); await nextTick()
       const grid = fixture.querySelector('.card-grid'), list = fixture.querySelector('.large-card-list')
       assert(grid.querySelectorAll('.my-tappable-card').length === 4 && list.querySelectorAll('.my-tappable-card').length === 2, '示例混入展示型卡片')

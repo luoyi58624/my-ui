@@ -10,7 +10,7 @@ async function load(path) {
   return await import('data:text/javascript;base64,' + Buffer.from(outputText).toString('base64'))
 }
 const { resolveTab, navigateTab } = globalThis.MyUI.utils
-const { validateProfile } = await load('../example/src/demo/profile.ts')
+const { validateProfile } = await load('../example/src/pages/home/scenarios/profile.ts')
 const { updateSelection } = globalThis.MyUI.utils
 const options = [{ value: 'recent', label: '最近' }, { value: 'favorites', label: '收藏' }, { value: 'archive', label: '归档', disabled: true }, { value: 'preferences', label: '偏好' }]
 

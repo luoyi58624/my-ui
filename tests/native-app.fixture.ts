@@ -1,7 +1,7 @@
 import { createApp, defineComponent, h, onMounted, onUnmounted, ref } from 'vue'
 import { createRouter, createWebHashHistory, onBeforeRouteLeave } from 'vue-router'
 import { App, AppBar, Tabbar, useApp, type AppPage, type AppTab } from 'tauri-plugin-native-components/vue'
-import Root from '../example/src/demo/native-app/Root.vue'
+import Root from '../example/src/pages/native/app/Root.vue'
 import 'tauri-plugin-native-components/style.css'
 
 const w = window as any

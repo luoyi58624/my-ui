@@ -1,15 +1,18 @@
 import type { CodeFile } from './types'
 import { appExampleFiles } from './app'
 
-const sources = import.meta.glob<string>('../../**/*.vue', { query: '?raw', import: 'default' })
+const sources = import.meta.glob<string>('../../pages/**/*.vue', {
+  query: '?raw',
+  import: 'default'
+})
 
 const share: CodeFile = {
-  name: 'demo/SharePanel.vue',
+  name: 'components/SharePanel.vue',
   language: 'vue',
   source: () => import('../../components/SharePanel.vue?raw').then((module) => module.default)
 }
 const portrait: CodeFile = {
-  name: 'assets/avatar-lan.svg',
+  name: 'commons/assets/avatar-lan.svg',
   language: 'html',
   source: () => import('../assets/avatar-lan.svg?raw').then((module) => module.default)
 }
@@ -22,84 +25,90 @@ const companions: Record<string, readonly CodeFile[]> = {
     {
       name: 'DrawerExample.vue',
       language: 'vue',
-      source: () => import('../../components/DrawerExample.vue?raw').then((module) => module.default)
+      source: () =>
+        import('../../components/DrawerExample.vue?raw').then((module) => module.default)
     }
   ],
   'selection-sheet': [
     {
       name: 'SelectionPanel.vue',
       language: 'vue',
-      source: () => import('../../components/SelectionPanel.vue?raw').then((module) => module.default)
+      source: () =>
+        import('../../components/SelectionPanel.vue?raw').then((module) => module.default)
     }
   ],
   'profile-form': [
     {
       name: 'profile.ts',
       language: 'typescript',
-      source: () => import('../../demo/profile.ts?raw').then((module) => module.default)
+      source: () =>
+        import('../../pages/home/scenarios/profile.ts?raw').then((module) => module.default)
     }
   ],
   'shared-state': [
     {
-      name: '../navigation.ts',
+      name: 'commons/navigation.ts',
       language: 'typescript',
       source: () => import('../navigation.ts?raw').then((module) => module.default)
     },
     {
-      name: '../native-context.ts',
+      name: 'commons/native-context.ts',
       language: 'typescript',
       source: () => import('../native-context.ts?raw').then((module) => module.default)
     },
     {
-      name: '../stores/shared.ts',
+      name: 'commons/state/shared.ts',
       language: 'typescript',
       source: () => import('../state/shared.ts?raw').then((module) => module.default)
     },
     {
-      name: '../stores/storage.ts',
+      name: 'commons/state/storage.ts',
       language: 'typescript',
       source: () => import('../state/storage.ts?raw').then((module) => module.default)
     }
   ]
 }
 
-const app = (names: string[]) => [{ file: 'App.vue', names }]
-const pages: Record<string, { file: string; names?: string[] }[]> = {
-  button: app(['button-basic', 'button-icons', 'button-states']),
-  tag: app(['tag-tones', 'tag-single', 'tag-multiple', 'tag-toggle']),
-  input: app(['input-search', 'input-hint', 'select']),
-  switch: app(['switches']),
-  slider: app(['segmented', 'slider', 'custom-slider']),
-  selection: app(['choices-radio', 'choices-checkbox', 'stepper']),
-  navigation: app(['navigation']),
-  list: app(['list-choices', 'list-navigation']),
-  feedback: app(['toast', 'dialog', 'sheet']),
-  card: [{ file: 'CardShowcase.vue' }],
-  identity: [{ file: 'IdentityShowcase.vue' }],
-  image: [{ file: 'ImageShowcase.vue' }],
-  shadows: [{ file: 'ShadowShowcase.vue' }],
-  'app-bar': [{ file: 'AppBarShowcase.vue' }],
-  'selection-collapse': [{ file: 'SelectionCollapseShowcase.vue' }],
-  combobox: [{ file: 'ComboboxShowcase.vue' }],
-  picker: [{ file: 'PickerShowcase.vue' }],
-  'date-time-picker': [{ file: 'DateTimeShowcase.vue' }],
-  upload: [{ file: 'UploadShowcase.vue' }],
+const pages: Record<string, { file: string }[]> = {
+  button: [{ file: 'pages/home/button/index.vue' }],
+  tag: [{ file: 'pages/home/tag/index.vue' }],
+  navigation: [{ file: 'pages/home/navigation/index.vue' }],
+  list: [{ file: 'pages/home/list/index.vue' }],
+  input: [{ file: 'pages/home/input/index.vue' }],
+  switch: [{ file: 'pages/home/switch/index.vue' }],
+  slider: [{ file: 'pages/home/slider/index.vue' }],
+  selection: [{ file: 'pages/home/selection/index.vue' }],
+  feedback: [{ file: 'pages/home/feedback/index.vue' }],
+  'native-html': [{ file: 'pages/home/native-html/index.vue' }],
+  card: [{ file: 'pages/home/card/index.vue' }],
+  identity: [{ file: 'pages/home/identity/index.vue' }],
+  image: [{ file: 'pages/home/image/index.vue' }],
+  shadows: [{ file: 'pages/home/shadows/index.vue' }],
+  'app-bar': [{ file: 'pages/home/app-bar/index.vue' }],
+  'selection-collapse': [{ file: 'pages/home/selection-collapse/index.vue' }],
+  combobox: [{ file: 'pages/home/combobox/index.vue' }],
+  picker: [{ file: 'pages/home/picker/index.vue' }],
+  'date-time-picker': [{ file: 'pages/home/date-time-picker/index.vue' }],
+  upload: [{ file: 'pages/home/upload/index.vue' }],
   primitives: [
-    { file: 'FeedbackPrimitives.vue' },
-    { file: 'PlaybackProgress.vue' },
-    { file: 'SliderShowcase.vue' }
+    { file: 'pages/home/primitives/index.vue' },
+    { file: 'pages/home/primitives/PlaybackProgress.vue' },
+    { file: 'pages/home/primitives/SliderExample.vue' }
   ],
-  'notice-steps': [{ file: 'NoticeStepsShowcase.vue' }],
-  popup: [{ file: 'PopupShowcase.vue' }],
-  menu: [{ file: 'MenuShowcase.vue' }],
-  'touch-gestures': [{ file: 'TouchShowcase.vue' }],
-  scenarios: [{ file: 'ProfileFormExample.vue' }, { file: 'EssentialsShowcase.vue' }],
-  'native-navigation': [{ file: 'NativeNavigationShowcase.vue' }],
-  'native-app': [{ file: 'NativeAppShowcase.vue' }]
+  'notice-steps': [{ file: 'pages/home/notice-steps/index.vue' }],
+  popup: [{ file: 'pages/home/popup/index.vue' }],
+  menu: [{ file: 'pages/home/menu/index.vue' }],
+  'touch-gestures': [{ file: 'pages/home/touch-gestures/index.vue' }],
+  scenarios: [
+    { file: 'pages/home/scenarios/ProfileFormExample.vue' },
+    { file: 'pages/home/scenarios/index.vue' }
+  ],
+  'native-app': [{ file: 'pages/native/app/index.vue' }],
+  'native-navigation': [{ file: 'pages/native/navigation/index.vue' }]
 }
 
 function sourcePath(file: string) {
-  return file === 'App.vue' ? '../../App.vue' : '../../demo/' + file
+  return '../../' + file
 }
 function previewTags(source: string) {
   return [...source.matchAll(/<DemoExample\b(?:"[^"]*"|'[^']*'|[^'">])*>/g)]
@@ -120,7 +129,7 @@ export interface PreviewCodeGroup {
 /** 按页面读取预览定义，独立代码页也按示例分别展示。 */
 export async function previewGroups(id: string): Promise<PreviewCodeGroup[]> {
   const groups = await Promise.all(
-    (pages[id] ?? []).map(async ({ file, names }) => {
+    (pages[id] ?? []).map(async ({ file }) => {
       const load = sources[sourcePath(file)]
       if (!load) throw new Error('找不到示例源文件：' + file)
       const source = await load()
@@ -128,7 +137,6 @@ export async function previewGroups(id: string): Promise<PreviewCodeGroup[]> {
         const attribute = (key: string) =>
           tag[0].match(new RegExp('(?:^|\\s)' + key + '="([^"]*)"'))?.[1] ?? ''
         const name = attribute('name')
-        if (names && !names.includes(name)) return []
         return [
           {
             name,
@@ -164,6 +172,13 @@ function setupCode(source: string, regions: string[], template: string) {
     /\/\/ #region ([\w-]+)\r?\n([\s\S]*?)\/\/ #endregion(?: [\w-]+)?/g,
     (_, name: string, content: string) => (regions.includes(name) ? content : '')
   )
+  // 页面运行时共用提示入口，复制出的独立示例自带 Toast 宿主。
+  const standaloneNotify = /\bconst notify = inject\(notifyKey\)!/.test(script)
+  if (standaloneNotify)
+    script = script.replace(
+      /\bconst notify = inject\(notifyKey\)!/,
+      'const toast = ref<InstanceType<typeof Toast>>()\nfunction notify(message: string) {\n  toast.value?.show(message)\n}'
+    )
   const imports: { bindings: string; quote: string; path: string }[] = []
   script = script
     .replace(
@@ -196,6 +211,15 @@ function setupCode(source: string, regions: string[], template: string) {
     }
     return matches(bindings) ? [`import ${bindings.trim()} from ${quote}${path}${quote}`] : []
   })
+  if (standaloneNotify) {
+    if (
+      !declarations.some((declaration) =>
+        /import \{[^}]*\bref\b[^}]*\} from ['"]vue['"]/.test(declaration)
+      )
+    )
+      declarations.unshift("import { ref } from 'vue'")
+    declarations.unshift("import { Toast } from '@my-ui/vue'")
+  }
   return [...declarations, ...(script ? ['', script] : [])].join('\n').trim()
 }
 

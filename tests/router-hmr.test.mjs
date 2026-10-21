@@ -25,7 +25,7 @@ test('开发热更新后，目录、Tab 和返回仍由同一个路由驱动', {
     page.on('console', message => { if (message.text().includes('[vite] hot updated:')) revision++ })
     const url = new URL('#/home', server.resolvedUrls.local[0]).href
 
-    for (const path of ['/src/demo/catalog.ts', '/src/navigation.ts', '/src/router.ts']) {
+    for (const path of ['/src/pages/catalog.ts', '/src/commons/navigation.ts', '/src/router.ts']) {
       await t.test(path, async () => {
         await page.goto(url)
         await page.locator('[data-demo-link="button"]').waitFor()

@@ -67,7 +67,7 @@
           await until(() => frame.contentDocument?.querySelector('[data-example="button-basic"]'))
           doc = frame.contentDocument
           win = frame.contentWindow
-          const { demoExamples } = await import('/example/src/demo/catalog.ts')
+          const { demoExamples } = await import('/example/src/pages/catalog.ts')
           const { previewGroups } = await import('/example/src/commons/code/source.ts')
           const pages = demoExamples.filter((item) => !item.path)
           let exampleCount = 0,
