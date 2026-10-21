@@ -4,7 +4,9 @@ import android.app.Activity
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.res.ColorStateList
+import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
 import android.os.Build
@@ -56,7 +58,7 @@ internal class NativeProfileTab(private val activity: Activity, action: (String)
         bindProfile()
     }
 
-    private data class Row(val root: LinearLayout, val icon: ImageView, val title: TextView, val description: TextView, val arrow: ImageView)
+    private data class Row(val root: LinearLayout, val icon: ImageView, val title: TextView, val description: TextView, val arrow: ImageView, val ripple: RippleDrawable)
 
     private fun textView() = TextView(activity).apply {
         // 字体家族只在创建时设置，重设会覆盖已生效的可变字重。
@@ -65,7 +67,12 @@ internal class NativeProfileTab(private val activity: Activity, action: (String)
     }
 
     private fun row(title: String, description: String, paths: Array<String>): Row {
-        val root = LinearLayout(activity).apply { gravity = Gravity.CENTER_VERTICAL; isClickable = true; isFocusable = true }
+        // 每行单独遮罩，避免无边界波纹投射到父卡片并覆盖相邻行。
+        val ripple = RippleDrawable(ColorStateList.valueOf(Color.TRANSPARENT), null, ColorDrawable(Color.WHITE))
+        val root = LinearLayout(activity).apply {
+            gravity = Gravity.CENTER_VERTICAL; isClickable = true; isFocusable = true
+            background = ripple
+        }
         val icon = ImageView(activity).apply { setImageDrawable(NavigationIcon(JSONArray(paths), 24)) }
         val text = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         val heading = textView().apply { this.text = title }
@@ -73,7 +80,7 @@ internal class NativeProfileTab(private val activity: Activity, action: (String)
         val arrow = ImageView(activity).apply { setImageDrawable(NavigationIcon(JSONArray(arrayOf("M9 5l7 7-7 7")), 20)) }
         text.addView(heading); text.addView(caption)
         root.addView(icon); root.addView(text, LinearLayout.LayoutParams(0, -2, 1f)); root.addView(arrow)
-        return Row(root, icon, heading, caption, arrow)
+        return Row(root, icon, heading, caption, arrow, ripple)
     }
 
     private fun bindProfile() {
@@ -112,7 +119,7 @@ internal class NativeProfileTab(private val activity: Activity, action: (String)
         for (row in listOf(details, browse)) {
             row.root.minimumHeight = px(84)
             row.root.setPadding(px(18), px(18), px(18), px(18))
-            row.root.background = RippleDrawable(ColorStateList.valueOf(ColorUtils.setAlphaComponent(primary, 30)), null, null)
+            row.ripple.setColor(ColorStateList.valueOf(ColorUtils.setAlphaComponent(primary, 30)))
             row.icon.imageTintList = ColorStateList.valueOf(primary)
             row.icon.layoutParams = LinearLayout.LayoutParams(px(24), px(24)).apply { marginEnd = px(16) }
             style(row.title, 16, foreground, appearance.getInt("fontWeight"))
