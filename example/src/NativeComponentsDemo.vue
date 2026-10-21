@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { Button, Icon, type IconName } from '@my-ui/vue'
 import {
-  BottomNavigation,
+  Tabbar,
   Page,
   Tabs,
   type NavigationAction,
@@ -12,7 +12,7 @@ import DemoAppBar from './DemoAppBar.vue'
 import { closePage } from './navigation'
 import { useNativeBarsSuspended } from './native-components'
 
-const props = defineProps<{ kind: 'app-bar' | 'bottom-navigation' | 'tabs' }>()
+const props = defineProps<{ kind: 'app-bar' | 'tabbar' | 'tabs' }>()
 const suspended = useNativeBarsSuspended()
 const centered = ref(true),
   subtitle = ref(true),
@@ -21,7 +21,7 @@ const centered = ref(true),
   message = ref('')
 const counts = ref<Record<string, number>>({ daily: 0, saved: 0, profile: 0 })
 const title = computed(
-  () => ({ 'app-bar': '顶部导航', 'bottom-navigation': '底部导航', tabs: '页面切换' })[props.kind]
+  () => ({ 'app-bar': '顶部导航', tabbar: '底部导航', tabs: '页面切换' })[props.kind]
 )
 const items: NavigationItem[] = [
   { value: 'daily', label: '动态', icon: 'home' },
@@ -125,7 +125,7 @@ function tabAction(event: { tab: string; value: string }) {
       <p v-if="message" class="native-component-message" role="status">{{ message }}</p>
     </div>
     <template v-if="kind !== 'app-bar'" #navigation>
-      <BottomNavigation
+      <Tabbar
         :model-value="kind === 'tabs' ? tab : selected"
         :items="kind === 'tabs' ? nativeItems : items"
         label="示例底部导航"

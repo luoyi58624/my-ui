@@ -21,6 +21,8 @@ const props = withDefaults(
     actions?: NavigationAction[]
     /** 仅首页启用主题和设置入口，子页默认不重复显示。 */
     settings?: boolean
+    /** 将当前页面自己的顶栏接入 App 的原生页面布局。 */
+    page?: boolean
   }>(),
   { back: false, backLabel: '返回', center: true, actions: () => [], settings: false }
 )
@@ -47,7 +49,7 @@ defineExpose({ focus: () => bar.value?.focus() })
 </script>
 
 <template>
-  <div class="demo-native-header">
+  <div class="demo-native-header" :data-page-navbar="page ? '' : undefined">
     <AppBar
       ref="bar"
       :title="title"

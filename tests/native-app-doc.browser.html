@@ -27,7 +27,7 @@ if (mode) {
   const load = async (mode = 'web') => {
     frame = document.createElement('iframe'); frame.src = '?frame=' + mode + '#/example/native-app';
     document.querySelector('#fixture').replaceChildren(frame);
-    await until(() => frame.contentDocument?.querySelector('[data-example="app-container"]'));
+    await until(() => frame.contentDocument?.querySelector('[data-example="app-basic"]'));
     doc = frame.contentDocument; win = frame.contentWindow;
   };
   const check = async (name, run) => { document.querySelector('#result').textContent = '运行中：' + name; await run(); reports.push({ name, passed: true }) };
@@ -36,11 +36,10 @@ if (mode) {
     document.querySelector('#run').disabled = true;
     try {
       await load();
-      await check('两个示例分别对应实际 App 与独立页源码，配置依赖完整可读', async () => {
+      await check('App 用法集中在一个示例，只展示 App 与 Tabbar 的必要配置', async () => {
         const { previewGroups } = await import('/example/src/demo/code/source.ts');
         const groups = await previewGroups('native-app');
-        assert(groups.map(group => group.name).join() === 'app-container,app-pages', '示例和代码分组错误');
-        assert(!root().querySelector('.app-api').textContent.includes('#navbar'), 'App 文档仍提供 navbar 插槽');
+        assert(groups.map(group => group.name).join() === 'app-basic' && root().querySelectorAll('[data-example]').length === 1, 'App 用法仍拆分成多个示例');
         for (const group of groups) {
           const block = root().querySelector('[data-example="' + group.name + '"]');
           assert(block.querySelector('.doc-example-preview') && block.querySelector('.demo-code-files'), '预览没有配套代码');
@@ -49,14 +48,14 @@ if (mode) {
             assert(source.length > 50 && !source.includes('<iframe') && !source.includes('<DemoExample'), '展示了文档外壳而非实际源码');
             assert(!source.includes('#navbar'), 'App 示例仍使用 navbar 插槽');
             assert(!/<style\b|\bstyle=|style\.css/.test(source), 'App 用法代码混入了 CSS');
-            assert(!/\bdraft\b|\bcount\b|<Card\b|<Input\b/.test(source), 'App 用法代码混入了业务演示');
+            assert(!/\berror\b|\bdraft\b|\bcount\b|<Card\b|<Input\b/.test(source), 'App 用法代码混入了业务演示或错误处理');
           }
           block.querySelector('summary').click();
           await until(() => block.querySelector('code'));
-          assert(block.querySelector('code').textContent.includes(group.name === 'app-container' ? '<App ' : 'useApp'), '示例第一份源码不对应预览');
+          assert(block.querySelector('code').textContent.includes('<App ') && block.querySelector('code').textContent.includes('<Tabbar '), '示例没有使用 App 与 Tabbar');
           block.querySelector('summary').click();
         }
-        assert(root().querySelectorAll('.doc-outline a').length === 2, '文档目录没有分别定位两个示例');
+        assert(root().querySelectorAll('.doc-outline a').length === 1, '文档仍有多余分组');
       });
       await check('最小预览支持 Tab 切换与独立页往返，保留容器和页面实例', async () => {
         const preview = root().querySelector('iframe');
@@ -74,7 +73,7 @@ if (mode) {
         assert(pd.querySelector('.nc-app') === app && pd.querySelector('.nc-app-tabbar') === bar && !bar.hidden, '返回重建了容器或底栏');
         assert(pd.querySelector('.nc-app-view-active') === profile, '返回没有保留当前 Tab');
       });
-      await check('320、390 与桌面宽度下文档和 App 均不溢出，独立代码页展示两组代码', async () => {
+      await check('320、390 与桌面宽度下文档和 App 均不溢出，代码页同样只展示一个示例', async () => {
         for (const width of [320, 390, 1463]) {
           frame.style.width = width + 'px'; await pause(70);
           const page = root(), preview = page.querySelector('iframe'), app = preview.contentDocument.querySelector('.nc-app');
@@ -83,9 +82,9 @@ if (mode) {
           assert((win.getComputedStyle(page.querySelector('.doc-outline')).display === 'none') === (width <= 1024), '目录响应式错误');
         }
         win.location.hash = '/code/native-app';
-        await until(() => doc.querySelectorAll('.code-page [data-code-example]').length === 2);
-        await until(() => doc.querySelectorAll('.code-page code').length >= 2);
-        assert(doc.querySelector('.code-page').textContent.includes('App 容器与底部 TabBar') && doc.querySelector('.code-page').textContent.includes('独立页面与返回'), '独立代码页缺少分组');
+        await until(() => doc.querySelectorAll('.code-page [data-code-example]').length === 1);
+        await until(() => doc.querySelector('.code-page code'));
+        assert(doc.querySelector('.code-page code').textContent.includes('<Tabbar '), '独立代码页没有使用新的底栏组件');
       });
       await check('Android 文档通过完整原生页面打开示例，不在 iframe 中创建原生宿主', async () => {
         await load('android');
@@ -94,9 +93,6 @@ if (mode) {
         await until(() => win.calls.some(call => call.command === 'plugin:native-components|push'));
         assert(win.calls.find(call => call.command === 'plugin:native-components|push').args.path.endsWith('#/native/app-demo'), '完整 App 示例目标错误');
         assert(win.location.hash === '#/example/native-app', '打开原生页面改变了文档路由');
-        button(root(), '打开独立页面').click();
-        await until(() => win.calls.filter(call => call.command === 'plugin:native-components|push').length === 2);
-        assert(win.calls.filter(call => call.command === 'plugin:native-components|push').at(-1).args.path.endsWith('#/native/app-demo/detail'), '独立页面示例目标错误');
       });
       document.querySelector('#result').textContent = JSON.stringify({ passed: reports.length, total: 4, reports }, null, 2);
     } catch (error) {

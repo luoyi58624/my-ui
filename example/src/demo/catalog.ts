@@ -96,10 +96,10 @@ export const nativeDemoGroups: { title: string; items: DemoExample[] }[] = [
         path: '/native/app-bar'
       },
       {
-        id: 'native-bottom-navigation',
-        title: 'BottomNavigation 底部导航',
+        id: 'native-tabbar',
+        title: 'Tabbar 底部导航',
         icon: 'home',
-        path: '/native/bottom-navigation'
+        path: '/native/tabbar'
       },
       { id: 'native-tabs', title: 'Tabs 页面切换', icon: 'grid', path: '/native/tabs' },
       { id: 'page-refresh', title: 'Page 页面与下拉刷新', icon: 'sliders', path: '/page-refresh' }

@@ -1,5 +1,5 @@
 import type { CodeFile } from './types'
-import { appBarCode, bottomNavigationCode, pageCode, tabsCode } from './native'
+import { appBarCode, tabbarCode, pageCode, tabsCode } from './native'
 import { appExampleFiles } from './app'
 
 function vue(name: string, source: CodeFile['source']): CodeFile {
@@ -8,7 +8,7 @@ function vue(name: string, source: CodeFile['source']): CodeFile {
 
 // 独立示例直接读取原文件；内联在 App 中的示例提供可独立使用的最小组件。
 const examples: Record<string, CodeFile[]> = {
-  'native-app': [...appExampleFiles['app-container']!, ...appExampleFiles['app-pages']!],
+  'native-app': [...appExampleFiles['app-basic']!],
   button: [
     vue(
       'ButtonExample.vue',
@@ -348,7 +348,7 @@ async function share() {
     }
   ],
   'native-app-bar': [vue('AppBarExample.vue', appBarCode)],
-  'native-bottom-navigation': [vue('BottomNavigationExample.vue', bottomNavigationCode)],
+  'native-tabbar': [vue('TabbarExample.vue', tabbarCode)],
   'native-tabs': [vue('TabsExample.vue', tabsCode)],
   'page-refresh': [vue('PageExample.vue', pageCode)],
   'native-navigation': [

@@ -3,6 +3,7 @@ import vue from '@vitejs/plugin-vue'
 
 const exampleRoot = decodeURIComponent(new URL('.', import.meta.url).pathname).replace(/^\/(\w:)/, '$1')
 const projectRoot = decodeURIComponent(new URL('..', import.meta.url).pathname).replace(/^\/(\w:)/, '$1')
+const nativeComponentsRoot = decodeURIComponent(new URL('../../../tauri/plugins/tauri-plugin-native-components', import.meta.url).pathname).replace(/^\/(\w:)/, '$1')
 
 export default defineConfig(({ mode }) => ({
   root: mode === 'test' ? projectRoot : exampleRoot,
@@ -17,16 +18,17 @@ export default defineConfig(({ mode }) => ({
         // 测试入口位于仓库根目录，和示例及插件共用同一个路由实例。
         { find: /^vue-router$/, replacement: exampleRoot + 'node_modules/vue-router/dist/vue-router.mjs' },
       ] : []),
-      { find: 'tauri-plugin-native-components', replacement: exampleRoot + 'node_modules/tauri-plugin-native-components' },
+      // 本地插件直接读取源码，新增或更名组件后不再命中 Bun 安装副本的旧出口。
+      { find: 'tauri-plugin-native-components', replacement: nativeComponentsRoot },
       // 使用库自带的常用语言集合，避免代码示例加载全部语法。
       { find: /^highlight\.js$/, replacement: 'highlight.js/lib/common' },
     ],
-    dedupe: ['vue'],
+    dedupe: ['vue', 'vue-router'],
   },
   // 本地插件直接分发 Vue 源码，避免开发预构建缓存旧组件出口。
   optimizeDeps: { exclude: ['tauri-plugin-native-components'] },
   server: {
-    fs: { allow: [projectRoot] },
+    fs: { allow: [projectRoot, nativeComponentsRoot] },
     // Android 页面使用 Tauri 虚拟域名，热更新连接直接走 USB 转发的开发地址。
     hmr: mode === 'test' ? undefined : { host: loadEnv(mode, projectRoot, 'TAURI_').TAURI_DEV_HOST || '127.0.0.1', clientPort: 5178 },
     // Rust 编译与生成文件交给 Tauri 监听，避免反复刷新示例。

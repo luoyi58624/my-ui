@@ -1,6 +1,6 @@
 import { createApp, defineComponent, h, onMounted, onUnmounted, ref } from 'vue'
 import { createRouter, createWebHashHistory, onBeforeRouteLeave } from 'vue-router'
-import { App, AppBar, BottomNavigation, useApp, type AppPage, type AppTab } from 'tauri-plugin-native-components/vue'
+import { App, AppBar, Tabbar, useApp, type AppPage, type AppTab } from 'tauri-plugin-native-components/vue'
 import Root from '../example/src/demo/native-app/Root.vue'
 import 'tauri-plugin-native-components/style.css'
 
@@ -45,7 +45,7 @@ const Example = defineComponent({
       h('button', { 'data-bar-count': '', onClick: () => barCount.value++ }, '自定义底栏 · ' + barCount.value),
       custom
         ? h('nav', { 'aria-label': '自定义导航', style: 'display:flex;gap:12px;padding:12px' }, items.map(item => h('button', { 'data-custom-tab': item.value, onClick: () => select(item.value) }, item.label)))
-        : h(BottomNavigation, { modelValue: value, items, 'onUpdate:modelValue': select }),
+        : h(Tabbar, { modelValue: value, items, 'onUpdate:modelValue': select }),
     ],
   }),
 })

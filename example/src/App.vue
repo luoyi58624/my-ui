@@ -705,7 +705,7 @@ async function selectAction(action: Option) {
       <NativeNavigationShowcase @notify="notify" />
     </template>
     <template #native-app>
-      <NativeAppShowcase @notify="notify" />
+      <NativeAppShowcase />
     </template>
     <template #scenarios>
       <EssentialsShowcase @notify="notify" />

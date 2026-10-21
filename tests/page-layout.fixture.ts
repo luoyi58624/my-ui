@@ -1,5 +1,5 @@
 import { createApp, defineComponent, h, onMounted, provide, ref } from 'vue'
-import { AppBar, BottomNavigation, Page } from 'tauri-plugin-native-components/vue'
+import { AppBar, Tabbar, Page } from 'tauri-plugin-native-components/vue'
 import { pageLayoutKey } from '../example/node_modules/tauri-plugin-native-components/vue/usePageLayout'
 import { Button, Dialog, Drawer } from '../packages/vue/index'
 import 'tauri-plugin-native-components/style.css'
@@ -22,7 +22,7 @@ w.events = []
 const items = [{ value: 'home', label: '首页', icon: 'home' as const }, { value: 'saved', label: '收藏', icon: 'grid' as const }]
 w.app = createApp({ setup: () => () => h(new URL(location.href).searchParams.get('frame') === 'late' ? LatePage : Page, { active: active.value, style: 'height:100dvh', onError: (reason: unknown) => w.errors.push(String(reason)) }, {
   navbar: () => h(AppBar, { title: title.value, back: true, actions: [{ value: 'settings', label: '设置', icon: 'sliders' }], onBack: () => w.events.push('back'), onAction: value => w.events.push(value) }),
-  navigation: () => h(BottomNavigation, { modelValue: tab.value, items, 'onUpdate:modelValue': value => { tab.value = value } }),
+  navigation: () => h(Tabbar, { modelValue: tab.value, items, 'onUpdate:modelValue': value => { tab.value = value } }),
   default: () => [
     h('input', { id: 'note', value: note.value, onInput: event => { note.value = (event.target as HTMLInputElement).value } }),
     h(Button, { onClick: () => { dialog.value = true } }, () => '打开确认'),

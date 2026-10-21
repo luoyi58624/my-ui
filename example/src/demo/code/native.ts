@@ -69,40 +69,21 @@ function goBack() {
   </Page>
 </template>`
 
-/** BottomNavigation 只管理底栏，内容由业务切换。 */
-export const bottomNavigationCode = `<script setup lang="ts">
+/** Tabbar 只管理底栏，内容由业务切换。 */
+export const tabbarCode = `<script setup lang="ts">
 import { ref } from 'vue'
-import { BottomNavigation, type NavigationItem } from 'tauri-plugin-native-components/vue'
-import 'tauri-plugin-native-components/style.css'
+import { Tabbar, type NavigationItem } from 'tauri-plugin-native-components/vue'
 
-const selected = ref('home')
+const active = ref('home')
 const items: NavigationItem[] = [
   { value: 'home', label: '首页', icon: 'home' },
-  { value: 'messages', label: '消息', icon: 'message', badge: 2 },
-  { value: 'profile', label: '我的', icon: 'user' }
+  { value: 'profile', label: '我的', icon: 'user' },
 ]
 </script>
 
 <template>
-  <div class="shell">
-    <main>当前页面：{{ selected }}</main>
-    <BottomNavigation v-model="selected" :items="items" label="主导航" />
-  </div>
-</template>
-
-<style scoped>
-.shell {
-  display: flex;
-  flex-direction: column;
-  height: 100dvh;
-}
-main {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding: 24px;
-}
-</style>`
+  <Tabbar v-model="active" :items="items" />
+</template>`
 
 /** Tabs 默认承载 Vue 内容，nativeView 需要 Android 宿主注册页面工厂。 */
 export const tabsCode = `<script setup lang="ts">

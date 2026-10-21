@@ -1,5 +1,5 @@
 import type { CodeFile } from './types'
-import { appBarCode, bottomNavigationCode, pageCode, tabsCode } from './native'
+import { appBarCode, tabbarCode, pageCode, tabsCode } from './native'
 
 /** 示例内的两份入门指南。 */
 export type GuideKind = 'quick-start' | 'native'
@@ -257,7 +257,7 @@ html[data-theme='dark'] {
         id: 'platform',
         title: '01 · 组件与平台',
         paragraphs: [
-          '基础 my-ui 组件运行在 WebView 内。tauri-plugin-native-components 额外提供 AppBar、BottomNavigation、Tabs 和 Page，适合系统导航、页面容器与下拉刷新等需要原生体验的部分。组件命名不添加 Native 前缀。',
+          '基础 my-ui 组件运行在 WebView 内。tauri-plugin-native-components 额外提供 App、AppBar、Tabbar、Tabs 和 Page，适合应用容器、系统导航与下拉刷新等需要原生体验的部分。组件命名不添加 Native 前缀。',
           'Android 使用原生导航控件和 SwipeRefreshLayout。浏览器、Windows、macOS、Linux 以及 iOS 使用 Web 回退，目前没有 iOS 原生 UI。浏览器中可以验证属性、事件、布局和 Web 刷新交互，Android 系统控件的实际效果需要设备环境。',
           'my-ui 与插件都导出了 AppBar、Tabs，按需求选择导入来源。下面的代码均从 tauri-plugin-native-components/vue 导入原生封装组件。'
         ],
@@ -323,7 +323,7 @@ pub fn run() {
         id: 'page',
         title: '03 · Page、导航栏与下拉刷新',
         paragraphs: [
-          '先引入插件样式。Page 的 navbar、navigation 插槽分别放顶部 AppBar 和底部 BottomNavigation，默认插槽放正文。Android 使用原生导航与中间原 WebView 的三段布局；其他平台使用 Web 模拟相同结构。页面必须有确定高度，例如 100dvh。',
+          '先引入插件样式。Page 的 navbar、navigation 插槽分别放顶部 AppBar 和底部 Tabbar，默认插槽放正文。Android 使用原生导航与中间原 WebView 的三段布局；其他平台使用 Web 模拟相同结构。页面必须有确定高度，例如 100dvh。',
           '设置 refreshable，绑定 v-model:refreshing，在 @refresh 中请求数据，并在 finally 中把 refreshing 设为 false。Android 支持不松手从正文滚动接到下拉刷新，向上推回刷新器后继续滚动正文，松手超过阈值才刷新。按钮可调用组件引用的 refresh()，共用同一套刷新流程。直接设置 refreshing=true 只显示指示器，不触发业务请求。'
         ],
         files: [file('PageExample.vue', 'vue', pageCode)],
@@ -331,14 +331,14 @@ pub fn run() {
       },
       {
         id: 'navigation',
-        title: '04 · AppBar、BottomNavigation 与 Tabs',
+        title: '04 · AppBar、Tabbar 与 Tabs',
         paragraphs: [
-          'AppBar 的 actions 使用结构化数据，@action 接收 value；@back 交给业务处理。BottomNavigation 用 v-model 管理当前项，items 支持 2～5 项，每项的 value 应唯一。',
+          'AppBar 的 actions 使用结构化数据，@action 接收 value；@back 交给业务处理。Tabbar 用 v-model 管理当前项，items 支持 2～5 项，每项的 value 应唯一。',
           'Tabs 将底栏与页面容器组合起来，默认插槽收到当前 value。下面展示 Vue 内容的用法；如需真正的 Android Tab 页面，为选项设置 nativeView，并在宿主注册 NativeTabViews 页面工厂。Vue 模板不会自动转换成 Android View。'
         ],
         files: [
           file('AppBarExample.vue', 'vue', appBarCode),
-          file('BottomNavigationExample.vue', 'vue', bottomNavigationCode),
+          file('TabbarExample.vue', 'vue', tabbarCode),
           file('TabsExample.vue', 'vue', tabsCode)
         ],
         link: { label: '打开 Tabs 示例', path: '/native/tabs' }

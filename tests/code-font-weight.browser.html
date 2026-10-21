@@ -67,15 +67,17 @@
       const root = () => doc.querySelector(pageSelector)
       const code = () => root()?.querySelector('.demo-code code')
       const visible = (selector) =>
-        [...doc.querySelectorAll(selector)].find((element) => element.getClientRects().length)
+        [...doc.querySelectorAll(selector)].find((element) =>
+          element.getClientRects().length && win.getComputedStyle(element).visibility === 'visible'
+        )
       const openSettings = async () => {
         returnRoute = win.location.hash
         win.location.hash = '/home'
         await until(
-          () => doc.querySelector('.demo-top [aria-label="主题定制"]')?.getClientRects().length,
+          () => visible('.demo-top [aria-label="主题定制"]'),
           '首页设置入口未显示'
         )
-        doc.querySelector('.demo-top [aria-label="主题定制"]').click()
+        visible('.demo-top [aria-label="主题定制"]').click()
         await until(() => visible('input[aria-label="全局字重"]'), '全局字重设置未打开')
       }
       const closeSettings = async () => {
@@ -253,7 +255,7 @@
                 ['/guide/native', '[data-guide="native"]'],
                 ['/code/button', '.code-page'],
                 ['/native/app-bar', '[data-component-demo="app-bar"]'],
-                ['/native/bottom-navigation', '[data-component-demo="bottom-navigation"]'],
+                ['/native/tabbar', '[data-component-demo="tabbar"]'],
                 ['/native/tabs', '[data-component-demo="tabs"]'],
                 ['/page-refresh', '.refresh-demo'],
                 ['/showcase', '.showcase-layout'],

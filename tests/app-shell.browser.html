@@ -1,0 +1,39 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>主 Demo App 容器回归</title><style>body{font:14px system-ui;margin:20px}iframe{width:390px;height:844px;border:1px solid #ddd}pre{white-space:pre-wrap}</style>
+<button id="run">运行检查</button><pre id="result">尚未运行</pre><div id="fixture"></div>
+<script type="module">
+const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms)),mode=new URLSearchParams(location.search).get('frame');
+if(mode){
+  if(mode==='android'){Object.defineProperty(navigator,'userAgent',{value:'Android Tauri',configurable:true});window.isTauri=true;window.calls=[];window.__TAURI_INTERNALS__={invoke:async(command,args)=>{window.calls.push({command,args})}}}
+  document.body.innerHTML='<div id="app"></div>';const base=document.createElement('base');base.href='/example/';document.head.append(base);await import('/example/src/main.ts');
+}else{
+  const reports=[],assert=(value,message)=>{if(!value)throw Error(message)},until=async(check,message='等待主 Demo 超时')=>{const start=performance.now();while(!check()){if(performance.now()-start>12000)throw Error(message);await pause(20)}};
+  let frame,doc,win;
+  const load=async(mode='web')=>{frame=document.createElement('iframe');frame.src='?frame='+mode+'#/home';document.querySelector('#fixture').replaceChildren(frame);await until(()=>frame.contentDocument?.querySelector('.demo-app.nc-app .nc-tabbar'));doc=frame.contentDocument;win=frame.contentWindow;await pause(160)};
+  const current=()=>doc.querySelector('.demo-page:not([inert])'),bar=()=>doc.querySelector('.demo-app .nc-app-tabbar');
+  const select=async(value)=>{bar().querySelector('[aria-label="'+({home:'首页',native:'原生',messages:'消息',profile:'我的'}[value])+'"]').click();await until(()=>current()?.dataset.demoPage===value);await pause(50)};
+  const back=async()=>{doc.querySelector('.demo-view:not([inert]) .demo-top [aria-label^="返回"]').click();await until(()=>!doc.querySelector('.demo-detail'));await pause(70)};
+  const check=async(name,run)=>{await run();reports.push({name,passed:true})};
+  document.querySelector('#run').onclick=async()=>{document.querySelector('#run').disabled=true;try{
+    await load();
+    await check('主 Demo 实际使用 App 与 Tabbar，顶部导航由当前页面提供',async()=>{
+      const api=await import('tauri-plugin-native-components/vue');assert(api.Tabbar&&!api.BottomNavigation,'组件名称没有统一');
+      assert(!doc.querySelector('.demo-app > .nc-page-navbar')&&doc.querySelector('.nc-app-view-active [data-page-navbar]'),'仍由 App 提供全局顶部导航');assert(bar().querySelectorAll('button').length===4,'主底栏缺少栏目');
+    });
+    await check('四个 Tab 保留页面、计数、滚动与底栏实例，重复选择不重置',async()=>{
+      const app=doc.querySelector('.demo-app'),footer=bar(),home=current(),length=win.history.length;home.scrollTop=550;await pause(40);
+      await select('messages');const messages=current(),counter=[...messages.querySelectorAll('button')].find(node=>node.textContent.includes('点一下'));counter.click();await pause(30);await select('profile');await select('native');await select('home');
+      assert(current()===home&&home.scrollTop===550,'切换丢失首页或滚动');await select('home');assert(home.scrollTop===550,'重复选择重置页面');await select('messages');assert(current()===messages&&counter.textContent.includes('1'),'消息计数没有保留');assert(win.history.length===length&&win.location.hash==='#/messages','Tab 路由或历史错误');assert(doc.querySelector('.demo-app')===app&&bar()===footer,'切换重建 App 或底栏');await select('home');
+    });
+    await check('配置的文档独立页隐藏底栏，返回恢复目录焦点并保留文档输入',async()=>{
+      const app=doc.querySelector('.demo-app'),footer=bar(),home=current(),top=home.scrollTop;home.querySelector('[data-demo-link="input"]').click();await until(()=>current()?.dataset.demoPage==='example/input');const detail=current(),input=detail.querySelector('input');assert(footer.hidden&&win.location.hash==='#/example/input','独立页没有通过 App 打开');input.value='保留文档输入';input.dispatchEvent(new win.Event('input',{bubbles:true}));await back();assert(current()===home&&home.scrollTop===top&&doc.activeElement?.dataset.demoLink==='input','返回未恢复目录');home.querySelector('[data-demo-link="input"]').click();await until(()=>current()?.dataset.demoPage==='example/input');assert(current()===detail&&detail.querySelector('input')===input&&input.value==='保留文档输入','文档实例或输入丢失');assert(doc.querySelector('.demo-app')===app&&bar()===footer,'独立页重建容器');await back();
+    });
+    await check('Android 页面自己的顶栏和共享底栏进入同一原生布局，遮罩及切换不串页',async()=>{
+      await load('android');const layout=()=>win.calls.filter(call=>call.args?.surface?.kind==='layout').at(-1)?.args.surface;await until(()=>layout()?.top?.title==='组件示例'&&layout()?.bottom?.modelValue==='home');const footer=layout().bottom.id;
+      doc.querySelector('#app').inert=true;await pause(100);assert(layout().top.visible&&layout().bottom.visible,'正文遮罩撤掉了导航');
+      win.dispatchEvent(new win.CustomEvent('native-components',{detail:{id:footer,action:'select',value:'messages'}}));await until(()=>layout()?.top?.title==='消息'&&layout()?.bottom?.modelValue==='messages');await pause(120);assert(layout().bottom.id===footer&&layout().top.title==='消息','失活页面覆盖了当前导航');doc.querySelector('#app').inert=false;
+    });
+    document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,total:4,reports},null,2);
+  }catch(error){document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,error:String(error.stack||error),reports},null,2)}finally{document.querySelector('#run').disabled=false}};
+}
+</script></html>
