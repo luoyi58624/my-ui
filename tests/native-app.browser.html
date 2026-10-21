@@ -6,7 +6,7 @@ const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms)),params=new URLSearc
 if(params.has('frame')){
   if(params.get('frame')==='android'){
     Object.defineProperty(navigator,'userAgent',{value:'Android Tauri',configurable:true});window.isTauri=true;
-    window.calls=[];window.__TAURI_INTERNALS__={invoke:async(command,args)=>{window.calls.push({command,args})}};
+    window.calls=[];window.__TAURI_INTERNALS__={invoke:async(command,args)=>{if(command==='plugin:app|supports_multiple_windows')return true;window.calls.push({command,args})}};
   }
   document.body.innerHTML='<div id="app"></div>';document.body.style.margin='0';document.documentElement.style.cssText='--nc-surface:#fff;--nc-text:#17191e;--nc-muted:#626776;--nc-primary:#2456ca;--nc-selected:#e8efff;--nc-border:#ddd';
   await import('/tests/native-app.fixture.ts');

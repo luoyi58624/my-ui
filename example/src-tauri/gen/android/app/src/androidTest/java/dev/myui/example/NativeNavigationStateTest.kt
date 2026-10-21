@@ -54,13 +54,35 @@ class NativeNavigationStateTest {
     @Test fun aRequiredRecreationStartsAtItsFinalGeometryOnTheFirstFrame() = withNavigation { fixture ->
         val previous = fixture.bar()
         val frames = fixture.frames {
-            val without = JSONObject(fixture.data.toString()).put("bottom", JSONObject.NULL)
-            fixture.update(without)
+            fixture.data.getJSONObject("bottom").put("id", "replacement-bottom")
             fixture.update()
         }
         assertNotSame(previous, fixture.bar())
         assertTrue("重建后的第一帧不能再改变图标、字号和文字基线：$frames", frames.all { it == frames.last() })
         fixture.assertTextStyle(11f, 700)
+    }
+
+    @Test fun hidingAndReattachingTheLayoutRetainsTheBarAndItsMenu() = withNavigation { fixture ->
+        val previous = fixture.bar()
+        val menu = previous.menu
+        fixture.frames {
+            fixture.update(JSONObject(fixture.data.toString()).put("bottom", JSONObject.NULL))
+            fixture.update()
+        }
+        assertSame("详情返回不能重建底栏", previous, fixture.bar())
+        fixture.frames {
+            fixture.layoutType.getMethod("dispose").invoke(fixture.layout)
+            fixture.layout = fixture.layoutType.getConstructor(Activity::class.java, WebView::class.java, fixture.hostType)
+                .newInstance(fixture.webView.context, fixture.webView, fixture.host)
+            fixture.update()
+        }
+        assertSame("切换页面壳后仍应复用原底栏", previous, fixture.bar())
+        assertSame(menu, fixture.bar().menu)
+        fixture.frames {
+            fixture.hostType.getMethod("remove", String::class.java).invoke(fixture.host, "bottom")
+            fixture.update()
+        }
+        assertNotSame("组件卸载后必须释放原控件", previous, fixture.bar())
     }
 
     @Test fun switchingSelectionDoesNotMoveOrScaleIconsAndLabels() = withNavigation { fixture ->

@@ -1,9 +1,11 @@
 import { installNativeBackHandler } from 'tauri-plugin-native-components/window'
+import type { Router } from 'vue-router'
 import type {} from '../../../packages/core/my-ui'
 
-/** 只提供示例组件库的弹层接口，系统返回实现由插件统一管理。 */
-export function installNativeOverlayBack(): () => void {
+/** 提供示例弹层与路由，插件依次处理弹层、同窗口页面和系统返回。 */
+export function installNativeOverlayBack(router?: Router): () => void {
   return installNativeBackHandler({
+    router,
     dismiss: () => MyUI.layers.dismissTop(),
     subscribe: notify => MyUI.layers.subscribe(notify),
   })

@@ -6,19 +6,19 @@ if(new URLSearchParams(location.search).has('frame')){
   document.body.innerHTML='<div id="app"></div>';
   await import('/example/src/main.ts').catch(error=>{document.body.textContent=error.stack;throw error});
 }else{
-  const reports=[],calls=[],pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));let frame,doc,win,respond=()=>Promise.resolve();
+  const reports=[],calls=[],pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));let frame,doc,win,multipleWindows=true,respond=()=>Promise.resolve();
   const assert=(value,message)=>{if(!value)throw Error(message)};
   const until=async(check,message)=>{const start=performance.now();while(!check()){if(performance.now()-start>10000)throw Error(message);await pause(30)}};
   const check=async(name,run)=>{await run();reports.push({name,passed:true})};
   async function load(suffix,android=true){
-    const previous=doc;frame.src='/tests/navigation.browser.html?frame=1&'+suffix;
-    await until(()=>frame.contentDocument!==previous&&frame.contentDocument?.querySelector('.nc-tabs-navigation button'),'示例加载失败');
+    const previous=doc;multipleWindows=true;frame.src='/tests/navigation.browser.html?frame=1&'+suffix;
+    await until(()=>frame.contentDocument!==previous&&frame.contentDocument?.querySelector('.demo-page:not([inert])'),'示例加载失败');
     doc=frame.contentDocument;win=frame.contentWindow;await pause(120);
     // 组件和状态先按网页真实挂载，再替换宿主命令；验证视图到桥接的调用，不模拟操作系统。
     Object.defineProperty(win.navigator,'userAgent',{configurable:true,value:android?'Mozilla/5.0 Android':'Mozilla/5.0 Windows NT'});
     win.isTauri=true;
     // 只记录导航命令；主题和系统栏同步可在路由变化时独立触发。
-    win.__TAURI_INTERNALS__={invoke:(command,args)=>{if(!/^plugin:native-components\|(push|back)$/.test(command))return Promise.resolve();calls.push({command,args});return respond(command,args)}};
+    win.__TAURI_INTERNALS__={invoke:(command,args)=>{if(command==='plugin:app|supports_multiple_windows')return Promise.resolve(multipleWindows);if(!/^plugin:native-components\|(push|back)$/.test(command))return Promise.resolve();calls.push({command,args});return respond(command,args)}};
     win.__TAURI__={core:{invoke:win.__TAURI_INTERNALS__.invoke}};
   }
   const click=id=>doc.querySelector('[data-demo-link="'+id+'"]').click();
@@ -47,13 +47,20 @@ if(new URLSearchParams(location.search).has('frame')){
       });
       await check('独立子页显示目标内容，返回调用原生关闭且不改网页历史',async()=>{
         await load('child=1&pageWindow=1#/example/image');win.location.hash='#/example/button';await until(()=>doc.querySelector('.demo-top [aria-label="返回上一页"]'),'子页没有原生返回入口');
-        assert(doc.querySelector('.demo-detail:not([inert])').textContent.includes('主要按钮'),'没有渲染目标示例');assert(win.getComputedStyle(doc.querySelector('.nc-tabs-navigation')).display==='none','子页仍显示主 Tab');
+        await until(()=>doc.querySelector('.demo-detail:not([inert])')?.textContent.includes('主要按钮'),'没有渲染目标示例');assert(doc.querySelector('.nc-app-tabbar').hidden,'子页仍显示主 Tab');
         const count=calls.length,hash=win.location.hash;doc.querySelector('.demo-top [aria-label="返回上一页"]').click();await pause(80);assert(calls.length===count+1&&calls.at(-1).command==='plugin:native-components|back','返回没有关闭当前原生子页');assert(win.location.hash===hash,'返回修改了子页网页路由');
+      });
+      await check('旧版 Android 在当前 App 打开详情，往返保留目录、底栏和输入实例',async()=>{
+        await load('legacy=1#/home');multipleWindows=false;const count=calls.length,home=doc.querySelector('[data-demo-page="home"]'),app=doc.querySelector('.demo-app'),bar=doc.querySelector('.nc-app-tabbar');home.scrollTop=440;
+        click('input');await until(()=>win.location.hash==='#/example/input'&&doc.querySelector('.demo-detail input'),'旧版 Android 未打开详情');const input=doc.querySelector('.demo-detail input');input.value='保留输入';input.dispatchEvent(new win.Event('input',{bubbles:true}));
+        assert(bar.hidden&&doc.querySelector('.demo-app')===app&&calls.length===count,'旧版仍调用多窗口或重建 App');doc.querySelector('.demo-view:not([inert]) .demo-top [aria-label="返回组件列表"]').click();await until(()=>win.location.hash==='#/home','旧版返回失败');
+        assert(home===doc.querySelector('[data-demo-page="home"]')&&home.scrollTop===440&&!bar.hidden,'返回丢失目录或滚动');click('input');await until(()=>win.location.hash==='#/example/input'&&doc.querySelector('.demo-detail:not([inert]) input'),'旧版再次进入失败');assert(doc.querySelector('.demo-detail input')===input&&input.value==='保留输入','详情输入实例丢失');
+        assert(doc.querySelector('.demo-app')===app&&doc.querySelector('.nc-app-tabbar')===bar&&calls.length===count,'往返替换了容器或误调用原生关闭');
       });
       await check('主窗口直接访问组件旧链接，返回只回目录而不会误关主窗口',async()=>{
         await load('direct=1#/example/button');const count=calls.length;doc.querySelector('.demo-top [aria-label="返回组件列表"]').click();await until(()=>win.location.hash==='#/home','没有回到主目录');assert(calls.length===count,'主窗口错误调用了关闭命令');
       });
-      document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,total:6,reports},null,2);
+      document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,total:7,reports},null,2);
     }catch(error){document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,error:String(error.stack||error),reports},null,2)}
     finally{document.querySelector('#run').disabled=false}
   };

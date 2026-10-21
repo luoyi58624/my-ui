@@ -8,7 +8,7 @@ export { isAndroidNative, isNativePage as isChildPage } from 'tauri-plugin-nativ
 /** 示例导航实例，各平台使用同一份 Vue Router 路由。 */
 export const navigation = createNativeRouter(router, { appearance: readPageAppearance })
 
-/** 进入示例页面：Android 创建 Activity，Web 与桌面端在当前窗口切换。 */
+/** 进入示例页面；Android 支持多窗口时创建 Activity，否则在当前窗口切换。 */
 export function openPage(path: string, options: PageOptions = {}): Promise<void> {
   return navigation.push(path, options).then(() => {})
 }

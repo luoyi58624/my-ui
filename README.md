@@ -482,7 +482,9 @@ Android 示例的系统返回优先交给当前 WebView 的最上层弹层：级
 
 设置首页参考手机系统设置的原生布局：大标题随正文滚动退出，搜索栏吸顶，列表采用圆角分组和逐行波纹。点击行或搜索栏，通过普通 Android Intent 打开 `NativeSettingsActivity`，子页自行提供返回导航、搜索输入和显示设置 UI，不创建 Tauri 窗口或 WebView。开关、模式选择和滑块仅保留界面状态，不读写系统设置；系统返回后保留首页滚动、控件和底栏实例。
 
-版本边界：普通原生设置子页已在 Android 9 验证；组件详情目前使用 Tauri 多窗口创建 Web 子 Activity，这条路径要求 Android 12L（API 32）及以上。旧版 Android 的同 WebView 路由回退尚未实现，不能用应用最低安装版本代替这项能力的版本要求。参见 [Tauri 移动端多窗口说明](https://tauri.app/learn/mobile-multiwindow/)。
+版本边界：普通原生设置子页已在 Android 9 验证；组件详情在支持多窗口的 Android 12L（API 32）及以上创建 Web 子 Activity，更低版本自动使用当前 WebView 的 Vue Router 导航，保留页面、输入和滚动状态。系统返回优先关闭弹层，再返回同窗口上一页，根页面交还系统。参见 [Tauri 移动端多窗口说明](https://tauri.app/learn/mobile-multiwindow/)。
+
+旧版 Android 的导航定向检查为 `node tests/android-navigation-compat.device.mjs`，可通过 `ANDROID_SERIAL` 指定设备；覆盖真实系统返回、弹层优先级、多层路由、直达链接及底栏和输入状态保留。
 
 原生资料页的定向设备测试为 `:app:connectedArm64DebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.myui.example.NativeProfileActivityTest`，覆盖真实输入、空昵称校验、保存、开关、重建和取消，运行结束恢复原有资料。
 

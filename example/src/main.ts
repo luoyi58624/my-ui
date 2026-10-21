@@ -16,7 +16,7 @@ let stopOverlayBack = () => {},
   stopAppearance = () => {}
 void router.isReady().then(() => {
   app.mount('#app')
-  stopOverlayBack = installNativeOverlayBack()
+  stopOverlayBack = installNativeOverlayBack(router)
   stopAppearance = installNativeAppearance()
 })
 import.meta.hot?.dispose(() => {
