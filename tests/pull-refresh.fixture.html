@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="zh-CN">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>下拉刷新交互检查</title>
+  <style>
+    body { margin: 0; padding: 12px; }
+    #subject { width: min(100%, 360px); height: 380px; border: 1px solid var(--border); }
+    #drag-zone { padding: 18px; min-height: 48px; }
+    .test-row { min-height: 48px; padding: 12px; border-top: 1px solid var(--border); }
+    #nested { height: 64px; overflow: auto; overscroll-behavior: contain; }
+    #nested > div { height: 220px; }
+    #controls { display: flex; gap: 8px; padding: 12px; }
+  </style>
+  <div id="app"></div>
+  <script type="module" src="./pull-refresh.fixture.ts"></script>
+</html>

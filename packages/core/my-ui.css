@@ -3764,6 +3764,96 @@ p[data-my-empty] {
 .my-app-bar-back svg[data-my-app-bar] { width: 22px; height: 22px; rotate: 180deg; }
 .my-app-bar-back[data-my-app-bar]:active { background: var(--press); }
 
+/* ── PullRefresh ───────────────────────────────────────── */
+.my-pull-refresh {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--card-background);
+}
+.my-pull-refresh-viewport {
+  height: 100%;
+  overflow: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.my-pull-refresh-track {
+  display: flow-root;
+  min-height: 100%;
+}
+.my-pull-refresh-indicator {
+  position: absolute;
+  z-index: 1;
+  inset: -64px 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  height: 64px;
+  color: var(--text-secondary);
+  background: var(--card-background);
+  font-size: 13px;
+  line-height: 20px;
+  pointer-events: none;
+  user-select: none;
+}
+.my-pull-refresh-symbol {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  color: var(--primary);
+}
+.my-pull-refresh-symbol > svg {
+  width: 18px;
+  height: 18px;
+  transform: rotate(90deg);
+  transition: transform 160ms ease;
+}
+.my-pull-refresh-spinner {
+  display: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid color-mix(in srgb, currentColor 20%, transparent);
+  border-top-color: currentColor;
+  border-radius: 50%;
+}
+.my-pull-refresh[data-state="ready"] > .my-pull-refresh-indicator > .my-pull-refresh-symbol > svg {
+  transform: rotate(-90deg);
+}
+.my-pull-refresh[data-state="refreshing"] > .my-pull-refresh-indicator > .my-pull-refresh-symbol > svg {
+  display: none;
+}
+.my-pull-refresh[data-state="refreshing"] > .my-pull-refresh-indicator > .my-pull-refresh-symbol > .my-pull-refresh-spinner {
+  display: block;
+  animation: my-pull-refresh-spin 800ms linear infinite;
+}
+.my-pull-refresh:not([data-state="idle"]) > .my-pull-refresh-viewport > .my-pull-refresh-track,
+.my-pull-refresh:not([data-state="idle"]) > .my-pull-refresh-indicator {
+  will-change: transform;
+}
+.my-pull-refresh[data-animated] > .my-pull-refresh-viewport > .my-pull-refresh-track,
+.my-pull-refresh[data-animated] > .my-pull-refresh-indicator {
+  transition: transform 260ms cubic-bezier(.2, .8, .2, 1), opacity 260ms ease;
+}
+.my-pull-refresh[data-state="idle"] > .my-pull-refresh-indicator {
+  visibility: hidden;
+}
+@keyframes my-pull-refresh-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .my-pull-refresh-spinner {
+    animation: none !important;
+  }
+  .my-pull-refresh-track,
+  .my-pull-refresh-indicator,
+  .my-pull-refresh-symbol > svg {
+    transition: none !important;
+  }
+}
+
 /* ── Notice ────────────────────────────────────────────── */
 
 .my-notice[data-my-notice] { --notice-color: var(--primary); display: grid; grid-template-rows: 1fr; min-width: 0; opacity: 1; transition: grid-template-rows 200ms ease, opacity 200ms ease; }

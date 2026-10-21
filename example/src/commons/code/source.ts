@@ -99,6 +99,7 @@ const pages: Record<string, { file: string }[]> = {
   popup: [{ file: 'pages/home/popup/index.vue' }],
   menu: [{ file: 'pages/home/menu/index.vue' }],
   'touch-gestures': [{ file: 'pages/home/touch-gestures/index.vue' }],
+  'pull-refresh': [{ file: 'pages/home/pull-refresh/index.vue' }],
   scenarios: [
     { file: 'pages/home/scenarios/ProfileFormExample.vue' },
     { file: 'pages/home/scenarios/index.vue' }

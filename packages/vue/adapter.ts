@@ -117,6 +117,8 @@ export function useNative(name: string, props: object, emit: unknown) {
     select: () => controller?.exposed.select?.(),
     /** 重新计算浮层位置。 */
     updatePosition: () => controller?.exposed.updatePosition?.(),
+    /** 主动触发下拉刷新；禁用或加载中返回 false。 */
+    refresh: (): boolean => controller?.exposed.refresh?.() ?? false,
     /** 重新加载图片，或按文件标识重试上传。 */
     retry: (...args: any[]) => controller?.exposed.retry?.(...args),
     /** 打开原生文件选择窗口，需由用户操作触发。 */

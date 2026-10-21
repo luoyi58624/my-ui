@@ -27,5 +27,6 @@ export const homeDocs: Record<string, Component> = {
   popup: defineAsyncComponent(() => import('./popup/index.vue')),
   menu: defineAsyncComponent(() => import('./menu/index.vue')),
   'touch-gestures': defineAsyncComponent(() => import('./touch-gestures/index.vue')),
+  'pull-refresh': defineAsyncComponent(() => import('./pull-refresh/index.vue')),
   scenarios: defineAsyncComponent(() => import('./scenarios/index.vue'))
 }

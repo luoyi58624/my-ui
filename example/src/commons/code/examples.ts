@@ -362,6 +362,11 @@ async function share() {
       import('../../pages/home/touch-gestures/index.vue?raw').then((m) => m.default)
     )
   ],
+  'pull-refresh': [
+    vue('pages/home/pull-refresh/index.vue', () =>
+      import('../../pages/home/pull-refresh/index.vue?raw').then((m) => m.default)
+    )
+  ],
   scenarios: [
     vue('pages/home/scenarios/index.vue', () =>
       import('../../pages/home/scenarios/index.vue?raw').then((m) => m.default)

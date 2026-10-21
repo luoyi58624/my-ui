@@ -1738,6 +1738,160 @@
     },
   });
 
+  // ── PullRefresh：浏览器负责正文滚动，顶部下拉只更新合成位移 ──────────────
+  register("PullRefresh", {
+    defaults: { value: false, disabled: false, label: "下拉刷新" },
+    init(c) {
+      const threshold = 64, maximum = 112, duration = 260;
+      c.element.classList.add("my-pull-refresh");
+      c.viewport = el("div", "pull-refresh-viewport");
+      c.track = el("div", "pull-refresh-track");
+      c.indicator = el("div", "pull-refresh-indicator");
+      c.symbol = el("span", "pull-refresh-symbol");
+      c.arrow = svgIcon("arrow-right");
+      c.spinner = el("span", "pull-refresh-spinner");
+      c.message = el("span", "pull-refresh-message");
+      c.symbol.append(c.arrow, c.spinner); c.indicator.append(c.symbol, c.message);
+      c.viewport.append(c.track); c.element.append(c.viewport, c.indicator);
+      attrs(c.viewport, { tabindex: 0, role: "region" });
+      attrs(c.indicator, { role: "status", "aria-live": "polite", "aria-atomic": true });
+      attr(c.symbol, "aria-hidden", true);
+      let phase = "idle", offset = 0, frame = 0, timer = 0, animated = false;
+      let session, suppressUntil = 0, loading, disabled;
+      const render = () => {
+        const transform = offset ? `translate3d(0, ${offset.toFixed(2)}px, 0)` : "none";
+        c.track.style.transform = transform; c.indicator.style.transform = transform;
+        c.indicator.style.opacity = String(Math.min(1, offset / 32));
+        attrs(c.element, { "data-state": phase, "data-animated": animated || undefined, "aria-busy": !!c.p.value });
+        attr(c.indicator, "aria-hidden", phase === "idle");
+        text(c.message, phase === "refreshing" ? "正在刷新…" : phase === "ready" ? "松开刷新" : c.p.label);
+      };
+      const stopMotion = () => {
+        cancelAnimationFrame(frame); clearTimeout(timer); frame = timer = 0; animated = false;
+      };
+      const draw = () => { if (!frame) frame = requestAnimationFrame(() => { frame = 0; render(); }); };
+      const finishMotion = () => {
+        stopMotion();
+        phase = c.p.value ? "refreshing" : "idle";
+        offset = c.p.value ? threshold : 0;
+        render();
+      };
+      const settle = (immediate = false) => {
+        stopMotion();
+        if (immediate || reduced() || offset === 0 && !c.p.value) { finishMotion(); return; }
+        phase = c.p.value ? "refreshing" : "settling"; animated = true;
+        offset = c.p.value ? threshold : 0;
+        render();
+        // transitionend 在后台页或移除样式时可能不触发，计时器保证状态收尾。
+        timer = setTimeout(finishMotion, duration + 40);
+      };
+      const stopGesture = () => {
+        const previous = session; session = undefined;
+        previous?.stop();
+        if (previous?.active) suppressUntil = performance.now() + 450;
+        return previous;
+      };
+      const cancel = (immediate = false) => {
+        const previous = stopGesture();
+        if (previous?.active || phase === "pulling" || phase === "ready") settle(immediate);
+      };
+      /** 主动刷新与有效下拉共用一次性入口，先同步加载状态再通知业务。 */
+      c.exposed.refresh = () => {
+        if (c.p.disabled || c.p.value) return false;
+        stopGesture();
+        c.set(true);
+        // 先让绑定层接收到 true，避免同步完成的业务被 Vue 合并更新后留下加载态。
+        queueMicrotask(() => c.emit("refresh"));
+        return true;
+      };
+      const move = event => {
+        const current = session;
+        if (!current) return;
+        if (c.p.disabled || c.p.value || event.touches.length !== 1 || event.defaultPrevented) { cancel(); return; }
+        const touch = [...event.touches].find(item => item.identifier === current.id);
+        if (!touch) { cancel(); return; }
+        const x = touch.clientX - current.x, y = touch.clientY - current.y;
+        if (!current.active) {
+          if (Math.max(Math.abs(x), Math.abs(y)) < 6) return;
+          if (y <= 0 || y < Math.abs(x) * 1.15 || c.viewport.scrollTop > 1 || !event.cancelable) { stopGesture(); return; }
+          current.active = true; stopMotion();
+        }
+        if (!event.cancelable) { cancel(); return; }
+        event.preventDefault();
+        // 先半速跟手，越过阈值后进一步增加阻力；不读取布局、不更新 Vue。
+        offset = Math.min(maximum, Math.max(0, y <= threshold * 2 ? y / 2 : threshold + (y - threshold * 2) / 4));
+        phase = offset >= threshold ? "ready" : "pulling";
+        draw();
+      };
+      const end = event => {
+        if (!session || ![...event.changedTouches].some(touch => touch.identifier === session.id)) return;
+        const previous = stopGesture();
+        if (!previous.active) return;
+        // 释放发生在下一帧之前时也以最后一次手势距离判定。
+        if (offset >= threshold) c.exposed.refresh();
+        else settle();
+      };
+      c.on(c.viewport, "touchstart", event => {
+        cancel(); suppressUntil = 0;
+        if (c.p.disabled || c.p.value || phase !== "idle" || event.touches.length !== 1 || event.defaultPrevented || c.viewport.scrollTop > 1 || c.element.closest("[inert]")) return;
+        const target = event.target instanceof Element ? event.target : undefined;
+        if (!target || target.closest(".my-pull-refresh") !== c.element || target.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="slider"],video,audio,[data-swipe-ignore]') || canScrollGesture(target, c.viewport, "y", 1)) return;
+        const touch = event.touches[0];
+        const interrupt = event => { if (event.touches.length !== 1) cancel(); };
+        const canceled = () => cancel();
+        session = { id: touch.identifier, x: touch.clientX, y: touch.clientY, active: false, stop: () => {
+          c.viewport.removeEventListener("touchmove", move);
+          document.removeEventListener("touchend", end);
+          document.removeEventListener("touchcancel", canceled);
+          document.removeEventListener("touchstart", interrupt, true);
+        } };
+        // 只有从顶部起手的候选手势需要等待 JS；普通滚动没有阻塞式 move 监听。
+        c.viewport.addEventListener("touchmove", move, { passive: false });
+        document.addEventListener("touchend", end, { passive: true });
+        document.addEventListener("touchcancel", canceled, { passive: true });
+        document.addEventListener("touchstart", interrupt, { passive: true, capture: true });
+      }, { passive: true });
+      c.on(c.viewport, "click", event => {
+        if (event.detail !== 0 && performance.now() < suppressUntil) {
+          suppressUntil = 0; event.preventDefault(); event.stopImmediatePropagation();
+        }
+      }, true);
+      c.on(c.viewport, "pointerdown", event => { if (event.pointerType !== "touch") suppressUntil = 0; }, { passive: true });
+      c.on(window, "blur", () => { cancel(true); finishMotion(); });
+      c.on(document, "visibilitychange", () => { if (document.hidden) { cancel(true); finishMotion(); } });
+      const resize = () => { cancel(true); finishMotion(); };
+      c.on(window, "resize", resize, { passive: true });
+      let viewportSize;
+      const observer = new ResizeObserver(entries => {
+        const { width, height } = entries[0].contentRect;
+        const changed = viewportSize && (width !== viewportSize.width || height !== viewportSize.height);
+        viewportSize = { width, height };
+        // 首次报告只是挂载尺寸，不能撤销已经开始的下拉手势。
+        if (changed) resize();
+      });
+      observer.observe(c.viewport);
+      const motionPreference = matchMedia("(prefers-reduced-motion: reduce)");
+      c.on(motionPreference, "change", () => { if (motionPreference.matches) { cancel(true); finishMotion(); } });
+      c.syncRefresh = () => {
+        const nextLoading = !!c.p.value, nextDisabled = !!c.p.disabled;
+        if (nextLoading !== loading) {
+          const initial = loading === undefined; loading = nextLoading;
+          stopGesture(); settle(initial || nextDisabled);
+        } else if (nextDisabled !== disabled && nextDisabled) {
+          stopGesture(); finishMotion();
+        }
+        disabled = nextDisabled;
+        attr(c.viewport, "aria-label", c.p.label);
+        render();
+      };
+      c.cleanups.add(() => { stopGesture(); stopMotion(); observer.disconnect(); });
+    },
+    paint(c) {
+      c.slot("default", c.track);
+      c.syncRefresh();
+    },
+  });
+
   // ── Notice：内联通知与内容淡出，关闭后立即退出焦点和辅助树 ────────────────
   register("Notice", {
     defaults: { value: true, type: "info", title: "", message: "", closable: false },

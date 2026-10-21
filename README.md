@@ -9,7 +9,7 @@ packages/
     my-ui.js            所有 DOM 交互、定位与动画
     my-ui.d.ts          原生 API 类型
   vue/                  @my-ui/vue：Vue 3 薄封装与可选 Pinia 共享状态
-    index.ts            51 个组件的公共入口
+    index.ts            52 个组件的公共入口
     adapter.ts          props、v-model、事件、插槽和生命周期适配
     components/         组件封装及类型，无组件样式
 example/                @my-ui/example：展示与使用示例
@@ -99,7 +99,42 @@ const actions = [
 
 保留原来的 Vue 组件名、v-model、事件、具名插槽与作用域插槽。适配层使用实际原生元素作为根节点，组件之间通过 DOM 上下文共享布局与分组状态。
 
-公共组件：Icon、Avatar、Image、Badge、Button、Tag、TagGroup、Input、Textarea、Form、FormField、Radio、RadioGroup、Checkbox、CheckboxGroup、Choices、Switch、Select、Combobox、Segmented、Slider、Picker、DatePicker、TimePicker、Calendar、Upload、AppBar、Notice、Steps、Progress、Tabs、Navigation、Stepper、CellGroup、ListRow、Collapse、CollapseItem、Card、Tooltip、Divider、Loading、Skeleton、Empty、Floating、Menu、Popover、Dialog、Sheet、Drawer、Popup、Toast。
+公共组件：Icon、Avatar、Image、Badge、Button、Tag、TagGroup、Input、Textarea、Form、FormField、Radio、RadioGroup、Checkbox、CheckboxGroup、Choices、Switch、Select、Combobox、Segmented、Slider、Picker、DatePicker、TimePicker、Calendar、Upload、AppBar、Notice、Steps、Progress、PullRefresh、Tabs、Navigation、Stepper、CellGroup、ListRow、Collapse、CollapseItem、Card、Tooltip、Divider、Loading、Skeleton、Empty、Floating、Menu、Popover、Dialog、Sheet、Drawer、Popup、Toast。
+
+## PullRefresh 下拉刷新
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue'
+import { Button, PullRefresh } from '@my-ui/vue'
+
+const refreshing = ref(false)
+const pullRefresh = ref<InstanceType<typeof PullRefresh>>()
+async function reload() {
+  try {
+    // 在这里请求并更新列表；失败提示也由业务处理。
+    await fetch('/api/items')
+  } finally {
+    refreshing.value = false
+  }
+}
+</script>
+
+<template>
+  <Button :disabled="refreshing" @click="pullRefresh?.refresh()">刷新列表</Button>
+  <PullRefresh ref="pullRefresh" v-model="refreshing" style="height: 480px" @refresh="reload">
+    <div>这里放列表内容</div>
+  </PullRefresh>
+</template>
+```
+
+这是纯 Web 组件，不调用 Tauri 或系统原生组件。组件自己提供一个滚动区域，使用方通过 `height` 或受约束的布局设置高度，默认插槽直接放内容。正文使用浏览器滚动，下拉只用动画帧更新 `transform`，不逐帧更新 Vue 状态或重建内容；JS 主线程被业务工作占满时，跟手仍可能延迟。
+
+`v-model` 是布尔加载状态；有效下拉释放或 ref 的 `refresh()` 先同步 `true`，下一微任务触发无参数的 `refresh` 事件，让同步完成的业务也能正确结束加载。业务在成功或失败的 `finally` 中恢复 `false`，组件随后收回。加载中或 `disabled` 时 `refresh()` 返回 `false` 且不重复触发；成功发起返回 `true`。外部直接设为 `true` 只展示加载状态，不触发请求。`disabled` 禁止新手势和主动刷新，不中止已经发出的业务请求。`label` 默认为“下拉刷新”，同时作为滚动区域的辅助名称。
+
+只有单指从组件顶部开始向下拖动才会接管；显示位移达到 64px 后松开触发，最大位移 112px，未达到阈值、取消或多指会收回。普通滚动、横向手势和输入控件保留自己的行为；内部滚动区仍能向上滚动时优先消费手势。需要完全独立的交互区域可加 `data-swipe-ignore`。本组件不在一次滚动手势中途到顶后继续接管，需抬手后再次下拉；鼠标与键盘用户可使用上述刷新按钮。
+
+原生 HTML 使用 `MyUI.create('PullRefresh', { value: false, onChange(value) {}, onRefresh() {} }, { slots: { default: content } })`，通过 `instance.update({ value: false })` 结束刷新，通过 `instance.exposed.refresh()` 主动发起。支持减少动态效果；卸载时释放手势监听、动画帧、计时器与尺寸观察器。完整 Vue 示例见 `example/src/pages/home/pull-refresh/index.vue`。
 
 ## 按压反馈与交互卡片
 

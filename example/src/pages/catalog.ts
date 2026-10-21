@@ -70,7 +70,8 @@ export const demoGroups: { title: string; items: DemoExample[] }[] = [
       { id: 'notice-steps', title: 'Notice / Steps', icon: 'bell', anchors: ['notice', 'steps'] },
       { id: 'popup', title: 'Popup / Drawer', icon: 'layer' },
       { id: 'menu', title: 'Menu 菜单', icon: 'grid' },
-      { id: 'touch-gestures', title: 'Touch 触摸滑动', icon: 'sliders' }
+      { id: 'touch-gestures', title: 'Touch 触摸滑动', icon: 'sliders' },
+      { id: 'pull-refresh', title: 'PullRefresh 下拉刷新', icon: 'cloud' }
     ]
   },
   {

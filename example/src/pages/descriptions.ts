@@ -25,6 +25,7 @@ export const demoDescriptions: Record<string, string> = {
   popup: '通过抽屉、选择面板与确认提示承载临时任务，关闭后回到当前页面。',
   menu: '将操作组织为普通菜单、右键菜单、多选列表或级联菜单。',
   'touch-gestures': '通过跟手滑动切换内容，体验拖动、回弹与滑动关闭。',
+  'pull-refresh': '在列表顶部下拉更新内容，体验回弹、加载与刷新后的消息变化。',
   scenarios: '将表单、加载状态与内容切换放进完整场景，观察组件之间的配合。',
   'native-html': '直接使用 CSS 与 JavaScript，在独立页面查看原生 HTML 组件示例。',
   'native-navigation': '跨页面读写同一份状态，并在返回时保留当前页面的交互位置。'
