@@ -324,7 +324,7 @@ pub fn run() {
         title: '03 · Page、导航栏与下拉刷新',
         paragraphs: [
           '先引入插件样式。Page 的 navbar、navigation 插槽分别放顶部 AppBar 和底部 BottomNavigation，默认插槽放正文。Android 使用原生导航与中间原 WebView 的三段布局；其他平台使用 Web 模拟相同结构。页面必须有确定高度，例如 100dvh。',
-          '设置 refreshable，绑定 v-model:refreshing，在 @refresh 中请求数据，并在 finally 中把 refreshing 设为 false。按钮可调用组件引用的 refresh()，共用同一套刷新流程。直接设置 refreshing=true 只显示指示器，不触发业务请求。'
+          '设置 refreshable，绑定 v-model:refreshing，在 @refresh 中请求数据，并在 finally 中把 refreshing 设为 false。Android 支持不松手从正文滚动接到下拉刷新，向上推回刷新器后继续滚动正文，松手超过阈值才刷新。按钮可调用组件引用的 refresh()，共用同一套刷新流程。直接设置 refreshing=true 只显示指示器，不触发业务请求。'
         ],
         files: [file('PageExample.vue', 'vue', pageCode)],
         link: { label: '体验 Page 与下拉刷新', path: '/page-refresh' }

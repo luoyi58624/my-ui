@@ -3,7 +3,7 @@ import { onBeforeUnmount, ref } from 'vue'
 import { Page, type NavigationAction, type PageHandle } from 'tauri-plugin-native-components/vue'
 import DemoAppBar from './DemoAppBar.vue'
 import { Button, popup } from '@my-ui/vue'
-import { closePage } from './navigation'
+import { closePage, isAndroidNative } from './navigation'
 import { useNativeBarsSuspended } from './native-components'
 
 const page = ref<PageHandle>(),
@@ -33,6 +33,7 @@ const actions: NavigationAction[] = [
     }
   }
 ]
+const continuousRefresh = isAndroidNative()
 let timer: ReturnType<typeof setTimeout> | undefined
 
 function refresh() {
@@ -110,7 +111,7 @@ onBeforeUnmount(() => {
           <span class="refresh-demo-dot" />
         </article>
       </div>
-      <p class="refresh-demo-hint">回到列表顶部，下拉查看新动态</p>
+      <p class="refresh-demo-hint">{{ continuousRefresh ? '滚到顶部继续下拉，向上推回后继续浏览' : '回到列表顶部，下拉查看新动态' }}</p>
     </div>
   </Page>
 </template>

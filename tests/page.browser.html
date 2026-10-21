@@ -19,7 +19,8 @@ if(params.has('frame')){
   const touch=(target,type,x,y)=>{const item=new win.Touch({identifier:1,target,clientX:x,clientY:y,pageX:x,pageY:y});const event=new win.TouchEvent(type,{bubbles:true,cancelable:true,touches:/end|cancel/.test(type)?[]:[item],targetTouches:/end|cancel/.test(type)?[]:[item],changedTouches:[item]});target.dispatchEvent(event);return event};
   const pull=async(selector='#pull-start',dx=0,dy=160,end='touchend')=>{const target=doc.querySelector(selector),p=point(selector);touch(target,'touchstart',p.x,p.y);const event=touch(target,'touchmove',p.x+dx,p.y+dy);touch(target,end,p.x+dx,p.y+dy);await pause(40);return event};
   const latest=()=>win.calls.filter(call=>call.args.surface.kind==='page').at(-1)?.args.surface;
-  const probe=selector=>{const p=point(selector),detail={id:latest().id,x:p.x,y:p.y,allowed:false};win.dispatchEvent(new win.CustomEvent('native-components-refresh-probe',{detail}));return detail.allowed};
+  const probeState=selector=>{const p=point(selector),detail={id:latest().id,x:p.x,y:p.y,allowed:false,atTop:false};win.dispatchEvent(new win.CustomEvent('native-components-refresh-probe',{detail}));return detail};
+  const probe=selector=>probeState(selector).allowed;
   const refreshEvent=(request,id=latest().id)=>win.dispatchEvent(new win.CustomEvent('native-components',{detail:{id,action:'refresh',request}}));
   const check=async(name,fn)=>{await fn();reports.push({name,passed:true})};
   document.querySelector('#run').onclick=async()=>{document.querySelector('#run').disabled=true;reports.length=0;try{
@@ -67,10 +68,15 @@ if(params.has('frame')){
       win.state.refreshing.value=false;await until(()=>latest().visible===false);
       win.state.refreshable.value=true;await until(()=>latest().visible&&latest().enabled);
     });
-    await check('原生开始手势时核对真实 DOM，到顶状态不依赖 WebView scrollY',async()=>{
-      assert(probe('#pull-start'),'顶部普通内容被拒绝');
+    await check('原生手势资格与到顶状态分离，起手未到顶也可继续交接',async()=>{
+      assert(probe('#pull-start')&&probeState('#pull-start').atTop&&latest().atTop,'顶部普通内容被拒绝或未同步边界');
       for(const selector of ['#input','#nested','#horizontal','#excluded'])assert(!probe(selector),'未排除 '+selector);
-      win.page.scrollTo({top:20});assert(!probe('#pull-start'),'滚动中误判到顶');win.page.scrollTo({top:0});
+      win.page.scrollTo({top:20});const moving=probeState('#pull-start');
+      assert(moving.allowed&&!moving.atTop,'未到顶时把整次手势拒绝，或误判为到顶');await until(()=>latest().atTop===false);
+      const calls=win.calls.filter(call=>call.args.surface.kind==='page').length;
+      for(const top of [40,60,80])win.page.scrollTo({top,behavior:'instant'});await pause(80);
+      assert(win.calls.filter(call=>call.args.surface.kind==='page').length===calls,'普通滚动逐帧更新了原生桥');
+      win.page.scrollTo({top:0});await until(()=>latest().atTop===true);
       win.state.disabled.value=true;await pause(40);assert(!probe('#pull-start'),'禁用时仍允许手势');win.state.disabled.value=false;await pause(40);
     });
     await check('原生刷新请求去重并回传确认，迟到或其他页面事件不触发业务',async()=>{

@@ -475,7 +475,11 @@ Android 示例的系统返回优先交给当前 WebView 的最上层弹层：级
 
 从 `tauri-plugin-native-components/vue` 引入 `AppBar`、`BottomNavigation`、`Tabs`，同时引入 `tauri-plugin-native-components/style.css`。组件按职责命名，通过 Vue 属性、事件和插槽封装平台能力。Android 使用 MaterialToolbar 和 BottomNavigationView，保留官方水波纹；Web 和其他桌面/移动平台显示 Vue 对应内容。CSS 提供尺寸和颜色，插件不生成示例主题。
 
-`Tabs` 同时管理底栏和各 Tab 的原生页面，`nativeView` 指向宿主注册的 Android 页面工厂。首页和原生目录使用当前 Tauri WebView，消息和我的使用 `DemoNativeTab.kt` 中的独立 Android View；原生目录里的 Tabs 示例同样展示原生页面切换与计数保留。详情页由同一个插件新建 Activity，各 Tab 不额外打开 Activity 或 WebView。Web/桌面的对应内容保留在 Vue 插槽中，三个独立组件示例按路由名称缓存，互不混用状态。
+`Tabs` 同时管理底栏和各 Tab 的原生页面，`nativeView` 指向宿主注册的 Android 页面工厂。首页和原生目录使用当前 Tauri WebView，消息使用 `DemoNativeTab.kt`，我的使用 `NativeProfileTab.kt` 中的 Android 个人中心；原生目录里的 Tabs 示例同样展示原生页面切换与计数保留。组件详情页由同一个插件新建 Activity，各 Tab 不额外打开 Activity 或 WebView。Web/桌面的对应内容保留在 Vue 插槽中，三个独立组件示例按路由名称缓存，互不混用状态。
+
+「我的 → 个人资料」通过普通 Android Intent 打开 `NativeProfileActivity`：使用 AppCompatActivity、MaterialToolbar、原生输入框与开关，页面完全由 Android View 绘制，不创建 Tauri 窗口或 WebView。保存昵称、签名与展示偏好后，个人中心通过 SharedPreferences 监听立即更新；系统返回取消未提交内容，输入草稿在 Activity 重建后保留。页面继承来源主题并处理系统栏、输入法安全区，返回交给系统，不注册常驻拦截。Web/桌面展示个人中心预览，并说明资料编辑需要在 Android 应用内体验。
+
+原生资料页的定向设备测试为 `:app:connectedArm64DebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.myui.example.NativeProfileActivityTest`，覆盖真实输入、空昵称校验、保存、开关、重建和取消，运行结束恢复原有资料。
 
 `DemoAppBar.vue` 将结构化标题、返回和主题操作接入原生导航头。放在 Page 的 navbar 插槽时，Android 使用原生页面壳管理导航，Web 弹层出现时保留同一导航实例；正文与弹层始终留在原 WebView 中。原生组件绑定发起调用的窗口，不借用 Tauri 的全局 Activity。
 
@@ -483,4 +487,6 @@ Android 示例的系统返回优先交给当前 WebView 的最上层弹层：级
 
 使用 `refreshable`、`v-model:refreshing`、`@refresh` 启用下拉刷新，业务在请求结束后将 refreshing 设为 false。Android 使用原生 SwipeRefreshLayout；Web 和原生接入失败时使用 Web 刷新。`suspended` 只暂停内容区原生控件和刷新，不卸载页面导航。
 
-「原生 → Page 页面与下拉刷新」打开独立的 `#/page-refresh` 动态列表：支持顶部下拉、导航栏刷新按钮、刷新完成后更新列表，以及弹窗期间暂停刷新。`Page` 的 `refresh()`、`scrollTo(options)`、`scrollElement` 可用于业务操作；返回原生目录后保留浏览位置。当前默认插槽承载 Web 内容，自有滚动容器和 iframe 不自动接管。目录与返回行为的定向检查为 `bun run test:browser native-catalog demo-layout navigation`。
+「原生 → Page 页面与下拉刷新」打开独立的 `#/page-refresh` 动态列表：Android 支持同一次拖动滚到顶部后继续拉出刷新器，向上推回刷新器后继续滚正文，松手超过阈值才刷新。也支持导航栏刷新按钮、刷新完成后更新列表，以及弹窗期间暂停刷新。`Page` 的 `refresh()`、`scrollTo(options)`、`scrollElement` 可用于业务操作；返回原生目录后保留浏览位置。当前默认插槽承载 Web 内容，自有滚动容器和 iframe 不自动接管。目录与返回行为的定向检查为 `bun run test:browser native-catalog demo-layout navigation`。
+
+安装 Android 调试包后，`node tests/android-refresh.device.mjs [--record]` 定向检查连续到顶、回推接力、反向拖动、多次交接及弹窗恢复后的快速拖动。手机需保持解锁、竖屏；回归只重启示例，不清除应用数据，截图、触摸记录和可选录屏保存在系统临时目录。
