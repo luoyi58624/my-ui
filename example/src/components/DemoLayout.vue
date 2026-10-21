@@ -60,6 +60,13 @@ watch(
   height: 100dvh;
   background: var(--background);
 }
+@media (prefers-reduced-motion: reduce) {
+  /* 0.01ms 也会延迟继承的 visibility，栏目返回时需立即显示并接受焦点。 */
+  .demo-app .nc-app-tab-view,
+  .demo-app .nc-app-tab-view * {
+    transition-duration: 0s !important;
+  }
+}
 .demo-tabs {
   height: 100%;
 }

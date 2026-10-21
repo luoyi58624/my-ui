@@ -323,6 +323,19 @@
                 '旧链接没有定位 ' + hash
               )
             }
+            // 冷启动时文档尚未加载，仍需等待内容挂载后定位旧锚点。
+            frame.src = '/tests/demo-layout.browser.html?frame=1#/slider-options'
+            await until(
+              () => frame.contentDocument?.querySelector('.demo-detail:not([inert]) #slider-options'),
+              '直达旧链接没有加载文档'
+            )
+            doc = frame.contentDocument
+            win = frame.contentWindow
+            await until(() => {
+              const target = doc.getElementById('slider-options').getBoundingClientRect(),
+                panel = page().getBoundingClientRect()
+              return target.top >= panel.top - 1 && target.top < panel.bottom
+            }, '首次加载没有定位旧锚点')
             await route('home')
           })
           await check('详情内弹窗优先关闭，页面与返回入口仍正常', async () => {

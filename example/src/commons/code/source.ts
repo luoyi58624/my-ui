@@ -165,7 +165,12 @@ function dedent(value: string) {
     .trim()
 }
 
-function setupCode(source: string, regions: string[], template: string) {
+function setupCode(
+  source: string,
+  regions: string[],
+  template: string,
+  related: readonly CodeFile[]
+) {
   let script = source.match(/<script setup(?:\s[^>]*)?>([\s\S]*?)<\/script>/)?.[1] ?? ''
   // 每个示例显式声明所需状态区，预览与代码始终取自同一份文件。
   script = script.replace(
@@ -192,6 +197,24 @@ function setupCode(source: string, regions: string[], template: string) {
     .replace(/\n{3,}/g, '\n\n')
   const used = script + '\n' + template
   const declarations = imports.flatMap(({ bindings, quote, path }) => {
+    // 复制代码以展示的文件名组织目录，不能保留文档页面自身的多级相对路径。
+    if (path.startsWith('.')) {
+      const basename = path
+        .split('/')
+        .at(-1)!
+        .replace(/\.(?:ts|js)$/, '')
+      const companion = related.find(
+        (file) =>
+          file.name
+            .split('/')
+            .at(-1)!
+            .replace(/\.(?:ts|js)$/, '') === basename
+      )
+      if (companion)
+        path =
+          './' +
+          (/\.[^/]+$/.test(path) ? companion.name : companion.name.replace(/\.(?:ts|js)$/, ''))
+    }
     const matches = (binding: string) => {
       const name = binding
         .trim()
@@ -258,7 +281,7 @@ export function previewFiles(
         if (!closing) throw new Error('示例预览没有结束标记：' + name)
         const end = offset + closing.index
         let template = dedent(source.slice(offset, end))
-        let script = setupCode(source, setup.split(/\s+/), template)
+        let script = setupCode(source, setup.split(/\s+/), template, dependencies)
         // 页面级反馈宿主不属于预览框，复制独立示例时补齐必要挂载点。
         if (/\bconst toast\b/.test(script) && !/<Toast\b/.test(template))
           template += '\n<Toast ref="toast" />'
@@ -280,9 +303,11 @@ export function previewFiles(
       language: 'css',
       source: async () => {
         const source = await read()
-        return [...source.matchAll(/<style(?:\s[^>]*)?>([\s\S]*?)<\/style>/g)]
-          .map((match) => match[1]!.trim())
-          .join('\n\n')
+        return (
+          [...source.matchAll(/<style(?:\s[^>]*)?>([\s\S]*?)<\/style>/g)]
+            .map((match) => match[1]!.trim())
+            .join('\n\n') || '/* 此示例使用组件的默认样式，无需额外 CSS。 */'
+        )
       }
     },
     ...dependencies

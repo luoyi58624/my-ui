@@ -142,6 +142,7 @@
             assert(
               buttonCode.includes('notify') &&
                 buttonCode.includes('<Toast') &&
+                !buttonCode.includes('notifyKey') &&
                 !buttonCode.includes('liked') &&
                 !buttonCode.includes('openSheet'),
               '基础按钮混入其他交互'
@@ -162,6 +163,18 @@
               buttonCode.includes('\n    <Button') && !buttonCode.includes('</Button><Button'),
               '代码没有正常缩进'
             )
+            const icons = (await previewGroups('button'))[1],
+              shared = (await previewGroups('native-navigation'))[0]
+            assert(
+              (await read(icons)).includes("from './components/SharePanel.vue'") &&
+                icons.files.some(file => file.name === 'components/SharePanel.vue'),
+              '拆分后的示例没有按展示目录导入分享面板'
+            )
+            assert(
+              (await read(shared)).includes("from './commons/navigation'") &&
+                shared.files.some(file => file.name === 'commons/navigation.ts'),
+              '共享状态示例没有按展示目录导入导航依赖'
+            )
           })
           await check('展开、切换文件与收起代码不重建交互控件', async () => {
             await route('input')
@@ -174,7 +187,7 @@
             await until(() => fold.querySelector('code'))
             const tabs = fold.querySelectorAll('.demo-code-file-list button')
             tabs[1].click()
-            await until(() => fold.querySelector('code')?.textContent.includes('.btn-row'))
+            await until(() => fold.querySelector('code')?.textContent.includes('.field-group'))
             tabs[0].click()
             await until(() => fold.querySelector('code')?.textContent.includes('<Input'))
             fold.querySelector('summary').click()

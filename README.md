@@ -165,7 +165,7 @@ Notice 的 `type` 为 `info` / `success` / `warning` / `error`，支持 `title`�
 
 Steps 的 `options` 使用 `{ label, description?, icon?, disabled? }`，`value` / `v-model` 是从零开始的当前索引，等于总数表示全部完成；`status="error"` 将当前步骤标为失败，`vertical` 使用纵向布局。默认只展示进度；开启 `interactive` 后允许点击与方向键切换，Home / End 到首尾，跳过禁用项，整组只有一个 Tab 入口；`disabled` 禁止所有操作。CSS 变量 `--step-size` 默认 32px。
 
-四个组件的原生入口同样为 `MyUI.create('Upload', props)`、`MyUI.mount('#host', 'Upload', props)` 或 `data-my`；Upload / Notice / Steps 的双向值使用 `value` 与 `onChange`，AppBar 的返回使用 `onBack`。完整原生写法见 `example/native.html`，Vue 示例在 `example/src/demo/UploadShowcase.vue`、`AppBarShowcase.vue`、`NoticeStepsShowcase.vue`。
+四个组件的原生入口同样为 `MyUI.create('Upload', props)`、`MyUI.mount('#host', 'Upload', props)` 或 `data-my`；Upload / Notice / Steps 的双向值使用 `value` 与 `onChange`，AppBar 的返回使用 `onBack`。完整原生写法见 `example/native.html`，Vue 示例分别在 `example/src/pages/home/upload/index.vue`、`example/src/pages/home/app-bar/index.vue`、`example/src/pages/home/notice-steps/index.vue`。
 
 ## Image 图片
 
@@ -203,7 +203,7 @@ Steps 的 `options` 使用 `{ label, description?, icon?, disabled? }`，`value`
 
 原生用法为 `MyUI.mount('#picker', 'Picker', { value, options, onChange(value) {} })`，或使用 `data-my="Picker"`。Vue 可通过 ref 的 `focus()` 聚焦首个可用列。CSS 变量为 `--picker-item-height`（默认 44px）、`--picker-height`（默认 220px）和 `--picker-radius`；颜色沿用现有主题变量。
 
-Picker 可直接嵌入页面，也可放入 Sheet。面板中使用一份临时值，确认后写回，取消时丢弃；示例见 `example/src/demo/PickerShowcase.vue`。
+Picker 可直接嵌入页面，也可放入 Sheet。面板中使用一份临时值，确认后写回，取消时丢弃；示例见 `example/src/pages/home/picker/index.vue`。
 
 ## DatePicker / TimePicker / Calendar
 
@@ -237,7 +237,7 @@ MyUI.mount('#date', 'DatePicker', { value: '2026-10-19' });
 MyUI.mount('#time', 'TimePicker', { value: '09:30', minuteStep: 15 });
 ```
 
-原生声明式入口同样支持 `data-my="Calendar"` / `DatePicker` / `TimePicker` 和 JSON `data-options`。DatePicker / TimePicker 沿用 Picker 的 CSS 变量；Calendar 提供 `--calendar-width`（默认 360px）和 `--calendar-day-size`（默认 36px），颜色只沿用 CSS 主题变量。示例见 `example/src/demo/DateTimeShowcase.vue` 与 `example/native.html`。
+原生声明式入口同样支持 `data-my="Calendar"` / `DatePicker` / `TimePicker` 和 JSON `data-options`。DatePicker / TimePicker 沿用 Picker 的 CSS 变量；Calendar 提供 `--calendar-width`（默认 360px）和 `--calendar-day-size`（默认 36px），颜色只沿用 CSS 主题变量。示例见 `example/src/pages/home/date-time-picker/index.vue` 与 `example/native.html`。
 
 ## API 弹层
 
@@ -278,7 +278,7 @@ Vue 从 `./my-ui/vue` 导入 `popup`，`content` 返回 `h()` 构建的 Vue 内�
 
 明暗样式通过 `document.documentElement.dataset.theme = 'dark'` 切换，浅色使用 `'light'`。颜色、阴影、字重和背景模糊都可直接覆写 CSS 变量，组件 JS 不会应用配色或覆盖这些值。
 
-展示页的 14 组主色、3 组层级风格、系统外观监听与主题编辑逻辑位于 `example/src/theme/index.js`，由 `example/src/demo/ThemeSettings.vue` 使用；它们不属于 `MyUI` 或 Vue 组件入口。用户只复制 `packages/core/` 和 `packages/vue/` 时，不会带入这套示例配置。
+展示页的 14 组主色、3 组层级风格、系统外观监听与主题编辑逻辑位于 `example/src/commons/theme/index.js`，由 `example/src/components/ThemeSettings.vue` 使用；它们不属于 `MyUI` 或 Vue 组件入口。用户只复制 `packages/core/` 和 `packages/vue/` 时，不会带入这套示例配置。
 
 ## Vue 全局共享状态
 
@@ -328,7 +328,7 @@ await storage.flush?.()
 
 ## 本地展示与验证
 
-首页的“完整交互示例”入口打开 `#/showcase`，按需加载旧版整页展示。`ShowcaseLayout.vue` 保留原来的头图、分类导航和连续布局，与独立示例共用 `App.vue` 的组件插槽及交互；返回目录保留滚动与入口焦点，离开整页时暂停播放和模拟上传。目录在桌面与手机上统一使用移动端单列布局。
+首页的“完整交互示例”入口打开 `#/showcase`，按需加载整页展示。`example/src/components/ShowcaseLayout.vue` 保留头图、分类导航和连续布局，通过 `example/src/pages/home/index.ts` 与 `example/src/pages/native/index.ts` 的文档注册表复用独立示例；返回目录保留滚动与入口焦点，离开整页时暂停播放和模拟上传。目录在桌面与手机上统一使用移动端单列布局。
 
 ```powershell
 bun install
@@ -336,11 +336,11 @@ bun run dev
 bun run build
 ```
 
-开发地址默认 `http://127.0.0.1:5178/`，纯 HTML 入口为 `/native.html`。示例采用顶部导航与“首页、原生、消息、我的”四个底部 Tab。首页按用途展示普通组件；“原生”集中展示 AppBar、BottomNavigation、Tabs、Page 下拉刷新和原生页面与共享状态；消息和我的保留 Demo 占位页。Web 和桌面 App 使用 Vue Router 在当前窗口导航，Android 的每个列表入口创建独立 Activity。返回保留所属目录的滚动与入口焦点，底部同级切换不增加返回历史，旧 `#/discover` 链接进入原生目录。
+开发地址默认 `http://127.0.0.1:5178/`，纯 HTML 入口为 `/native.html`。示例采用顶部导航与“首页、原生、消息、我的”四个底部 Tab。首页按用途展示普通组件；“原生”集中展示 App、AppBar、Tabbar、Tabs、Page 下拉刷新和原生页面与共享状态；消息保留 Demo 占位页，我的展示个人中心。Web 和桌面 App 使用 Vue Router 在当前窗口导航，Android 的每个列表入口创建独立 Activity。返回保留所属目录的滚动与入口焦点，底部同级切换不增加返回历史，旧 `#/discover` 链接进入原生目录。
 
-`example/src/router.ts` 定义 Vue Router，`DemoRoot.vue` 使用 KeepAlive 保留页面和统一弹层宿主；`DemoLayout.vue` 负责目录、安全区与示例展示，`demo/catalog.ts` 维护目录数据，`App.vue` 用同名插槽组织内容。`navigation.ts` 接入 `tauri-plugin-native-components/router`，组件库不依赖 Tauri。Android 子页地址为 `index.html?pageWindow=1#/example/组件标识`；旧的 `#combobox`、`#slider-options` 等链接仍可直接定位。原生 Activity 与共享状态示例位于首页的“完整示例”分组。CSS 保存后即时更新；修改 JS 核心会完整刷新示例，避免旧实例残留。构建结果同时提供 Vue 页面、原生页面和原样的 CSS/JS。
+`example/src/router.ts` 定义 Vue Router，`example/src/App.vue` 提供统一弹层和提示宿主，`example/src/pages/native/app/Root.vue` 使用 KeepAlive 保留页面；`example/src/components/DemoLayout.vue` 负责应用容器和栏目导航。`example/src/pages/catalog.ts` 维护目录数据，各文档按目录标识放在 `pages/home/` 或 `pages/native/` 下，通过文档注册表加载；四个栏目的内容也分别位于对应页面目录。公共逻辑集中在 `example/src/commons/`，其中 `navigation.ts` 接入 `tauri-plugin-native-components/router`，`notify.ts` 提供页面共用的提示入口；组件库不依赖 Tauri。Android 子页地址为 `index.html?pageWindow=1#/example/组件标识`；旧的 `#combobox`、`#slider-options` 等链接仍可直接定位。原生 Activity 与共享状态示例位于“原生”目录的“页面与共享”分组。CSS 保存后即时更新；修改 JS 核心会完整刷新示例，避免旧实例残留。构建结果同时提供 Vue 页面、原生页面和原样的 CSS/JS。
 
-主题偏好由 `stores/theme.ts` 的共享 Pinia store 管理，明暗模式、配色和字重均跨窗口持久化同步；任意窗口修改后，其他窗口与新窗口都会应用。旧的 `my-ui:theme` 设置继续作为迁移来源和首帧快照。`native-appearance.ts` 同步实际明暗主题到 Android 系统栏文字/图标及桌面窗口装饰，主页面和子页面使用相同逻辑。纯 HTML 在 App 内通过独立的 `native-theme.js` 接入同一存储，不加载 Vue；普通离线 HTML 仍只依赖组件 CSS/JS。
+主题偏好由 `example/src/commons/state/theme.ts` 的共享 Pinia store 管理，明暗模式、配色和字重均跨窗口持久化同步；任意窗口修改后，其他窗口与新窗口都会应用。旧的 `my-ui:theme` 设置继续作为迁移来源和首帧快照。`example/src/commons/native-appearance.ts` 同步实际明暗主题到 Android 系统栏文字/图标及桌面窗口装饰，主页面和子页面使用相同逻辑。纯 HTML 在 App 内通过独立的 `native-theme.js` 接入同一存储，不加载 Vue；普通离线 HTML 仍只依赖组件 CSS/JS。
 
 页面头部的普通脚本 `public/theme-init.js` 在样式和主模块加载前恢复模式与已解析的主题变量；新原生窗口同时继承父页的背景和实际模式。Android 的 Activity、WebView 和网页使用一致的加载背景，避免新页先亮后暗。
 
@@ -367,7 +367,7 @@ bun run test:browser demo-layout
 
 ## PC 桌面应用
 
-桌面示例使用 Tauri 2，原生工程放在 `example/src-tauri/`，继续属于现有示例 workspace。前端仍是 `example/src/main.ts` → `App.vue` → `demo/`，共用 `@my-ui/vue`、原生 CSS/JS 和示例主题。
+桌面示例使用 Tauri 2，原生工程放在 `example/src-tauri/`，继续属于现有示例 workspace。前端由 `example/src/main.ts` 启动 `example/src/App.vue`，再通过路由加载 `example/src/pages/`，共用 `@my-ui/vue`、原生 CSS/JS 和示例主题。
 
 ```powershell
 bun install
@@ -416,7 +416,7 @@ bun run install:android ./example/src-tauri/gen/android/app/build/outputs/apk/un
 
 插件移植自 `android_system_font_weight`，此次迁移保持采集和探针算法不变。Rust 只注册桥接，Kotlin 在后台线程采集、解析，前端启动只调用一次 `getWght`，`getRawData` 留作诊断。OPPO 系采用通过校验的探针，其他厂商的支持边界与原插件相同，不把 `fontWeightAdjustment` 或厂商滑杆编码当作绝对字重。
 
-`example/src/font-weight.ts` 管理缓存及系统跟随：启动与返回前台时自动同步，只有实际修改滑块数值才进入手动模式，点「恢复字重」重新采集。异步结果不会覆盖较新的手动设置；读取失败保留当前值，不伪装成成功读取到 400。主题设置统一应用 `settings.fontWeight`，正文、操作文字、次标题和标题保留原有层级。Tauri 权限使用 `[default]` 集合，仅向 Android 首页与原生示例子页授权；编译缓存、Tauri API 副本与自动生成的权限文件均不提交。
+`example/src/commons/font-weight.ts` 管理缓存及系统跟随：启动与返回前台时自动同步，只有实际修改滑块数值才进入手动模式，点「恢复字重」重新采集。异步结果不会覆盖较新的手动设置；读取失败保留当前值，不伪装成成功读取到 400。主题设置统一应用 `settings.fontWeight`，正文、操作文字、次标题和标题保留原有层级。Tauri 权限使用 `[default]` 集合，仅向 Android 首页与原生示例子页授权；编译缓存、Tauri API 副本与自动生成的权限文件均不提交。
 
 **移动端适配**（只写在示例层，组件库保持中立）：`example/src/mobile.ts` 按 UA 加 `my-mobile-native` 类并拦截长按选中与系统 callout（输入框、可复制文本除外）；`mobile.css` 处理 edge-to-edge 下的状态栏与手势条安全区；viewport 使用 `viewport-fit=cover`。字重统一走主题系统的 `settings.fontWeight`，不另设一套变量。
 

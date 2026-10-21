@@ -28,20 +28,24 @@ const updateVisibility = () => {
 let first = true
 const { scroller, remember } = useDemoScroll(() => {
   title.value?.focus()
+  locateAnchor()
+})
+function locateAnchor() {
+  if (!first || !active.value) return
   const anchor = route.path.replace(/^\//, '')
-  if (first && item.anchors?.includes(anchor)) {
+  if (item.anchors?.includes(anchor)) {
     const target = scroller.value?.querySelector<HTMLElement>('[id="' + anchor + '"]')
-    if (target && scroller.value) {
-      scroller.value.scrollTop =
-        target.getBoundingClientRect().top -
-        scroller.value.getBoundingClientRect().top +
-        scroller.value.scrollTop -
-        20
-      remember()
-    }
+    // 异步文档挂载后再定位，首次直达旧链接也能滚动到对应示例。
+    if (!target || !scroller.value) return
+    scroller.value.scrollTop =
+      target.getBoundingClientRect().top -
+      scroller.value.getBoundingClientRect().top +
+      scroller.value.scrollTop -
+      20
+    remember()
   }
   first = false
-})
+}
 function back() {
   void closePage('/' + item.catalog).catch(layout.report)
 }
@@ -86,6 +90,7 @@ onBeforeUnmount(() => document.removeEventListener('visibilitychange', updateVis
             ><component
               :is="content"
               v-bind="id === 'primitives' ? { active: active && visible } : {}"
+              @vue:mounted="locateAnchor"
           /></DemoDocument>
         </div>
       </section>

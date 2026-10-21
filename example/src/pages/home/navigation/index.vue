@@ -24,5 +24,3 @@ const navOptions: Option[] = [
     <Navigation v-model="navigation" :options="navOptions" />
   </DemoExample>
 </template>
-
-<style scoped></style>
