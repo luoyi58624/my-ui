@@ -4,9 +4,7 @@ import type { AppPage } from 'tauri-plugin-native-components/vue'
 export const pages: AppPage[] = [
   {
     name: 'app-detail',
-    path: '/native/app-demo/detail/:id',
+    path: '/native/app-demo/detail',
     component: () => import('./DetailPage.vue'),
-    props: true,
-    meta: { title: '记录详情' },
   },
 ]

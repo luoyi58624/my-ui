@@ -48,6 +48,8 @@ if (mode) {
             const source = await file.source();
             assert(source.length > 50 && !source.includes('<iframe') && !source.includes('<DemoExample'), '展示了文档外壳而非实际源码');
             assert(!source.includes('#navbar'), 'App 示例仍使用 navbar 插槽');
+            assert(!/<style\b|\bstyle=|style\.css/.test(source), 'App 用法代码混入了 CSS');
+            assert(!/\bdraft\b|\bcount\b|<Card\b|<Input\b/.test(source), 'App 用法代码混入了业务演示');
           }
           block.querySelector('summary').click();
           await until(() => block.querySelector('code'));
@@ -56,20 +58,21 @@ if (mode) {
         }
         assert(root().querySelectorAll('.doc-outline a').length === 2, '文档目录没有分别定位两个示例');
       });
-      await check('内嵌预览运行真实 App，切换和详情返回保留草稿、计数与滚动', async () => {
+      await check('最小预览支持 Tab 切换与独立页往返，保留容器和页面实例', async () => {
         const preview = root().querySelector('iframe');
-        await until(() => preview.contentDocument?.querySelector('[data-app-example]'));
-        const pd = preview.contentDocument, pw = preview.contentWindow;
-        const panel = pd.querySelector('[data-app-tab="home"]'), input = panel.querySelector('input');
-        input.value = '真实示例的草稿'; input.dispatchEvent(new pw.Event('input', { bubbles: true }));
-        button(panel, '记录次数').click(); panel.scrollTop = 170; await pause(30);
-        pd.querySelector('[aria-label="消息"]').click(); await pause(60);
-        pd.querySelector('[aria-label="日常"]').click(); await pause(60);
-        assert(pd.querySelector('[data-app-tab="home"]') === panel && panel.scrollTop === 170, '实际示例切换重建或重置页面');
-        button(panel, '打开记录详情').click(); await until(() => pd.querySelector('[data-app-detail]'));
-        assert(pd.querySelector('.nc-app-tabbar').hidden && pd.querySelector('[data-app-detail] h1').textContent.includes('2'), '实际示例没有接入独立页面参数');
-        pd.querySelector('[aria-label="返回 App"]').click(); await until(() => !pd.querySelector('[data-app-detail]')); await pause(60);
-        assert(input.value === '真实示例的草稿' && panel.scrollTop === 170 && button(panel, '记录次数').textContent.includes('1'), '实际示例返回丢失页面状态');
+        await until(() => preview.contentDocument?.querySelector('.nc-app'));
+        const pd = preview.contentDocument, app = pd.querySelector('.nc-app'), bar = pd.querySelector('.nc-app-tabbar'), home = pd.querySelector('[data-app-tab="home"]');
+        pd.querySelector('[aria-label="我的"]').click(); await pause(60);
+        const profile = pd.querySelector('[data-app-tab="profile"]');
+        assert(profile.querySelector('h2').textContent === '我的', '底栏没有切换到对应页面');
+        pd.querySelector('[aria-label="首页"]').click(); await pause(60);
+        assert(pd.querySelector('[data-app-tab="home"]') === home, 'Tab 切换重建了页面');
+        pd.querySelector('[aria-label="我的"]').click(); await pause(60);
+        button(profile, '打开独立页面').click(); await until(() => pd.querySelector('.nc-app-route-view'));
+        assert(bar.hidden && pd.querySelector('.nc-app-route-view h2').textContent === '独立页面', '独立页没有打开或底栏没有隐藏');
+        button(pd.querySelector('.nc-app-route-view'), '返回').click(); await until(() => !pd.querySelector('.nc-app-route-view'));
+        assert(pd.querySelector('.nc-app') === app && pd.querySelector('.nc-app-tabbar') === bar && !bar.hidden, '返回重建了容器或底栏');
+        assert(pd.querySelector('.nc-app-view-active') === profile, '返回没有保留当前 Tab');
       });
       await check('320、390 与桌面宽度下文档和 App 均不溢出，独立代码页展示两组代码', async () => {
         for (const width of [320, 390, 1463]) {
@@ -91,9 +94,9 @@ if (mode) {
         await until(() => win.calls.some(call => call.command === 'plugin:native-components|push'));
         assert(win.calls.find(call => call.command === 'plugin:native-components|push').args.path.endsWith('#/native/app-demo'), '完整 App 示例目标错误');
         assert(win.location.hash === '#/example/native-app', '打开原生页面改变了文档路由');
-        button(root(), '打开详情页').click();
+        button(root(), '打开独立页面').click();
         await until(() => win.calls.filter(call => call.command === 'plugin:native-components|push').length === 2);
-        assert(win.calls.filter(call => call.command === 'plugin:native-components|push').at(-1).args.path.endsWith('#/native/app-demo/detail/101'), '直达详情示例目标错误');
+        assert(win.calls.filter(call => call.command === 'plugin:native-components|push').at(-1).args.path.endsWith('#/native/app-demo/detail'), '独立页面示例目标错误');
       });
       document.querySelector('#result').textContent = JSON.stringify({ passed: reports.length, total: 4, reports }, null, 2);
     } catch (error) {

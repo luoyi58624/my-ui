@@ -21,23 +21,22 @@ async function open(path: string) {
 
 <template>
   <div class="app-documentation">
-    <DemoExample name="app-container" source="NativeAppShowcase.vue" title="App 容器与底部 TabBar" description="通过 tabs 配置页面组件，通过 tabbar 插槽提供底栏。切换栏目后，输入、计数和滚动位置各自保留。">
+    <DemoExample name="app-container" source="NativeAppShowcase.vue" title="App 容器与底部 TabBar" description="tabs 配置页面，tabbar 插槽提供底栏，通过 value 对应并切换。">
       <div v-if="native" class="app-native-preview">
         <span class="app-preview-icon"><Icon name="layer" /></span>
-        <h3>一个 App，三个常驻栏目</h3>
-        <p>在完整页面中体验原生底栏，以及栏目切换后的状态保留。</p>
+        <h3>App 与底部导航</h3>
+        <p>两个 Tab 和一个独立页面。</p>
         <Button :loading="opening" @click="open('/native/app-demo')">打开 App 示例 <Icon name="arrow-right" /></Button>
       </div>
       <iframe v-else :src="preview.href" title="App 容器交互预览" class="app-live-preview" loading="lazy" />
-      <p class="app-preview-note">先写下一份草稿，再切换栏目；打开记录详情后返回，继续刚才的操作。</p>
     </DemoExample>
     <DemoExample name="app-pages" source="NativeAppShowcase.vue" title="独立页面与返回" description="pages 沿用 Vue Router 的路由配置，在启动时注册一次。页面内部通过 useApp().push() 打开详情，通过 back() 返回。">
       <div class="app-route-preview">
         <span class="app-route-mark"><Icon name="file" /></span>
-        <div><h3>/native/app-demo/detail/:id</h3><p>独立页不占用 TabBar 选项，打开时隐藏底栏。</p></div>
-        <Button variant="outline" :loading="opening" @click="open('/native/app-demo/detail/101')">打开详情页</Button>
+        <div><h3>/native/app-demo/detail</h3><p>打开独立页时隐藏底栏，返回后恢复当前 Tab。</p></div>
+        <Button variant="outline" :loading="opening" @click="open('/native/app-demo/detail')">打开独立页面</Button>
       </div>
-      <p class="app-preview-note">同一份 pages 同时传给 App 和路由配置。外层 RouterView 以父路由作为缓存标识，避免打开子页时重新创建 App。</p>
+      <p class="app-preview-note">同一份 pages 同时传给 App 和 Vue Router。</p>
     </DemoExample>
     <section class="app-api" aria-label="App API">
       <h2>配置与插槽</h2>
@@ -56,7 +55,7 @@ async function open(path: string) {
 <style scoped>
 .app-documentation { display: grid; gap: 36px; }
 .app-documentation :deep(.doc-example + .doc-example) { margin-top: 0; }
-.app-live-preview { box-sizing: border-box; display: block; width: min(100%, 390px); height: 540px; margin: 0 auto; border: 1px solid var(--border); border-radius: 18px; background: var(--background); }
+.app-live-preview { box-sizing: border-box; display: block; width: min(100%, 390px); height: 320px; margin: 0 auto; border: 1px solid var(--border); border-radius: 18px; background: var(--background); }
 .app-preview-note, .app-api > p { margin: 20px 0 0; color: var(--text-secondary); font-size: 13px; line-height: 1.9; }
 .app-native-preview { padding: 14px 0; text-align: center; }
 .app-preview-icon { display: inline-grid; place-items: center; width: 56px; height: 56px; border-radius: 18px; background: var(--fill); color: var(--primary); }
@@ -77,5 +76,5 @@ async function open(path: string) {
 .app-api th { background: var(--fill); font-weight: var(--font-weight-action, 600); }
 .app-api td:first-child { white-space: nowrap; color: var(--primary); }
 .app-api tr:last-child td { border-bottom: 0; }
-@media (max-width: 600px) { .app-live-preview { height: 460px; border-radius: 12px; } .app-api th, .app-api td { padding: 10px 12px; } }
+@media (max-width: 600px) { .app-live-preview { border-radius: 12px; } .app-api th, .app-api td { padding: 10px 12px; } }
 </style>
