@@ -1788,7 +1788,8 @@
       const stopGesture = () => {
         const previous = session; session = undefined;
         previous?.stop();
-        if (previous?.active) suppressUntil = performance.now() + 450;
+        c.viewport.style.overflowY = "";
+        if (previous?.pulled) suppressUntil = performance.now() + 450;
         return previous;
       };
       const cancel = (immediate = false) => {
@@ -1812,15 +1813,28 @@
         if (!touch) { cancel(); return; }
         const x = touch.clientX - current.x, y = touch.clientY - current.y;
         if (!current.active) {
-          if (Math.max(Math.abs(x), Math.abs(y)) < 6) return;
-          if (y <= 0 || y < Math.abs(x) * 1.15 || c.viewport.scrollTop > 1 || !event.cancelable) { stopGesture(); return; }
-          current.active = true; stopMotion();
+          if (!current.vertical) {
+            if (Math.max(Math.abs(x), Math.abs(y)) < 6) return;
+            if (Math.abs(y) < Math.abs(x) * 1.15) { stopGesture(); return; }
+            current.vertical = true;
+          }
+          // 浏览器继续消费正文滚动，到顶后才建立下拉原点，不能丢弃这次触摸。
+          if (c.viewport.scrollTop > 1) { current.top = undefined; return; }
+          if (current.top === undefined) current.top = touch.clientY;
+          if (touch.clientY <= current.top) { current.top = touch.clientY; return; }
+          current.active = current.pulled = true; stopMotion();
+          // 原生滚动开始后 move 可能不可取消；仅在拉出区域期间禁止用户滚动。
+          c.viewport.style.overflowY = "hidden";
         }
-        if (!event.cancelable) { cancel(); return; }
-        event.preventDefault();
+        const distance = Math.max(0, touch.clientY - current.top);
+        if (distance === 0) {
+          // 回拉收完后立即归还同一次手势，正文仍由浏览器提供滚动与惯性。
+          current.active = false; current.top = touch.clientY;
+          c.viewport.style.overflowY = "";
+        }
         // 先半速跟手，越过阈值后进一步增加阻力；不读取布局、不更新 Vue。
-        offset = Math.min(maximum, Math.max(0, y <= threshold * 2 ? y / 2 : threshold + (y - threshold * 2) / 4));
-        phase = offset >= threshold ? "ready" : "pulling";
+        offset = Math.min(maximum, distance <= threshold * 2 ? distance / 2 : threshold + (distance - threshold * 2) / 4);
+        phase = offset >= threshold ? "ready" : offset > 0 ? "pulling" : "idle";
         draw();
       };
       const end = event => {
@@ -1833,20 +1847,24 @@
       };
       c.on(c.viewport, "touchstart", event => {
         cancel(); suppressUntil = 0;
-        if (c.p.disabled || c.p.value || phase !== "idle" || event.touches.length !== 1 || event.defaultPrevented || c.viewport.scrollTop > 1 || c.element.closest("[inert]")) return;
+        if (c.p.disabled || c.p.value || phase !== "idle" || event.touches.length !== 1 || event.defaultPrevented || c.element.closest("[inert]")) return;
         const target = event.target instanceof Element ? event.target : undefined;
-        if (!target || target.closest(".my-pull-refresh") !== c.element || target.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="slider"],video,audio,[data-swipe-ignore]') || canScrollGesture(target, c.viewport, "y", 1)) return;
+        if (!target || target.closest(".my-pull-refresh") !== c.element || target.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="slider"],video,audio,[data-swipe-ignore]')) return;
+        // 内部滚动容器整次手势归自己所有，避免其到顶时误拉动外层刷新区域。
+        for (let node = target; node && node !== c.viewport; node = node.parentElement) {
+          if (node.scrollHeight > node.clientHeight + 1 && /(auto|scroll)/.test(getComputedStyle(node).overflowY)) return;
+        }
         const touch = event.touches[0];
         const interrupt = event => { if (event.touches.length !== 1) cancel(); };
         const canceled = () => cancel();
-        session = { id: touch.identifier, x: touch.clientX, y: touch.clientY, active: false, stop: () => {
+        session = { id: touch.identifier, x: touch.clientX, y: touch.clientY, top: c.viewport.scrollTop <= 1 ? touch.clientY : undefined, vertical: false, active: false, pulled: false, stop: () => {
           c.viewport.removeEventListener("touchmove", move);
           document.removeEventListener("touchend", end);
           document.removeEventListener("touchcancel", canceled);
           document.removeEventListener("touchstart", interrupt, true);
         } };
-        // 只有从顶部起手的候选手势需要等待 JS；普通滚动没有阻塞式 move 监听。
-        c.viewport.addEventListener("touchmove", move, { passive: false });
+        // 全程被动观察，正文滚动无需等待 JS；下拉位移仍只在动画帧内更新。
+        c.viewport.addEventListener("touchmove", move, { passive: true });
         document.addEventListener("touchend", end, { passive: true });
         document.addEventListener("touchcancel", canceled, { passive: true });
         document.addEventListener("touchstart", interrupt, { passive: true, capture: true });
@@ -2908,6 +2926,16 @@
   register("Navigation", {
     tag: "nav",
     init: (c) => optionsInit(c, "navigation"),
+    paint: (c) => optionsPaint(c, "navigation"),
+  });
+  // 底部栏目与 Navigation 共用选择逻辑，只改变外观，不管理路由或页面。
+  register("Tabbar", {
+    tag: "nav",
+    defaults: { label: "主导航" },
+    init(c) {
+      optionsInit(c, "navigation");
+      c.element.classList.add("my-tabbar");
+    },
     paint: (c) => optionsPaint(c, "navigation"),
   });
   register("Stepper", {

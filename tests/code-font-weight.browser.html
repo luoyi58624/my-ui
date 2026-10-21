@@ -254,10 +254,10 @@
                 ['/guide/quick-start', '[data-guide="quick-start"]'],
                 ['/guide/native', '[data-guide="native"]'],
                 ['/code/button', '.code-page'],
-                ['/native/app-bar', '[data-component-demo="app-bar"]'],
-                ['/native/tabbar', '[data-component-demo="tabbar"]'],
-                ['/native/tabs', '[data-component-demo="tabs"]'],
-                ['/page-refresh', '.refresh-demo'],
+                ['/example/app-bar', '[data-demo-page="example/app-bar"]'],
+                ['/example/tabbar', '[data-demo-page="example/tabbar"]'],
+                ['/example/navigation', '[data-demo-page="example/navigation"]'],
+                ['/example/pull-refresh', '[data-demo-page="example/pull-refresh"]'],
                 ['/showcase', '.showcase-layout'],
                 ['/html', '.html-page'],
                 ['/shared-state', '.native-page']
@@ -267,16 +267,16 @@
                 assert(!visible('[aria-label="主题定制"]'), '子页仍有设置图标：' + path)
                 assert(!visible('[aria-label^="切换到"]'), '子页仍有主题切换图标：' + path)
                 assert(!visible('[aria-label="查看代码"]'), '子页仍有代码图标：' + path)
-                const header = visible('.demo-native-header')
+                const header = visible('.demo-header')
                 assert(header, '没有使用统一导航组件：' + path)
-                const bar = header.querySelector('.nc-app-bar'),
-                  button = bar.querySelector('.nc-leading button'),
+                const bar = header.querySelector('.my-app-bar'),
+                  button = bar.querySelector('.my-app-bar-back'),
                   bounds = bar.getBoundingClientRect(),
                   outer = header.getBoundingClientRect(),
-                  title = bar.querySelector('.nc-heading').getBoundingClientRect(),
+                  title = bar.querySelector('.my-app-bar-title').getBoundingClientRect(),
                   icon = button.querySelector('svg')
                 assert(
-                  bounds.height === 56 && button.getBoundingClientRect().width === 44,
+                  bounds.height === 60 && button.getBoundingClientRect().width === 40,
                   '导航或返回按钮尺寸不统一：' + path
                 )
                 assert(
@@ -289,7 +289,7 @@
                   '标题没有居中：' + path
                 )
                 assert(
-                  Math.abs(button.getBoundingClientRect().left - bounds.left - 8) < 1,
+                  Math.abs(button.getBoundingClientRect().left - bounds.left - 12) < 1,
                   '返回箭头边距不统一：' + path
                 )
                 const paths = [...icon.querySelectorAll('path')]

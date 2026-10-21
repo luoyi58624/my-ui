@@ -130,14 +130,14 @@ try {
   }, '没有找到可调试的首页 WebView')
   const main = await connect(mainTarget)
   await until(
-    () => main.evaluate('!!document.querySelector("[data-demo-link=native-navigation]")'),
+    () => main.evaluate('!!document.querySelector("[data-demo-link=button]")'),
     '首页尚未加载'
   )
   const token = 'launcher-' + Date.now()
   await main.evaluate(
     'globalThis.__launcherRegressionToken=' +
       JSON.stringify(token) +
-      ';document.querySelector("[data-demo-link=native-navigation]").click()'
+      ';document.querySelector("[data-demo-link=button]").click()'
   )
   await until(() => at('NativePageActivity'), '没有打开原生子页')
   const parentActivity = top()
@@ -145,22 +145,22 @@ try {
   await until(async () => {
     const targets = await (await fetch('http://127.0.0.1:' + port + '/json/list')).json()
     parentTarget = targets.find((item) =>
-      item.url.includes('pageWindow=1#/example/native-navigation')
+      item.url.includes('pageWindow=1#/example/button')
     )
     return !!parentTarget
-  }, '没有找到原生导航文档的 WebView')
+  }, '没有找到第一层组件文档的 WebView')
   const parent = await connect(parentTarget)
   await until(
     () =>
       parent.evaluate(
-        '[...document.querySelectorAll("button")].some(item => item.textContent.includes("打开原生页面"))'
+        '!!document.querySelector("[data-demo-page=\\"example/button\\"] .my-button")'
       ),
-    '原生导航示例尚未加载'
+    '第一层组件示例尚未加载'
   )
   await parent.evaluate(
     'globalThis.__launcherRegressionToken=' +
       JSON.stringify(token) +
-      ';[...document.querySelectorAll("button")].find(item => item.textContent.includes("打开原生页面")).click()'
+      ';window.__TAURI_INTERNALS__.invoke("plugin:native-components|push", {path:"index.html#/shared-state",title:"共享状态"})'
   )
   await until(
     () => at('NativePageActivity') && top() !== parentActivity,

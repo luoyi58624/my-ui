@@ -1,6 +1,4 @@
 import type { CodeFile } from './types'
-import { appBarCode, tabbarCode, pageCode, tabsCode } from './native'
-import { appExampleFiles } from './app'
 
 function vue(name: string, source: CodeFile['source']): CodeFile {
   return { name, language: 'vue', source }
@@ -8,7 +6,7 @@ function vue(name: string, source: CodeFile['source']): CodeFile {
 
 // 文档优先读取实际页面，独立代码入口保留可复制的最小用法。
 const examples: Record<string, CodeFile[]> = {
-  'native-app': [...appExampleFiles['app-basic']!],
+  tabbar: [vue('pages/home/tabbar/index.vue', () => import('../../pages/home/tabbar/index.vue?raw').then(m => m.default))],
   button: [
     vue(
       'ButtonExample.vue',
@@ -392,10 +390,6 @@ async function share() {
       source: () => import('../../../native.html?raw').then((m) => m.default)
     }
   ],
-  'native-app-bar': [vue('AppBarExample.vue', appBarCode)],
-  'native-tabbar': [vue('TabbarExample.vue', tabbarCode)],
-  'native-tabs': [vue('TabsExample.vue', tabsCode)],
-  'page-refresh': [vue('PageExample.vue', pageCode)],
   'native-navigation': [
     vue('pages/native/navigation/index.vue', () =>
       import('../../pages/native/navigation/index.vue?raw').then((m) => m.default)

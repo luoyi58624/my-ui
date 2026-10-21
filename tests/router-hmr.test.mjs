@@ -51,15 +51,15 @@ test('开发热更新后，目录、Tab 和返回仍由同一个路由驱动', {
           .locator('[data-demo-page="example/button"]:not([inert])')
           .waitFor({ timeout: 5000 })
         assert.equal(
-          await page.locator('.demo-view:not([inert]) .demo-top .nc-heading h1').textContent(),
+          await page.locator('.demo-view:not([inert]) .demo-top [data-demo-title]').textContent(),
           'Button 按钮'
         )
         await page.locator('.demo-view:not([inert]) .demo-top [aria-label^="返回"]').click()
         await page.locator('[data-demo-page="home"]:not([inert])').waitFor()
-        await page.locator('.demo-app > .nc-page-navigation button').nth(1).click()
+        await page.locator('[data-demo-tabbar] button').nth(1).click()
         await page.waitForURL('**/#/native')
         await page.locator('[data-demo-page="native"]:not([inert])').waitFor({ timeout: 5000 })
-        await page.locator('.demo-app > .nc-page-navigation button').nth(0).click()
+        await page.locator('[data-demo-tabbar] button').nth(0).click()
         await page.locator('[data-showcase-entry]').click()
         await page.locator('.showcase-layout .hero').waitFor({ timeout: 5000 })
         await page.locator('[aria-label="返回组件目录"]').click()

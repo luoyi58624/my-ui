@@ -6,6 +6,7 @@ import { createSharedStatePlugin, sharedStateKey, type SharedStateStorage } from
 import { installThemeState, useThemeStore } from '../example/src/commons/state/theme'
 import { readThemeSnapshot, themeStateKey } from '../example/src/commons/theme/preferences'
 import { installNativeAppearance } from '../example/src/commons/native-appearance'
+import { readPageAppearance } from '../example/src/commons/native-context'
 
 const settle = async () => { for(let i=0;i<25;i++){ await Promise.resolve(); await nextTick() } }
 function cache() {
@@ -93,6 +94,22 @@ test('原生加载背景使用当前配色，同为暗色但背景改变时也�
   const stop=installNativeAppearance();await settle()
   api.values.set('--background','#0d1015');api.mutate('dark');await settle()
   assert.deepEqual(api.calls.map((call:any)=>call.background),['#121419','#0d1015']);stop()
+}))
+
+test('系统栏与导航栏共用表面色，配色与明暗切换都同步',()=>withEnvironment(async api=>{
+  api.values.set('--background','#f2f3f5');api.values.set('--card-background','#ffffff')
+  const stop=installNativeAppearance();await settle()
+  assert.deepEqual(readPageAppearance(),{dark:false,background:'#f2f3f5'})
+  api.values.set('--background','#eeeeee');api.mutate('light');await settle()
+  assert.equal(api.calls.length,1)
+  api.values.set('--card-background','#fafafa');api.mutate('light');await settle()
+  api.values.set('--background','#121419');api.values.set('--card-background','#252931');api.mutate('dark');await settle()
+  assert.deepEqual(readPageAppearance(),{dark:true,background:'#121419'})
+  assert.deepEqual(api.calls.map(({dark,background}:any)=>({dark,background})),[
+    {dark:false,background:'#ffffff'},
+    {dark:false,background:'#fafafa'},
+    {dark:true,background:'#252931'}
+  ]);stop()
 }))
 
 test('跟随系统与手动主题分开传给原生，模式相同但偏好改变也要更新',()=>withEnvironment(async api=>{

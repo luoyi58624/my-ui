@@ -16,7 +16,7 @@ export const demoGroups: { title: string; items: DemoExample[] }[] = [
     title: '开始使用',
     items: [
       { id: 'quick-start', title: '快速开始', icon: 'spark', path: '/guide/quick-start' },
-      { id: 'native-integration', title: '集成原生', icon: 'layer', path: '/guide/native' }
+      { id: 'native-integration', title: '应用与平台', icon: 'layer', path: '/guide/native' }
     ]
   },
   {
@@ -52,7 +52,8 @@ export const demoGroups: { title: string; items: DemoExample[] }[] = [
     title: '导航与容器',
     items: [
       { id: 'app-bar', title: 'AppBar 顶部导航', icon: 'arrow-right' },
-      { id: 'navigation', title: 'Navigation 底部导航', icon: 'home' },
+      { id: 'tabbar', title: 'Tabbar 底部导航', icon: 'home' },
+      { id: 'navigation', title: 'Navigation 导航选项', icon: 'grid' },
       { id: 'list', title: 'List 列表', icon: 'inbox' },
       { id: 'selection-collapse', title: 'Radio / Checkbox / Collapse', icon: 'grid' }
     ]
@@ -84,40 +85,22 @@ export const demoGroups: { title: string; items: DemoExample[] }[] = [
   }
 ]
 
-/** 原生组件及页面能力统一放在第二个导航目录。 */
+/** 应用布局与持久化入口，组件用法直接复用首页文档。 */
 export const nativeDemoGroups: { title: string; items: DemoExample[] }[] = [
-  {
-    title: '原生组件',
-    items: [
-      { id: 'native-app', title: 'App 应用容器', icon: 'layer' },
-      {
-        id: 'native-app-bar',
-        title: 'AppBar 顶部导航',
-        icon: 'arrow-right',
-        path: '/native/app-bar'
-      },
-      {
-        id: 'native-tabbar',
-        title: 'Tabbar 底部导航',
-        icon: 'home',
-        path: '/native/tabbar'
-      },
-      { id: 'native-tabs', title: 'Tabs 页面切换', icon: 'grid', path: '/native/tabs' },
-      { id: 'page-refresh', title: 'Page 页面与下拉刷新', icon: 'sliders', path: '/page-refresh' }
-    ]
-  },
-  {
-    title: '页面与共享',
-    items: [{ id: 'native-navigation', title: '原生页面与共享状态', icon: 'layer' }]
-  }
+  { title: '应用布局', items: [
+    { id: 'application-appbar', title: 'AppBar 顶部导航', icon: 'arrow-right', path: '/example/app-bar' },
+    { id: 'application-tabbar', title: 'Tabbar 底部导航', icon: 'home', path: '/example/tabbar' },
+    { id: 'application-refresh', title: 'PullRefresh 下拉刷新', icon: 'cloud', path: '/example/pull-refresh' },
+    { id: 'application-guide', title: '应用与平台指南', icon: 'layer', path: '/guide/native' }
+  ] },
+  { title: '状态与平台', items: [
+    { id: 'native-navigation', title: '跨页状态与本地持久化', icon: 'layer' },
+    { id: 'application-html', title: '纯 HTML 示例', icon: 'grid', path: '/html' }
+  ] }
 ]
 
-/** 路由和返回入口共用目录归属，旧示例链接继续可用。 */
+/** 路由和返回入口共用目录归属。 */
 export const demoExamples = [
-  ...demoGroups.flatMap((group) =>
-    group.items.map((item) => ({ ...item, catalog: 'home' as const }))
-  ),
-  ...nativeDemoGroups.flatMap((group) =>
-    group.items.map((item) => ({ ...item, catalog: 'native' as const }))
-  )
+  ...demoGroups.flatMap(group => group.items.map(item => ({ ...item, catalog: 'home' as const }))),
+  ...nativeDemoGroups.flatMap(group => group.items.map(item => ({ ...item, catalog: 'native' as const })))
 ]

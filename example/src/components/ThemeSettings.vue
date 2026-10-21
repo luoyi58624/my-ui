@@ -5,7 +5,6 @@ import { createTheme, contrastRatio, defaultThemeOptions, themeColors, themeStyl
 import { createSystemFontWeightSync, supportsSystemFontWeight } from '../commons/font-weight'
 import { useThemeStore } from '../commons/state/theme'
 import { defaultThemeState } from '../commons/theme/preferences'
-import type { NavigationAction } from 'tauri-plugin-native-components'
 
 withDefaults(defineProps<{ controls?: boolean }>(), { controls: true })
 
@@ -68,16 +67,6 @@ function setMode(value: string) {
   notice.value = ''
 }
 function toggleMode() { settings.mode = currentMode.value === 'dark' ? 'light' : 'dark' }
-const actions = computed<NavigationAction[]>(() => [
-  ...(settings.mode === 'system' ? [] : [{ value: 'theme', icon: currentMode.value === 'dark' ? 'sun' as const : 'moon' as const, label: currentMode.value === 'dark' ? '切换到浅色模式' : '切换到暗黑模式' }]),
-  { value: 'settings', icon: 'sliders', label: '主题定制' },
-])
-function handleAction(value: string) {
-  if (value === 'theme') toggleMode()
-  else if (value === 'settings') open.value = true
-}
-/** 原生导航通过同一组操作项打开设置或切换外观。 */
-defineExpose({ actions, handleAction })
 function chooseColor(color: ThemeColorId) {
   currentData.value.color = color
   delete currentData.value.primary

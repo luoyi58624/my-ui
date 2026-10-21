@@ -2,6 +2,7 @@ import { defineAsyncComponent, type Component } from 'vue'
 
 /** 组件文档按目录标识加载，独立文档与完整示例共用。 */
 export const homeDocs: Record<string, Component> = {
+  tabbar: defineAsyncComponent(() => import('./tabbar/index.vue')),
   button: defineAsyncComponent(() => import('./button/index.vue')),
   tag: defineAsyncComponent(() => import('./tag/index.vue')),
   navigation: defineAsyncComponent(() => import('./navigation/index.vue')),

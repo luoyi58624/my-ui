@@ -19,7 +19,6 @@ const output = mkdtempSync(join(tmpdir(), 'my-ui-nav-compat-')), reports = []
 const screenshot = name => writeFileSync(join(output, name + '.png'), execFileSync('adb', ['-s', serial, 'exec-out', 'screencap', '-p'], { windowsHide: true, maxBuffer: 24 * 1024 * 1024 }))
 const activities = () => adb('shell', 'dumpsys', 'activity', 'activities')
 const foreground = () => activities().split('\n').find(line => /topResumedActivity=|mResumedActivity:/.test(line)) || ''
-const footer = () => adb('shell', 'dumpsys', 'activity', application).match(/BottomNavigationView\{([a-f0-9]+) [^\n]*/)?.[1]
 const webViewParent = () => {
   const lines = adb('shell', 'dumpsys', 'activity', application).split('\n'), index = lines.findIndex(line => line.includes('RustWebView{'))
   assert(index >= 0, '主 WebView 不存在')
@@ -72,19 +71,18 @@ try {
   await until(() => evaluate('!!document.querySelector("[data-demo-link=input]") && typeof __NATIVE_COMPONENTS_DISMISS__ === "function"'), '首页未就绪')
   assert.equal(await evaluate('window.__TAURI_INTERNALS__.invoke("plugin:app|supports_multiple_windows")'), false)
   assert.equal(await evaluate('history.state.back'), null)
-  const bottom = footer()
   const parent = webViewParent()
-  assert(bottom, '原生底栏没有就绪')
   assert(parent, 'WebView 父布局没有就绪')
-  await evaluate('window.__compat = { app: document.querySelector(".demo-app"), bar: document.querySelector(".nc-app-tabbar"), home: document.querySelector("[data-demo-page=home]") }; __compat.home.scrollTop = 380')
+  await evaluate('window.__compat = { app: document.querySelector(".demo-app"), bar: document.querySelector("[data-demo-tabbar]"), home: document.querySelector("[data-demo-page=home]") }; __compat.home.scrollTop = 380')
+  assert(await evaluate('!!__compat.bar'), 'Web 底栏没有就绪')
   await pause(150)
   const scroll = await evaluate('__compat.home.scrollTop')
   await evaluate(`(() => {
     window.__compat.frames = [];
     const sample = () => {
-      const view = location.hash === '#/shared-state' ? document.querySelector('.native-page.nc-page') : document.querySelector('.demo-view:not([inert])');
-      const head = view?.querySelector('.demo-top, .nc-page-navbar'), body = view?.querySelector('.demo-page, .nc-page-body');
-      if (head && body) __compat.frames.push({ route: location.hash, header: head.getBoundingClientRect().height, body: body.getBoundingClientRect().top, viewport: innerHeight });
+      const view = location.hash === '#/shared-state' ? document.querySelector('.native-page') : document.querySelector('.demo-view:not([inert])');
+      const head = view?.querySelector('.demo-header'), body = view?.querySelector('.demo-page, .demo-scroll');
+      if (head && body && head.getBoundingClientRect().height > 0) __compat.frames.push({ route: location.hash, header: head.getBoundingClientRect().bottom, body: body.getBoundingClientRect().top, viewport: innerHeight });
       __compat.frame = requestAnimationFrame(sample);
     }; sample();
   })()`)
@@ -100,7 +98,7 @@ try {
   await openInput()
   assert(foreground().includes('.MainActivity'), '旧版导航错误创建子 Activity')
   assert(!activities().includes(application + '/.NativePageActivity'), '旧版仍进入 Tauri 多窗口路径')
-  assert(await evaluate('__compat.bar.hidden && document.querySelector(".demo-app") === __compat.app'))
+  assert(await evaluate('getComputedStyle(__compat.bar).display === "none" && document.querySelector(".demo-app") === __compat.app'))
   await evaluate('window.__compat.input = document.querySelector(".demo-detail:not([inert]) input"); __compat.input.value = "legacy-state"; __compat.input.dispatchEvent(new Event("input", {bubbles:true}))')
   screenshot('legacy-detail')
   reports.push({ name: '旧版 Android 自动使用同窗口详情，不创建子 Activity', passed: true })
@@ -116,15 +114,15 @@ try {
   await until(() => route('/home'), '系统返回没有回到目录')
   assert(foreground().includes('.MainActivity'), '详情返回误退出主 Activity')
   assert.equal(await evaluate('__compat.home.scrollTop'), scroll)
-  assert.equal(footer(), bottom, '返回重建了原生底栏')
-  assert(await evaluate('document.querySelector(".demo-app") === __compat.app && !__compat.bar.hidden'))
+  assert(await evaluate('document.querySelector("[data-demo-tabbar]") === __compat.bar'), '返回重建了 Web 底栏')
+  assert(await evaluate('document.querySelector(".demo-app") === __compat.app && getComputedStyle(__compat.bar).display !== "none"'))
   await openInput()
   assert(await evaluate('document.querySelector(".demo-detail:not([inert]) input") === __compat.input && __compat.input.value === "legacy-state"'))
   reports.push({ name: '系统返回保留 App、底栏、目录滚动和详情输入实例', passed: true })
 
   // 从原生目录详情进入独立父路由，再连续返回原详情和原目录。
   systemBack(); await until(() => route('/home'), '重新进入后无法返回')
-  await evaluate('document.querySelector(".nc-app-tabbar [aria-label=原生]").click()')
+  await evaluate('[...document.querySelectorAll("[data-demo-tabbar] button")].find(node=>node.textContent.includes("应用")).click()')
   await until(() => route('/native'), '原生目录未打开')
   await evaluate('document.querySelector("[data-demo-link=native-navigation]").click()')
   await until(() => evaluate('!!document.querySelector(".demo-detail:not([inert]) .native-navigation-actions")'), '原生页面文档未加载')
@@ -135,15 +133,15 @@ try {
   assert(await evaluate('document.querySelector(".demo-app") === __compat.app && __compat.input.value === "legacy-state"'))
   await pause(200); systemBack()
   await until(() => route('/native'), '连续返回未回到目录')
-  assert.equal(footer(), bottom, '跨父路由返回重建了底栏')
+  assert(await evaluate('document.querySelector("[data-demo-tabbar]") === __compat.bar'), '跨父路由返回重建了底栏')
   assert.equal(webViewParent(), parent, '跨页面容器返回重新挂载了 WebView')
   reports.push({ name: '跨父路由的多层页面连续返回，仍保留详情状态', passed: true })
-  // 覆盖最后一次交接的超时窗口，不能在兜底放行之前就判为成功。
+  // 覆盖最后一次 Web 布局更新，确保没有旧原生导航占位。
   await pause(600)
   const frames = await evaluate('cancelAnimationFrame(__compat.frame); __compat.frames')
   writeFileSync(join(output, 'frames.json'), JSON.stringify(frames, null, 2))
   assert(frames.length > 20, '逐帧采样不足')
-  const displaced = frames.filter(frame => frame.header > .5 || Math.abs(frame.body) > .5)
+  const displaced = frames.filter(frame => frame.header <= 0 || Math.abs(frame.body - frame.header) > 1)
   assert.deepEqual(displaced, [], '导航交接中出现重复 Web 导航占位或正文位移')
   const timeouts = adb('logcat', '-d', '-v', 'epoch', '-s', 'NativePageFrame:W', '*:S').split('\n')
     .filter(line => Number(line.match(/^\s*(\d+\.\d+)/)?.[1]) >= logStart && line.includes('准备超时'))
@@ -154,7 +152,7 @@ try {
   await evaluate('history.replaceState(null,"","#/example/button"); location.reload()')
   await until(() => evaluate('!!document.querySelector(".demo-detail:not([inert]) .my-button") && typeof __NATIVE_COMPONENTS_DISMISS__ === "function"'), '直达详情未加载')
   assert.equal(await evaluate('history.state.back'), null)
-  await evaluate('document.querySelector(".demo-view:not([inert]) .demo-top [aria-label=返回组件列表]").click()')
+  await evaluate('document.querySelector(".demo-view:not([inert]) .demo-header [aria-label=返回组件列表]").click()')
   await until(() => route('/home'), '直达详情的顶栏返回未回到目录')
   assert.equal(await evaluate('history.state.back'), null)
   assert.equal(await evaluate('__NATIVE_COMPONENTS_DISMISS__()'), false)

@@ -34,6 +34,7 @@ const tags: Record<string, string> = {
   Steps: "ol",
   ListRow: "button",
   Navigation: "nav",
+  Tabbar: "nav",
 };
 
 /** Vue 只处理 props、v-model、事件、插槽和卸载，组件行为统一交给原生核心。 */

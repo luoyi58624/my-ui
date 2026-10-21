@@ -1,5 +1,4 @@
 import type { CodeFile } from './types'
-import { appBarCode, tabbarCode, pageCode, tabsCode } from './native'
 
 /** 示例内的两份入门指南。 */
 export type GuideKind = 'quick-start' | 'native'
@@ -250,203 +249,27 @@ html[data-theme='dark'] {
     ]
   },
   native: {
-    title: '集成原生',
-    subtitle: '用 Vue 属性、事件与插槽接入系统导航控件和下拉刷新。',
+    title: '应用与平台',
+    subtitle: '界面与滚动由 Web 完成，Android 继续提供原生多页面导航。',
     sections: [
-      {
-        id: 'platform',
-        title: '01 · 组件与平台',
-        paragraphs: [
-          '基础 my-ui 组件运行在 WebView 内。tauri-plugin-native-components 额外提供 App、AppBar、Tabbar、Tabs 和 Page，适合应用容器、系统导航与下拉刷新等需要原生体验的部分。组件命名不添加 Native 前缀。',
-          'Android 使用原生导航控件和 SwipeRefreshLayout。浏览器、Windows、macOS、Linux 以及 iOS 使用 Web 回退，目前没有 iOS 原生 UI。浏览器中可以验证属性、事件、布局和 Web 刷新交互，Android 系统控件的实际效果需要设备环境。',
-          'my-ui 与插件都导出了 AppBar、Tabs，按需求选择导入来源。下面的代码均从 tauri-plugin-native-components/vue 导入原生封装组件。'
-        ],
-        link: { label: '浏览全部原生组件示例', path: '/native' }
-      },
-      {
-        id: 'install',
-        title: '02 · 安装与注册插件',
-        paragraphs: [
-          '将插件源码放在项目旁边，通过本地 file 依赖安装。下面是需要合并进现有文件的配置片段；路径分别相对于 package.json 和 src-tauri/Cargo.toml。修改依赖后，在项目中运行 bun install。',
-          '只使用组件时注册 init() 即可。当前插件基于 Tauri 2.12，Android 控件要求 API 24+，宿主 Activity 使用 Material 主题，例如 Theme.Material3.DayNight.NoActionBar。Android 配置变更后需重新构建应用。'
-        ],
-        files: [
-          file(
-            'package.json',
-            'json',
-            `{
-  "dependencies": {
-    "tauri-plugin-native-components": "file:../tauri-plugin-native-components"
-  }
-}`
-          ),
-          file(
-            'src-tauri/Cargo.toml',
-            'toml',
-            `[dependencies]
-tauri-plugin-native-components = { path = "../node_modules/tauri-plugin-native-components" }`
-          ),
-          file(
-            'src-tauri/src/lib.rs',
-            'rust',
-            `#[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_native_components::init())
-        .run(tauri::generate_context!())
-        .expect("启动应用失败");
-}`
-          ),
-          file(
-            'src-tauri/capabilities/mobile.json',
-            'json',
-            `{
-  "$schema": "../gen/schemas/mobile-schema.json",
-  "identifier": "mobile",
-  "platforms": ["android"],
-  "windows": ["main", "native-page-*"],
-  "permissions": ["native-components:default"]
-}`
-          ),
-          file(
-            'res/values/themes.xml',
-            'html',
-            `<!-- 修改 Android 宿主原有主题的 parent，保留实际主题名与其他设置。 -->
-<resources>
-  <style name="Theme.my_app" parent="Theme.Material3.DayNight.NoActionBar" />
-</resources>
-<!-- AndroidManifest.xml 的 application android:theme 应指向这个主题。 -->`
-          )
-        ]
-      },
-      {
-        id: 'page',
-        title: '03 · Page、导航栏与下拉刷新',
-        paragraphs: [
-          '先引入插件样式。Page 的 navbar、navigation 插槽分别放顶部 AppBar 和底部 Tabbar，默认插槽放正文。Android 使用原生导航与中间原 WebView 的三段布局；其他平台使用 Web 模拟相同结构。页面必须有确定高度，例如 100dvh。',
-          '设置 refreshable，绑定 v-model:refreshing，在 @refresh 中请求数据，并在 finally 中把 refreshing 设为 false。Android 支持不松手从正文滚动接到下拉刷新，向上推回刷新器后继续滚动正文，松手超过阈值才刷新。按钮可调用组件引用的 refresh()，共用同一套刷新流程。直接设置 refreshing=true 只显示指示器，不触发业务请求。'
-        ],
-        files: [file('PageExample.vue', 'vue', pageCode)],
-        link: { label: '体验 Page 与下拉刷新', path: '/page-refresh' }
-      },
-      {
-        id: 'navigation',
-        title: '04 · AppBar、Tabbar 与 Tabs',
-        paragraphs: [
-          'AppBar 的 actions 使用结构化数据，@action 接收 value；@back 交给业务处理。Tabbar 用 v-model 管理当前项，items 支持 2～5 项，每项的 value 应唯一。',
-          'Tabs 将底栏与页面容器组合起来，默认插槽收到当前 value。下面展示 Vue 内容的用法；如需真正的 Android Tab 页面，为选项设置 nativeView，并在宿主注册 NativeTabViews 页面工厂。Vue 模板不会自动转换成 Android View。'
-        ],
-        files: [
-          file('AppBarExample.vue', 'vue', appBarCode),
-          file('TabbarExample.vue', 'vue', tabbarCode),
-          file('TabsExample.vue', 'vue', tabsCode)
-        ],
-        link: { label: '打开 Tabs 示例', path: '/native/tabs' }
-      },
-      {
-        id: 'overlay',
-        title: '05 · 与 Web 弹窗配合',
-        paragraphs: [
-          'Page 的原生导航位于 WebView 的实际边界之外，Dialog、Drawer、Menu 等 Web 弹层只覆盖中间正文，Vue 插槽和状态保持原样。无需订阅弹层状态来切换导航版本；遮罩出现时顶部操作、返回按钮和底部导航继续可交互，原生导航实例保持不变。内容区内额外放置的原生控件仍会按 DOM 的 inert 状态暂停。'
-        ],
-        files: [
-          file(
-            'App.vue',
-            'vue',
-            `<script setup lang="ts">
-import { Button, Popup, popup } from '@my-ui/vue'
-import { AppBar, Page } from 'tauri-plugin-native-components/vue'
-import 'tauri-plugin-native-components/style.css'
-
-function showDialog() {
-  void popup.showAlert({ title: '提示', message: '弹窗只覆盖正文，页面导航保持原生实例。' })
-}
-</script>
-
-<template>
-  <Page style="height: 100dvh">
-    <template #navbar><AppBar title="设置" /></template>
-    <Button @click="showDialog">打开弹窗</Button>
-  </Page>
-  <Popup />
-</template>`
-          )
-        ]
-      },
-      {
-        id: 'native-router',
-        title: '06 · 可选：使用原生页面导航',
-        paragraphs: [
-          '只使用上面的导航控件和 Page 时不需要新 Activity。需要 Android push 打开独立系统页面时，将 Vue Router 交给 createNativeRouter；浏览器与桌面仍在当前窗口内跳转。路由名称、页面组件由业务项目定义。',
-          'Android 页面导航要求 API 32+，Rust 端改用 Builder 并指定 NativePageActivity。宿主需要注册子 Activity：MainActivity 使用 singleTop，子页使用默认 standard、exported=false，两个 Activity 的 configChanges 保持一致。',
-          '子页主题继承宿主主题并设置 windowDisablePreview=true，AppActivity 为独立子页启用 waitForPage。Activity 立即开始系统转场，Page 只暂隐正在交接的 WebView 正文，等导航隐藏与正文首帧确认后显示；未使用 Page 的自定义内容在挂载后调用 /router 的 readyPage()。',
-          '下面提供当前示例的宿主文件作为接入参考。迁移时替换 dev.myui.example 包名、主题名及业务 Tab 注册。AppActivity 的生命周期转发顺序应保留。每个 Activity 有独立 Vue 实例，共享数据需要另外接入存储或状态同步。'
-        ],
-        files: [
-          file(
-            'navigation.ts',
-            'typescript',
-            `import { createNativeRouter } from 'tauri-plugin-native-components/router'
-import { router } from './router'
-
-// router.ts 导出项目的 Vue Router，并注册 /detail 路由。
-export const navigation = createNativeRouter(router)
-
-// 在点击事件中调用：
-// await navigation.push('/detail', { title: '详情' })
-// await navigation.back('/home')`
-          ),
-          file(
-            'Rust 插件注册',
-            'rust',
-            `.plugin(
-    tauri_plugin_native_components::Builder::new()
-        .activity_name("NativePageActivity")
-        .build()
-)`
-          ),
-          file('AppActivity.kt', 'kotlin', () =>
-            import('../../../src-tauri/gen/android/app/src/main/java/dev/myui/example/AppActivity.kt?raw').then(
-              (m) => m.default
-            )
-          ),
-          file('MainActivity.kt', 'kotlin', () =>
-            import('../../../src-tauri/gen/android/app/src/main/java/dev/myui/example/MainActivity.kt?raw').then(
-              (m) => m.default
-            )
-          ),
-          file('NativePageActivity.kt', 'kotlin', () =>
-            import('../../../src-tauri/gen/android/app/src/main/java/dev/myui/example/NativePageActivity.kt?raw').then(
-              (m) => m.default
-            )
-          ),
-          file('AndroidManifest.xml', 'html', () =>
-            import('../../../src-tauri/gen/android/app/src/main/AndroidManifest.xml?raw').then(
-              (m) => m.default
-            )
-          ),
-          file('themes.xml', 'html', () =>
-            import('../../../src-tauri/gen/android/app/src/main/res/values/themes.xml?raw').then(
-              (m) => m.default
-            )
-          ),
-          file('DemoNativeTab.kt', 'kotlin', () =>
-            import('../../../src-tauri/gen/android/app/src/main/java/dev/myui/example/DemoNativeTab.kt?raw').then(
-              (m) => m.default
-            )
-          )
-        ],
-        link: { label: '查看原生页面与共享状态示例', path: '/example/native-navigation' }
-      },
-      {
-        id: 'next',
-        title: '07 · 按需使用系统能力',
-        paragraphs: [
-          '普通表单、卡片、列表和弹窗继续使用 my-ui。需要文件选择、文件系统、系统通知等能力时，优先查找 Tauri 已有插件，再决定是否增加新的原生封装。',
-          '每个组件示例都有可折叠、可复制的用法代码。原生全屏示例可从原生组件目录进入，浏览器中会自动展示 Web 回退。'
-        ],
-        link: { label: '返回原生组件目录', path: '/native' }
-      }
+      { id: 'layout', title: '01 · 组合应用布局', paragraphs: [
+        '使用普通纵向 flex 布局：AppBar 放在顶部，内容区 flex: 1、min-height: 0、overflow: auto，Tabbar 放在底部。组件不创建原生 View，也不接管应用路由。',
+        '同一窗口内，主栏目首次访问后用 v-show 保留；Web 路由详情用有数量上限的 KeepAlive 保存临时状态。Android 打开详情时可使用独立 Activity 与 WebView。'
+      ], link: { label: '体验 AppBar 和 Tabbar', path: '/example/tabbar' } },
+      { id: 'routing', title: '02 · 保留原生多页面导航', paragraphs: [
+        '切换主栏目使用 replace，避免累积返回记录。openPage 通过 createNativeRouter 进入详情：Android 使用独立 Activity 与 WebView；浏览器和桌面使用 Vue Router。closePage 返回原窗口或上一条 Web 路由。',
+        '保留页面跳转、原生返回和页面就绪链路。每个页面内部使用 Web AppBar、Tabbar 与滚动内容，不再创建原生 UI 控件。'
+      ], files: [file('commons/navigation.ts', 'typescript', () => import('../navigation.ts?raw').then(m => m.default))] },
+      { id: 'refresh', title: '03 · 列表下拉刷新', paragraphs: [
+        'PullRefresh 提供独立的滚动区域，用 v-model 表达刷新状态，@refresh 发起请求。请求完成或失败都在 finally 中将刷新状态设为 false。'
+      ], link: { label: '体验 Web 下拉刷新', path: '/example/pull-refresh' } },
+      { id: 'platform', title: '04 · 保留需要的系统能力', paragraphs: [
+        'Android 宿主处理系统安全区域、键盘避让和返回按钮；返回先关闭最上层弹窗，再返回 Web 路由或关闭当前 Activity。主题同步系统栏外观，字重继续读取 Android 系统设置。',
+        '浏览器与桌面继续使用同一套 Web 页面。原生 HTML 也可直接使用 core 中的 CSS 和 JavaScript。'
+      ], link: { label: '打开纯 HTML 示例', path: '/html' } },
+      { id: 'state', title: '05 · 跨页状态与持久化', paragraphs: [
+        '保留跨窗口 Pinia 状态同步和本地持久化。Android 的多个 WebView 能共享备注与计数，重新启动后也可恢复。'
+      ], link: { label: '体验跨页状态', path: '/example/native-navigation' } }
     ]
   }
 }

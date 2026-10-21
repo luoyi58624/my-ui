@@ -72,7 +72,7 @@ function navigate(path: string) {
           <Icon name="arrow-right" />
         </button>
         <button type="button" @click="navigate('/guide/native')">
-          集成原生
+          应用与平台
           <Icon name="arrow-right" />
         </button>
       </nav>

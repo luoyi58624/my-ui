@@ -81,7 +81,7 @@ onBeforeUnmount(() => {
     name="pull-refresh"
     source="pages/home/pull-refresh/index.vue"
     title="下拉，收取新消息"
-    description="在列表顶部下拉更新，也可以点击刷新。收藏你想稍后阅读的内容。"
+    description="滚到顶部后继续下拉即可刷新，也可以点击刷新按钮。收藏你想稍后阅读的内容。"
   >
     <div class="inbox-example" data-pull-refresh-example>
       <div class="inbox-toolbar">
@@ -148,7 +148,7 @@ onBeforeUnmount(() => {
           </div>
         </PullRefresh>
       </div>
-      <p class="inbox-caption">向上滑动浏览；回到顶部，再下拉刷新。</p>
+      <p class="inbox-caption">向上滑动浏览；滚到顶部后继续下拉即可刷新。</p>
     </div>
   </DemoExample>
 </template>

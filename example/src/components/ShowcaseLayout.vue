@@ -11,14 +11,15 @@ import {
 } from 'vue'
 import { useRoute } from 'vue-router'
 import { Icon } from '@my-ui/vue'
-import { Page } from 'tauri-plugin-native-components/vue'
 import DemoAppBar from './DemoAppBar.vue'
 import { closePage, openPage } from '../commons/navigation'
+import { usePageReady } from '../commons/page-ready'
 import { notifyKey } from '../commons/notify'
 import { homeDocs } from '../pages/home'
 import { nativeDocs } from '../pages/native'
 
 const notify = inject(notifyKey)!
+usePageReady()
 const docs = { ...homeDocs, ...nativeDocs }
 const sections = [
   { id: 'actions', label: '基础组件' },
@@ -111,16 +112,13 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <Page class="showcase-page">
-    <template #navbar>
+  <div class="showcase-page demo-view">
       <DemoAppBar
         title="完整交互示例"
         back
         back-label="返回组件目录"
         @back="back"
-        @error="reportError"
       />
-    </template>
     <div
       ref="root"
       class="showcase-layout"
@@ -276,7 +274,7 @@ onBeforeUnmount(() => {
         </footer>
       </div>
     </div>
-  </Page>
+  </div>
 </template>
 
 <style scoped>
@@ -857,10 +855,11 @@ footer strong {
 }
 
 .showcase-page {
-  height: 100dvh;
+  height: 100%;
 }
 .showcase-layout {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   overscroll-behavior-y: contain;
   background: var(--background);

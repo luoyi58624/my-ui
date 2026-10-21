@@ -263,7 +263,7 @@
 
     "@my-ui/example/tauri-plugin-android-system-font-weight": ["tauri-plugin-android-system-font-weight@file:../../tauri/plugins/tauri-plugin-android-system-font-weight", {}],
 
-    "@my-ui/example/tauri-plugin-native-components": ["tauri-plugin-native-components@file:../../tauri/plugins/tauri-plugin-native-components", { "dependencies": { "@tauri-apps/api": "^2.12.4" }, "devDependencies": { "vue": "3.5.43", "vue-router": "4.6.4" }, "peerDependencies": { "vue": "^3.5.0", "vue-router": "^4.6.0" }, "optionalPeers": ["vue", "vue-router"] }],
+    "@my-ui/example/tauri-plugin-native-components": ["tauri-plugin-native-components@file:../../tauri/plugins/tauri-plugin-native-components", { "dependencies": { "@tauri-apps/api": "^2.12.4" }, "devDependencies": { "vue": "3.5.43", "vue-router": "4.6.4" }, "peerDependencies": { "vue-router": "^4.6.0" }, "optionalPeers": ["vue-router"] }],
 
     "@wdns/vue-code-block/vue": ["vue@3.5.44", "", { "dependencies": { "@vue/compiler-dom": "3.5.44", "@vue/compiler-sfc": "3.5.44", "@vue/runtime-dom": "3.5.44", "@vue/server-renderer": "3.5.44", "@vue/shared": "3.5.44" }, "peerDependencies": { "typescript": "*" }, "optionalPeers": ["typescript"] }, "sha512-dvvmaOCG7lAMkJTPqPwWeGMsPS6DIsFsfZDUgBp9V6mHf9b3+/wyVwYR4Es+WV6uJC0FKRxp81Obcq0ZwUcGFQ=="],
 

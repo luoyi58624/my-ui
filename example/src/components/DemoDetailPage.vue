@@ -7,6 +7,7 @@ import { demoExamples } from '../pages/catalog'
 import { demoDescriptions } from '../pages/descriptions'
 import { demoLayoutKey } from './layoutContext'
 import { useDemoScroll } from './useDemoScroll'
+import { usePageReady } from '../commons/page-ready'
 import DemoDocument from './DemoDocument.vue'
 import { homeDocs } from '../pages/home'
 import { nativeDocs } from '../pages/native'
@@ -22,6 +23,11 @@ const title = ref<InstanceType<typeof DemoAppBar>>()
 const active = ref(true),
   visible = ref(!document.hidden)
 const content = computed(() => homeDocs[props.id] ?? nativeDocs[props.id])
+const pageReady = usePageReady(false)
+function contentReady() {
+  locateAnchor()
+  pageReady()
+}
 const updateVisibility = () => {
   visible.value = !document.hidden
 }
@@ -63,11 +69,10 @@ onBeforeUnmount(() => document.removeEventListener('visibilitychange', updateVis
   <div class="demo-view" :inert="!active" :aria-hidden="!active || undefined">
     <DemoAppBar
       ref="title"
-      page
       :title="item.title"
       back
       :back-label="
-        isChildPage() ? '返回上一页' : item.catalog === 'native' ? '返回原生组件' : '返回组件列表'
+        isChildPage() ? '返回上一页' : item.catalog === 'native' ? '返回应用目录' : '返回组件列表'
       "
       class="demo-app-bar demo-top"
       @back="back"
@@ -90,7 +95,7 @@ onBeforeUnmount(() => document.removeEventListener('visibilitychange', updateVis
             ><component
               :is="content"
               v-bind="id === 'primitives' ? { active: active && visible } : {}"
-              @vue:mounted="locateAnchor"
+              @vue:mounted="contentReady"
           /></DemoDocument>
         </div>
       </section>

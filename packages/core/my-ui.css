@@ -2127,11 +2127,11 @@ button[data-my-segmented]:disabled {
 
 /* ── Navigation ───────────────────────────────────────────── */
 
-button[data-my-navigation]:disabled {
+button:is([data-my-navigation], [data-my-tabbar]):disabled {
   cursor: not-allowed;
   opacity: 0.68;
 }
-.my-navigation[data-my-navigation] {
+.my-navigation:is([data-my-navigation], [data-my-tabbar]) {
   background: var(--fill);
   border: 1px solid var(--border);
   display: flex;
@@ -2143,7 +2143,7 @@ button[data-my-navigation]:disabled {
   border-radius: 15px;
   align-items: stretch;
 }
-.my-navigation button[data-my-navigation] {
+.my-navigation button:is([data-my-navigation], [data-my-tabbar]) {
   min-width: 0;
   flex: 1;
   border: none;
@@ -2167,20 +2167,35 @@ button[data-my-navigation]:disabled {
   font-size: 12px;
   line-height: 1.15;
 }
-.my-navigation button svg[data-my-navigation] {
+.my-navigation button svg:is([data-my-navigation], [data-my-tabbar]) {
   height: 24px;
   width: 24px;
 }
-.my-navigation button.my-active[data-my-navigation] {
+.my-navigation button.my-active:is([data-my-navigation], [data-my-tabbar]) {
   color: var(--primary);
   font-weight: var(--font-weight-action, 500);
   background: transparent;
   box-shadow: none;
 }
-.my-navigation button[data-my-navigation]:focus-visible {
+.my-navigation button:is([data-my-navigation], [data-my-tabbar]):focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: -2px;
 }
+
+/* ── Tabbar：普通布局中的底栏，页面自行决定是否固定 ────────── */
+
+.my-tabbar[data-my-tabbar] {
+  flex: 0 0 auto;
+  height: calc(var(--tabbar-height, 64px) + var(--tabbar-safe-bottom, env(safe-area-inset-bottom, 0px)));
+  min-height: calc(var(--tabbar-height, 64px) + var(--tabbar-safe-bottom, env(safe-area-inset-bottom, 0px)));
+  padding: 4px max(8px, env(safe-area-inset-right, 0px)) calc(4px + var(--tabbar-safe-bottom, env(safe-area-inset-bottom, 0px))) max(8px, env(safe-area-inset-left, 0px));
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--card-background);
+}
+.my-tabbar button[data-my-tabbar] { height: auto; min-height: 44px; }
+.my-tabbar button.my-active[data-my-tabbar] { background: color-mix(in srgb, var(--primary) 10%, transparent); }
 
 /* ── Stepper ───────────────────────────────────────────── */
 
@@ -3745,7 +3760,7 @@ p[data-my-empty] {
 /* ── AppBar ────────────────────────────────────────────── */
 
 .my-app-bar[data-my-app-bar] {
-  display: flex; align-items: center; gap: 12px;
+  display: flex; flex: 0 0 auto; align-items: center; gap: 12px;
   min-height: var(--app-bar-height, 60px); padding: 8px 12px; margin: 0;
   border-bottom: 1px solid var(--border);
   background: var(--card-background); color: var(--text);
@@ -3775,7 +3790,7 @@ p[data-my-empty] {
 .my-pull-refresh-viewport {
   height: 100%;
   overflow: auto;
-  overscroll-behavior-y: contain;
+  overscroll-behavior-y: none;
   -webkit-overflow-scrolling: touch;
 }
 .my-pull-refresh-track {

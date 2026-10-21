@@ -1,0 +1,55 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Web Tabbar 定向回归</title>
+<style>body{font:14px system-ui;margin:20px}#fixture{width:min(100%,390px);margin:20px 0}pre{white-space:pre-wrap}</style>
+<h1>Web Tabbar</h1><button id="run">运行回归</button><div id="fixture"></div><pre id="result">尚未运行</pre>
+<script type="module">
+import { createApp, h, ref, nextTick } from 'vue'
+import { Tabbar } from '/packages/vue/index.ts'
+const fixture=document.querySelector('#fixture'), reports=[]
+const options=[{value:'home',label:'首页',icon:'home'},{value:'locked',label:'未开放',disabled:true},{value:'messages',label:'消息',icon:'message'},{value:'settings',label:'设置',icon:'sliders'}]
+const assert=(value,message)=>{if(!value)throw Error(message)}
+const tick=async()=>{await nextTick();await new Promise(resolve=>requestAnimationFrame(resolve))}
+const key=(node,key)=>node.dispatchEvent(new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true}))
+let controller,app
+const clean=()=>{app?.unmount();app=undefined;controller?.destroy();controller=undefined;fixture.replaceChildren()}
+const check=async(name,run)=>{clean();await run();reports.push({name,passed:true})}
+document.querySelector('#run').onclick=async()=>{
+  reports.length=0;document.querySelector('#run').disabled=true
+  try{
+    await check('原生 DOM 入口、辅助名称、选中语义和禁用项',async()=>{
+      const changes=[];controller=MyUI.create('Tabbar',{value:'home',options,onChange:value=>changes.push(value)});fixture.append(controller.element);await tick()
+      assert(controller.element.tagName==='NAV'&&controller.element.getAttribute('aria-label')==='主导航','导航地标错误')
+      const buttons=controller.element.querySelectorAll('button');assert(buttons[0].getAttribute('aria-current')==='page','缺少当前页语义')
+      buttons[1].click();assert(changes.length===0,'禁用项被选择');buttons[2].click();assert(changes.join()==='messages'&&buttons[2].getAttribute('aria-current')==='page','选择没有同步')
+    })
+    await check('方向键跳过禁用项，Home/End 与焦点同步',async()=>{
+      controller=MyUI.create('Tabbar',{value:'home',options});fixture.append(controller.element);const buttons=controller.element.querySelectorAll('button')
+      key(buttons[0],'ArrowRight');assert(document.activeElement===buttons[2],'方向键未跳过禁用项');key(buttons[2],'End');assert(document.activeElement===buttons[3],'End错误');key(buttons[3],'Home');assert(document.activeElement===buttons[0],'Home错误')
+    })
+    await check('切换不重建按钮，属性更新和空选项可恢复',async()=>{
+      controller=MyUI.create('Tabbar',{value:'home',options});fixture.append(controller.element);const button=controller.element.querySelector('button');button.focus()
+      controller.update({value:'messages'});assert(controller.element.querySelector('button')===button&&document.activeElement===button,'切换替换了按钮或焦点')
+      controller.update({options:[]});key(controller.element,'ArrowRight');assert(!controller.element.querySelector('button'),'空列表仍残留');controller.update({options});assert(controller.element.querySelectorAll('button').length===4,'列表不能恢复')
+    })
+    await check('安全区增加外壳高度，按钮保持触摸尺寸且没有横向溢出',async()=>{
+      controller=MyUI.create('Tabbar',{value:'home',options},{attributes:{style:'--tabbar-safe-bottom:24px'}});fixture.append(controller.element);await tick()
+      assert(controller.element.offsetHeight===88,'安全区高度错误');assert([...controller.element.querySelectorAll('button')].every(button=>button.getBoundingClientRect().height>=44),'触摸目标过小')
+      assert(controller.element.scrollWidth<=controller.element.clientWidth,'底栏横向溢出');assert(getComputedStyle(controller.element).position==='static','组件抢占固定定位')
+    })
+    await check('Vue v-model 和外部更新同步，DOM 与组件实例保留',async()=>{
+      const selected=ref('home');app=createApp({render:()=>h(Tabbar,{modelValue:selected.value,options,label:'示例栏目','onUpdate:modelValue':value=>selected.value=value})});app.mount(fixture);await tick()
+      const bar=fixture.querySelector('nav'),buttons=bar.querySelectorAll('button');buttons[2].click();await tick();assert(selected.value==='messages','Vue值未更新')
+      selected.value='settings';await tick();assert(fixture.querySelector('nav')===bar&&bar.querySelectorAll('button')[3]===buttons[3]&&buttons[3].getAttribute('aria-current')==='page','外部更新重建或未同步')
+    })
+    await check('Navigation 兼容保留，声明式 Tabbar 同样可用',async()=>{
+      controller=MyUI.create('Navigation',{value:'home',options});fixture.append(controller.element);await tick();assert(controller.element.offsetHeight===56,'旧Navigation外观被改变')
+      const node=document.createElement('nav');node.dataset.my='Tabbar';node.dataset.options=JSON.stringify({value:'home',options});fixture.append(node);const instances=MyUI.init(fixture);assert(node.classList.contains('my-tabbar')&&node.querySelectorAll('button').length===4,'声明式入口失效');instances.forEach(instance=>instance.destroy())
+    })
+    await check('卸载后旧按钮不再发送选择事件',async()=>{
+      let changes=0;controller=MyUI.create('Tabbar',{value:'home',options,onChange:()=>changes++});fixture.append(controller.element);const button=controller.element.querySelectorAll('button')[2];controller.destroy();controller=undefined;button.click();assert(changes===0,'卸载后仍发送事件')
+    })
+    document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,total:7,reports},null,2)
+  }catch(error){document.querySelector('#result').textContent=JSON.stringify({error:String(error.stack||error),reports},null,2)}
+  finally{clean();document.querySelector('#run').disabled=false}
+}
+</script></html>

@@ -14,6 +14,7 @@
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
             android:launchMode="singleTop"
+            android:windowSoftInputMode="adjustResize"
             android:label="@string/main_activity_title"
             android:name=".MainActivity"
             android:exported="true" />
@@ -35,19 +36,9 @@
         <activity
             android:name=".NativePageActivity"
             android:theme="@style/Theme.my_ui_example.Page"
+            android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
             android:exported="false" />
-
-        <!-- 原生设置子页自己管理导航、键盘和系统返回。 -->
-        <activity
-            android:name=".NativeSettingsActivity"
-            android:exported="false"
-            android:windowSoftInputMode="adjustResize" />
-
-        <activity
-            android:name=".NativeProfileActivity"
-            android:exported="false"
-            android:windowSoftInputMode="adjustResize" />
 
         <provider
           android:name="androidx.core.content.FileProvider"

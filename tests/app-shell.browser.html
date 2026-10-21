@@ -1,58 +1,47 @@
 <!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>主 Demo App 容器回归</title><style>body{font:14px system-ui;margin:20px}iframe{width:390px;height:844px;border:1px solid #ddd}pre{white-space:pre-wrap}</style>
+<title>Web 应用壳与原生页面导航回归</title><style>body{font:14px system-ui;margin:20px}iframe{width:390px;height:844px;border:1px solid #ddd}pre{white-space:pre-wrap}</style>
 <button id="run">运行检查</button><pre id="result">尚未运行</pre><div id="fixture"></div>
 <script type="module">
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms)),mode=new URLSearchParams(location.search).get('frame');
 if(mode){
-  if(mode==='android'){Object.defineProperty(navigator,'userAgent',{value:'Android Tauri',configurable:true});window.isTauri=true;window.calls=[];window.holdLayouts=false;window.releaseLayouts=[];window.__TAURI_INTERNALS__={invoke:async(command,args)=>{if(command==='plugin:app|supports_multiple_windows')return false;window.calls.push({command,args});if(window.holdLayouts&&args?.surface?.kind==='layout')await new Promise(resolve=>window.releaseLayouts.push(resolve))}}}
-  document.body.innerHTML='<div id="app"></div>';const base=document.createElement('base');base.href='/example/';document.head.append(base);await import('/example/src/main.ts');
+ if(mode==='android'){
+  Object.defineProperty(navigator,'userAgent',{value:'Android Tauri',configurable:true});window.isTauri=true;window.calls=[];
+  window.__TAURI_INTERNALS__={invoke:async(command,args)=>{window.calls.push({command,args,content:!!document.querySelector('.demo-detail input'),title:document.querySelector('[data-demo-title]')?.textContent});if(command==='plugin:app|supports_multiple_windows')return true}};
+ }
+ document.body.innerHTML='<div id="app"></div>';const base=document.createElement('base');base.href='/example/';document.head.append(base);await import('/example/src/main.ts');
 }else{
-  const reports=[],assert=(value,message)=>{if(!value)throw Error(message)},until=async(check,message='等待主 Demo 超时')=>{const start=performance.now();while(!check()){if(performance.now()-start>12000)throw Error(message);await pause(20)}};
-  let frame,doc,win;
-  const load=async(mode='web')=>{frame=document.createElement('iframe');frame.src='?frame='+mode+'#/home';document.querySelector('#fixture').replaceChildren(frame);await until(()=>frame.contentDocument?.querySelector('.demo-app.nc-app .nc-tabbar'));doc=frame.contentDocument;win=frame.contentWindow;await pause(160)};
-  const current=()=>doc.querySelector('.demo-page:not([inert])'),bar=()=>doc.querySelector('.demo-app .nc-app-tabbar');
-  const select=async(value)=>{bar().querySelector('[aria-label="'+({home:'首页',native:'原生',messages:'消息',settings:'设置'}[value])+'"]').click();await until(()=>current()?.dataset.demoPage===value);await pause(50)};
-  const back=async()=>{doc.querySelector('.demo-view:not([inert]) .demo-top [aria-label^="返回"]').click();await until(()=>!doc.querySelector('.demo-detail'));await pause(70)};
-  const check=async(name,run)=>{await run();reports.push({name,passed:true})};
-  document.querySelector('#run').onclick=async()=>{document.querySelector('#run').disabled=true;try{
-    await load();
-    await check('主 Demo 实际使用 App 与 Tabbar，顶部导航由当前页面提供',async()=>{
-      const api=await import('tauri-plugin-native-components/vue');assert(api.Tabbar&&!api.BottomNavigation,'组件名称没有统一');
-      assert(!doc.querySelector('.demo-app > .nc-page-navbar')&&doc.querySelector('.nc-app-view-active [data-page-navbar]'),'仍由 App 提供全局顶部导航');assert(bar().querySelectorAll('button').length===4,'主底栏缺少栏目');
-    });
-    await check('四个 Tab 保留页面、计数、滚动与底栏实例，重复选择不重置',async()=>{
-      const app=doc.querySelector('.demo-app'),footer=bar(),home=current(),length=win.history.length;home.scrollTop=550;await pause(40);
-      await select('messages');const messages=current(),counter=[...messages.querySelectorAll('button')].find(node=>node.textContent.includes('点一下'));counter.click();await pause(30);await select('settings');await select('native');await select('home');
-      assert(current()===home&&home.scrollTop===550,'切换丢失首页或滚动');await select('home');assert(home.scrollTop===550,'重复选择重置页面');await select('messages');assert(current()===messages&&counter.textContent.includes('1'),'消息计数没有保留');assert(win.history.length===length&&win.location.hash==='#/messages','Tab 路由或历史错误');assert(doc.querySelector('.demo-app')===app&&bar()===footer,'切换重建 App 或底栏');await select('home');
-    });
-    await check('配置的文档独立页隐藏底栏，返回恢复目录焦点并保留文档输入',async()=>{
-      const app=doc.querySelector('.demo-app'),footer=bar(),home=current(),top=home.scrollTop;home.querySelector('[data-demo-link="input"]').click();await until(()=>current()?.dataset.demoPage==='example/input'&&current().querySelector('input'));const detail=current(),input=detail.querySelector('input');assert(footer.hidden&&win.location.hash==='#/example/input','独立页没有通过 App 打开');input.value='保留文档输入';input.dispatchEvent(new win.Event('input',{bubbles:true}));await back();assert(current()===home&&home.scrollTop===top&&doc.activeElement?.dataset.demoLink==='input','返回未恢复目录');home.querySelector('[data-demo-link="input"]').click();await until(()=>current()?.dataset.demoPage==='example/input');assert(current()===detail&&detail.querySelector('input')===input&&input.value==='保留文档输入','文档实例或输入丢失');assert(doc.querySelector('.demo-app')===app&&bar()===footer,'独立页重建容器');await back();
-    });
-    await check('Android 页面自己的顶栏和共享底栏进入同一原生布局，遮罩及切换不串页',async()=>{
-      await load('android');const layout=()=>win.calls.filter(call=>call.args?.surface?.kind==='layout').at(-1)?.args.surface;await until(()=>layout()?.top?.title==='组件示例'&&layout()?.bottom?.modelValue==='home');const footer=layout().bottom.id;
-      doc.querySelector('#app').inert=true;await pause(100);assert(layout().top.visible&&layout().bottom.visible,'正文遮罩撤掉了导航');
-      win.dispatchEvent(new win.CustomEvent('native-components',{detail:{id:footer,action:'select',value:'messages'}}));await until(()=>layout()?.top?.title==='消息'&&layout()?.bottom?.modelValue==='messages');await pause(120);assert(layout().bottom.id===footer&&layout().top.title==='消息','失活页面覆盖了当前导航');doc.querySelector('#app').inert=false;
-    });
-    await check('设置页拥有独立导航布局，往返不替换共享底栏，旧入口仍可访问',async()=>{
-      const layout=()=>win.calls.filter(call=>call.args?.surface?.kind==='layout').at(-1)?.args.surface,footer=layout().bottom.id;
-      win.dispatchEvent(new win.CustomEvent('native-components',{detail:{id:footer,action:'select',value:'settings'}}));await until(()=>layout()?.bottom?.modelValue==='settings'&&!layout()?.top);assert(!doc.querySelector('.nc-app-view-active .demo-top'),'设置被统一导航头限制');
-      assert(win.calls.some(call=>call.args?.surface?.kind==='tabs'&&call.args.surface.items.some(item=>item.nativeView==='settings'&&item.nativeProps.groups.length===5)),'没有注册原生设置内容');
-      win.dispatchEvent(new win.CustomEvent('native-components',{detail:{id:footer,action:'select',value:'home'}}));await until(()=>layout()?.top?.title==='组件示例');assert(layout().bottom.id===footer,'设置往返重建底栏');win.location.hash='/profile';await until(()=>current()?.dataset.demoPage==='settings');
-    });
-    await check('冷进入、返回和缓存恢复在原生确认前也不出现 Web 导航占位',async()=>{
-      await load('android');await until(()=>doc.querySelector('[data-native-layout="true"]'));
-      const samples=[],sample=()=>{const active=doc.querySelector('.demo-view:not([inert])'),head=active?.querySelector('.demo-top');if(head)samples.push(head.getBoundingClientRect().height)};
-      let running=true;const watch=()=>{sample();if(running)win.requestAnimationFrame(watch)};win.requestAnimationFrame(watch);
-      const release=async()=>{win.holdLayouts=false;while(win.releaseLayouts.length){win.releaseLayouts.shift()();await pause(35)}await pause(100)};
-      for(let visit=0;visit<2;visit++){
-        win.holdLayouts=true;current().querySelector('[data-demo-link="input"]').click();await until(()=>current()?.dataset.demoPage==='example/input'&&current().querySelector('input'));await pause(90);
-        assert(doc.querySelector('.demo-view:not([inert]) .demo-top').getBoundingClientRect().height===0,'原生确认前重新显示了 Web 顶栏');await release();
-        win.holdLayouts=true;doc.querySelector('.demo-view:not([inert]) .demo-top [aria-label="返回组件列表"]').click();await until(()=>current()?.dataset.demoPage==='home');await pause(90);
-        assert(bar().getBoundingClientRect().height===0,'返回时重新预留了 Web 底栏');await release();
-      }
-      running=false;assert(samples.length>10&&samples.every(height=>height===0),'中间帧出现重复导航占位：'+samples.join(','));
-    });
-    document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,total:6,reports},null,2);
-  }catch(error){document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,error:String(error.stack||error),reports},null,2)}finally{document.querySelector('#run').disabled=false}};
+ const reports=[],assert=(value,message)=>{if(!value)throw Error(message)},until=async(check,message='等待应用壳超时')=>{const start=performance.now();while(!check()){if(performance.now()-start>15000)throw Error(message);await pause(20)}};
+ let frame,doc,win;
+ const current=()=>doc.querySelector('.demo-page:not([inert])'),bar=()=>doc.querySelector('[data-demo-tabbar]');
+ const load=async(mode='web',path='/home',child=false)=>{frame=document.createElement('iframe');frame.src='?frame='+mode+(child?'&pageWindow=1':'')+'#'+path;document.querySelector('#fixture').replaceChildren(frame);await until(()=>frame.contentDocument?.querySelector('.demo-app [data-demo-title]'));doc=frame.contentDocument;win=frame.contentWindow;await pause(150)};
+ const route=async(path)=>{win.location.hash=path;await until(()=>win.location.hash==='#'+path);await pause(80)};
+ const select=async(value)=>{const labels={home:'首页',native:'应用',messages:'消息',settings:'设置'};[...bar().querySelectorAll('button')].find(node=>node.textContent.trim()===labels[value]).click();await until(()=>current()?.dataset.demoPage===value);await pause(20)};
+ const open=async(id)=>{current().querySelector('[data-demo-link="'+id+'"]').click();await until(()=>current()?.dataset.demoPage==='example/'+id&&current().querySelector('[data-example]'));await pause(30)};
+ const back=async(expected='/home')=>{doc.querySelector('.demo-route-pages [aria-label^="返回"]').click();await until(()=>win.location.hash==='#'+expected);await pause(90)};
+ const check=async(name,run)=>{document.querySelector('#result').textContent='运行中：'+name;await run();reports.push({name,passed:true})};
+ document.querySelector('#run').onclick=async()=>{document.querySelector('#run').disabled=true;try{
+  await load();
+  await check('主壳使用 Web AppBar 与 Tabbar，栏目首次访问才挂载',async()=>{
+   assert(doc.querySelector('.demo-header .my-app-bar')&&bar().classList.contains('my-tabbar'),'没有使用 my-ui 导航组件');assert(doc.querySelectorAll('.demo-tab-pages .demo-view').length===1,'首屏提前创建其他栏目');assert(!doc.querySelector('[data-native-layout],.nc-page,.nc-tabs,.nc-app'),'仍挂载原生 UI 容器');
+  });
+  await check('连续 40 次 Tab 切换保留实例、计数、滚动与历史长度',async()=>{
+   const shell=doc.querySelector('.demo-app'),footer=bar(),home=current(),length=win.history.length;home.scrollTop=550;await pause(30);await select('messages');const messages=current(),counter=[...messages.querySelectorAll('button')].find(node=>node.textContent.includes('点一下'));counter.click();await pause(20);
+   for(let round=0;round<10;round++)for(const tab of ['settings','native','home','messages'])await select(tab);
+   assert(current()===messages&&counter.textContent.includes('1'),'切换丢失栏目状态');await select('home');assert(current()===home&&home.scrollTop===550,'首页滚动被重置');assert(win.history.length===length&&doc.querySelector('.demo-app')===shell&&bar()===footer,'切换累积历史或重建壳');assert(doc.querySelectorAll('.demo-tab-pages .demo-view').length===4,'切换重复创建栏目');
+  });
+  await check('详情到代码再返回保留输入、实例和滚动，底栏只在主栏目显示',async()=>{
+   await open('input');const detail=current(),input=detail.querySelector('input');input.value='代码往返保留内容';input.dispatchEvent(new win.Event('input',{bubbles:true}));detail.scrollTop=150;await pause(30);const top=detail.scrollTop;assert(win.getComputedStyle(bar()).display==='none','详情未隐藏主底栏');await route('/code/input');await until(()=>doc.querySelector('.code-page code'));await back('/example/input');assert(current()===detail&&input.value==='代码往返保留内容'&&detail.scrollTop===top,'代码页返回丢失详情');await back();assert(win.getComputedStyle(bar()).display!=='none'&&current().scrollTop===550,'返回目录丢失状态');
+  });
+  await check('详情缓存超过 12 页后释放最早页面',async()=>{
+   await open('input');const previous=current().querySelector('input');await back();for(const id of ['button','tag','card','identity','image','shadows','switch','slider','selection','list','feedback','menu','tabbar']){await route('/example/'+id);await until(()=>current()?.dataset.demoPage==='example/'+id&&current().querySelector('[data-example]'))}await route('/example/input');await until(()=>current()?.querySelector('input'));assert(current().querySelector('input')!==previous,'超过上限仍无限缓存');assert(doc.querySelectorAll('.demo-detail').length===1,'非活动详情仍参与布局');
+  });
+  await check('Android 保留原生 push，新页面内部使用 Web UI',async()=>{
+   await load('android');current().querySelector('[data-demo-link="input"]').click();await until(()=>win.calls.some(call=>call.command==='plugin:native-components|push'));const push=win.calls.find(call=>call.command==='plugin:native-components|push');assert(push.args.path.endsWith('#/example/input')&&push.args.title==='Input / Select','原生页面地址或标题错误');assert(win.location.hash==='#/home'&&current().dataset.demoPage==='home','原生 push 替换当前窗口路由');assert(!win.calls.some(call=>['plugin:native-components|create','plugin:native-components|update'].includes(call.command)),'仍通过 IPC 创建原生控件');
+  });
+  await check('Android 子页等实际内容挂载后 ready，返回关闭当前原生页面',async()=>{
+   await load('android','/example/input',true);await until(()=>current()?.querySelector('input'));await until(()=>win.calls.some(call=>call.command==='plugin:native-components|page_ready'));const ready=win.calls.filter(call=>call.command==='plugin:native-components|page_ready');assert(ready.every(call=>call.content&&call.title==='Input / Select'),'空根节点提前放行首帧');assert(win.getComputedStyle(bar()).display==='none'&&doc.querySelectorAll('.demo-tab-pages .demo-view').length===0,'子页创建无关主栏目');doc.querySelector('[aria-label="返回上一页"]').click();await until(()=>win.calls.some(call=>call.command==='plugin:native-components|back'));
+  });
+  document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,total:6,reports},null,2);
+ }catch(error){document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,error:String(error.stack||error),reports},null,2)}finally{document.querySelector('#run').disabled=false}};
 }
 </script></html>

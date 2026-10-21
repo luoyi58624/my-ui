@@ -29,7 +29,7 @@ if(new URLSearchParams(location.search).has('frame')){
       await check('桌面 Tauri 使用 Vue Router，在当前窗口进入与返回，不发原生创建命令',async()=>{
         await load('desktop=1#/home',false);const count=calls.length;click('button');await until(()=>win.location.hash==='#/example/button','桌面未使用 Vue Router');
         assert(calls.length===count&&doc.querySelector('.demo-detail:not([inert])'),'桌面误创建了原生窗口');
-        doc.querySelector('.demo-top [aria-label="返回组件列表"]').click();await until(()=>win.location.hash==='#/home','桌面返回失败');
+        doc.querySelector('.demo-header [aria-label="返回组件列表"]').click();await until(()=>win.location.hash==='#/home','桌面返回失败');
       });
       await load('start=1#/home');calls.length=0;
       await check('首页列表调用原生打开命令并携带正确地址与标题，父页保持原位',async()=>{
@@ -46,19 +46,19 @@ if(new URLSearchParams(location.search).has('frame')){
         assert(win.location.hash==='#/home'&&!doc.querySelector('[data-demo-page="home"]').inert,'失败后丢失目录');respond=()=>Promise.resolve();const count=calls.length;click('image');await pause(80);assert(calls.length===count+1,'失败后不能重试');
       });
       await check('独立子页显示目标内容，返回调用原生关闭且不改网页历史',async()=>{
-        await load('child=1&pageWindow=1#/example/image');win.location.hash='#/example/button';await until(()=>doc.querySelector('.demo-top [aria-label="返回上一页"]'),'子页没有原生返回入口');
-        await until(()=>doc.querySelector('.demo-detail:not([inert])')?.textContent.includes('主要按钮'),'没有渲染目标示例');assert(doc.querySelector('.nc-app-tabbar').hidden,'子页仍显示主 Tab');
-        const count=calls.length,hash=win.location.hash;doc.querySelector('.demo-top [aria-label="返回上一页"]').click();await pause(80);assert(calls.length===count+1&&calls.at(-1).command==='plugin:native-components|back','返回没有关闭当前原生子页');assert(win.location.hash===hash,'返回修改了子页网页路由');
+        await load('child=1&pageWindow=1#/example/image');win.location.hash='#/example/button';await until(()=>doc.querySelector('.demo-header [aria-label="返回上一页"]'),'子页没有原生返回入口');
+        await until(()=>doc.querySelector('.demo-detail:not([inert])')?.textContent.includes('主要按钮'),'没有渲染目标示例');assert(doc.querySelector('[data-demo-tabbar]').offsetHeight === 0,'子页仍显示主 Tab');
+        const count=calls.length,hash=win.location.hash;doc.querySelector('.demo-header [aria-label="返回上一页"]').click();await pause(80);assert(calls.length===count+1&&calls.at(-1).command==='plugin:native-components|back','返回没有关闭当前原生子页');assert(win.location.hash===hash,'返回修改了子页网页路由');
       });
       await check('旧版 Android 在当前 App 打开详情，往返保留目录、底栏和输入实例',async()=>{
-        await load('legacy=1#/home');multipleWindows=false;const count=calls.length,home=doc.querySelector('[data-demo-page="home"]'),app=doc.querySelector('.demo-app'),bar=doc.querySelector('.nc-app-tabbar');home.scrollTop=440;
+        await load('legacy=1#/home');multipleWindows=false;const count=calls.length,home=doc.querySelector('[data-demo-page="home"]'),app=doc.querySelector('.demo-app'),bar=doc.querySelector('[data-demo-tabbar]');home.scrollTop=440;
         click('input');await until(()=>win.location.hash==='#/example/input'&&doc.querySelector('.demo-detail input'),'旧版 Android 未打开详情');const input=doc.querySelector('.demo-detail input');input.value='保留输入';input.dispatchEvent(new win.Event('input',{bubbles:true}));
-        assert(bar.hidden&&doc.querySelector('.demo-app')===app&&calls.length===count,'旧版仍调用多窗口或重建 App');doc.querySelector('.demo-view:not([inert]) .demo-top [aria-label="返回组件列表"]').click();await until(()=>win.location.hash==='#/home','旧版返回失败');
-        assert(home===doc.querySelector('[data-demo-page="home"]')&&home.scrollTop===440&&!bar.hidden,'返回丢失目录或滚动');click('input');await until(()=>win.location.hash==='#/example/input'&&doc.querySelector('.demo-detail:not([inert]) input'),'旧版再次进入失败');assert(doc.querySelector('.demo-detail input')===input&&input.value==='保留输入','详情输入实例丢失');
-        assert(doc.querySelector('.demo-app')===app&&doc.querySelector('.nc-app-tabbar')===bar&&calls.length===count,'往返替换了容器或误调用原生关闭');
+        assert(bar.offsetHeight === 0&&doc.querySelector('.demo-app')===app&&calls.length===count,'旧版仍调用多窗口或重建 App');doc.querySelector('.demo-view:not([inert]) .demo-header [aria-label="返回组件列表"]').click();await until(()=>win.location.hash==='#/home','旧版返回失败');
+        assert(home===doc.querySelector('[data-demo-page="home"]')&&home.scrollTop===440&&bar.offsetHeight > 0,'返回丢失目录或滚动');click('input');await until(()=>win.location.hash==='#/example/input'&&doc.querySelector('.demo-detail:not([inert]) input'),'旧版再次进入失败');assert(doc.querySelector('.demo-detail input')===input&&input.value==='保留输入','详情输入实例丢失');
+        assert(doc.querySelector('.demo-app')===app&&doc.querySelector('[data-demo-tabbar]')===bar&&calls.length===count,'往返替换了容器或误调用原生关闭');
       });
       await check('主窗口直接访问组件旧链接，返回只回目录而不会误关主窗口',async()=>{
-        await load('direct=1#/example/button');const count=calls.length;doc.querySelector('.demo-top [aria-label="返回组件列表"]').click();await until(()=>win.location.hash==='#/home','没有回到主目录');assert(calls.length===count,'主窗口错误调用了关闭命令');
+        await load('direct=1#/example/button');const count=calls.length;doc.querySelector('.demo-header [aria-label="返回组件列表"]').click();await until(()=>win.location.hash==='#/home','没有回到主目录');assert(calls.length===count,'主窗口错误调用了关闭命令');
       });
       document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,total:7,reports},null,2);
     }catch(error){document.querySelector('#result').textContent=JSON.stringify({passed:reports.length,error:String(error.stack||error),reports},null,2)}

@@ -34,13 +34,13 @@ test('代码完整展开，鼠标位于代码区域时仍能滚动整页', { tim
               server.resolvedUrls.local[0]
             ).href
           )
-          const scroller = page.locator('.guide-page .nc-page-scroll')
+          const scroller = page.locator('.guide-page .demo-scroll')
           const short = page.locator('.guide-page .demo-code pre').first()
           await short.waitFor()
           // 使用浏览器真实滚轮，不能用 scrollTo 代替用户滚动来掩盖事件或滚动链问题。
           const wheelPage = async (code, delta) => {
             await code.evaluate((element) => {
-              const outer = element.closest('.nc-page-scroll')
+              const outer = element.closest('.demo-scroll')
               outer.scrollTop +=
                 element.getBoundingClientRect().top - outer.getBoundingClientRect().top - 80
             })
@@ -53,7 +53,7 @@ test('代码完整展开，鼠标位于代码区域时仍能滚动整页', { tim
             await page.mouse.wheel(0, delta)
             await page.waitForFunction(
               ({ before, delta }) => {
-                const current = document.querySelector('.guide-page .nc-page-scroll').scrollTop
+                const current = document.querySelector('.guide-page .demo-scroll').scrollTop
                 return delta > 0 ? current > before + 1 : current < before - 1
               },
               { before, delta },
@@ -88,7 +88,7 @@ test('代码完整展开，鼠标位于代码区域时仍能滚动整页', { tim
           await wheelPage(long, -160)
           if (width === 390) {
             await long.evaluate((element) => {
-              const outer = element.closest('.nc-page-scroll')
+              const outer = element.closest('.demo-scroll')
               outer.scrollTop +=
                 element.getBoundingClientRect().top - outer.getBoundingClientRect().top - 80
             })

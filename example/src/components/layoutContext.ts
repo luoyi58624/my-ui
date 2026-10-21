@@ -1,11 +1,11 @@
 import type { InjectionKey } from 'vue'
-import type { NavigationItem } from 'tauri-plugin-native-components/vue'
+import type { Option } from '@my-ui/vue'
 
-/** 主 Demo 的栏目配置，页面信息和底栏共用唯一标识。 */
-export interface DemoTab extends NavigationItem {
+/** 主 Demo 的栏目配置，页面和底栏共用唯一标识。 */
+export interface DemoTab extends Option {
   /** 页面顶部的标题。 */
   title: string
-  /** 原生占位示例编号。 */
+  /** 占位示例编号。 */
   demo?: number
 }
 

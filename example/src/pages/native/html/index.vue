@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Page } from 'tauri-plugin-native-components/vue'
 import DemoAppBar from '../../../components/DemoAppBar.vue'
 import { closePage } from '../../../commons/navigation'
+import { usePageReady } from '../../../commons/page-ready'
+
+const pageReady = usePageReady(false)
 
 const error = ref('')
-const loaded = ref(false)
 const source = new URL('native.html', document.baseURI).href
 function back() {
   void closePage().catch((reason) => {
@@ -15,25 +16,24 @@ function back() {
 </script>
 
 <template>
-  <Page class="html-page" :active="loaded">
-    <template #navbar
-      ><DemoAppBar title="原生 HTML 示例" back @back="back" @error="error = String($event)"
-    /></template>
+  <div class="html-page demo-view">
+    <DemoAppBar title="原生 HTML 示例" back @back="back"
+    />
     <p v-if="error" role="alert">{{ error }}</p>
     <iframe
       :src="source"
       title="直接使用 CSS 与 JavaScript 的组件示例"
-      @load="loaded = true"
+      @load="pageReady"
       @my:back.prevent="back"
     />
-  </Page>
+  </div>
 </template>
 
 <style scoped>
 .html-page {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  height: 100%;
   background: var(--background);
 }
 .html-page iframe {

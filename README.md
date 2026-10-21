@@ -9,7 +9,7 @@ packages/
     my-ui.js            所有 DOM 交互、定位与动画
     my-ui.d.ts          原生 API 类型
   vue/                  @my-ui/vue：Vue 3 薄封装与可选 Pinia 共享状态
-    index.ts            52 个组件的公共入口
+    index.ts            组件的公共入口
     adapter.ts          props、v-model、事件、插槽和生命周期适配
     components/         组件封装及类型，无组件样式
 example/                @my-ui/example：展示与使用示例
@@ -99,7 +99,7 @@ const actions = [
 
 保留原来的 Vue 组件名、v-model、事件、具名插槽与作用域插槽。适配层使用实际原生元素作为根节点，组件之间通过 DOM 上下文共享布局与分组状态。
 
-公共组件：Icon、Avatar、Image、Badge、Button、Tag、TagGroup、Input、Textarea、Form、FormField、Radio、RadioGroup、Checkbox、CheckboxGroup、Choices、Switch、Select、Combobox、Segmented、Slider、Picker、DatePicker、TimePicker、Calendar、Upload、AppBar、Notice、Steps、Progress、PullRefresh、Tabs、Navigation、Stepper、CellGroup、ListRow、Collapse、CollapseItem、Card、Tooltip、Divider、Loading、Skeleton、Empty、Floating、Menu、Popover、Dialog、Sheet、Drawer、Popup、Toast。
+公共组件：Icon、Avatar、Image、Badge、Button、Tag、TagGroup、Input、Textarea、Form、FormField、Radio、RadioGroup、Checkbox、CheckboxGroup、Choices、Switch、Select、Combobox、Segmented、Slider、Picker、DatePicker、TimePicker、Calendar、Upload、AppBar、Notice、Steps、Progress、PullRefresh、Tabs、Navigation、Tabbar、Stepper、CellGroup、ListRow、Collapse、CollapseItem、Card、Tooltip、Divider、Loading、Skeleton、Empty、Floating、Menu、Popover、Dialog、Sheet、Drawer、Popup、Toast。
 
 ## PullRefresh 下拉刷新
 
@@ -132,7 +132,7 @@ async function reload() {
 
 `v-model` 是布尔加载状态；有效下拉释放或 ref 的 `refresh()` 先同步 `true`，下一微任务触发无参数的 `refresh` 事件，让同步完成的业务也能正确结束加载。业务在成功或失败的 `finally` 中恢复 `false`，组件随后收回。加载中或 `disabled` 时 `refresh()` 返回 `false` 且不重复触发；成功发起返回 `true`。外部直接设为 `true` 只展示加载状态，不触发请求。`disabled` 禁止新手势和主动刷新，不中止已经发出的业务请求。`label` 默认为“下拉刷新”，同时作为滚动区域的辅助名称。
 
-只有单指从组件顶部开始向下拖动才会接管；显示位移达到 64px 后松开触发，最大位移 112px，未达到阈值、取消或多指会收回。普通滚动、横向手势和输入控件保留自己的行为；内部滚动区仍能向上滚动时优先消费手势。需要完全独立的交互区域可加 `data-swipe-ignore`。本组件不在一次滚动手势中途到顶后继续接管，需抬手后再次下拉；鼠标与键盘用户可使用上述刷新按钮。
+单指滚动到顶部后，继续向下即可拉出刷新区域，不用抬手重来；显示位移达到 64px 后松开触发，最大位移 112px。回拉收完后，同一次触摸可继续向上滚动正文；未达到阈值、取消或多指会收回。触摸监听全程被动，只有刷新区域被拉出期间临时禁止该容器的用户滚动，不逐帧写入 `scrollTop`，正文滚动与惯性仍由浏览器处理。横向手势、输入控件以及嵌套滚动容器保留自己的行为；需要完全独立的交互区域可加 `data-swipe-ignore`。鼠标与键盘用户可使用上述刷新按钮。连续手势以 Chromium 真实触摸序列验证，iOS WebView 尚未真机验收。
 
 原生 HTML 使用 `MyUI.create('PullRefresh', { value: false, onChange(value) {}, onRefresh() {} }, { slots: { default: content } })`，通过 `instance.update({ value: false })` 结束刷新，通过 `instance.exposed.refresh()` 主动发起。支持减少动态效果；卸载时释放手势监听、动画帧、计时器与尺寸观察器。完整 Vue 示例见 `example/src/pages/home/pull-refresh/index.vue`。
 
@@ -195,6 +195,16 @@ const upload: UploadRequest = async (file, { signal }) => {
 ```
 
 AppBar 默认标题居中，会根据左右内容的实际宽度预留对称空间；`center=false` 改为左对齐，长标题省略。`leading` 插槽优先于默认返回按钮，默认插槽替换标题，`actions` 放右侧操作。`back` 只发送事件，不调用浏览器历史；`sticky` 在当前滚动容器顶部吸附。CSS 变量为 `--app-bar-height`（默认 60px）和 `--app-bar-top`。
+
+```vue
+<Tabbar v-model="tab" :options="[
+  { value: 'home', label: '首页', icon: 'home' },
+  { value: 'messages', label: '消息', icon: 'message' },
+  { value: 'settings', label: '设置', icon: 'sliders' },
+]" label="主要栏目" />
+```
+
+Tabbar 与 Navigation 共用选项和键盘逻辑，支持禁用项、方向键与 Home/End；切换选中值时保留按钮节点。它在普通布局中占据底部空间，不自行固定定位、创建页面或跳转路由。`--tabbar-height` 默认为 64px，底部自动加上安全区；宿主已避让时可设置 `--tabbar-safe-bottom: 0px`。原生 HTML 使用 `MyUI.create('Tabbar', { value, options, onChange })`。Navigation 的原有圆角样式和 API 保持兼容。
 
 Notice 的 `type` 为 `info` / `success` / `warning` / `error`，支持 `title`、`message`，默认插槽替换正文，`actions` 添加操作。`icon=false` 可隐藏图标，或传入内置图标名；`closable` 开启关闭按钮并同步布尔值，200ms 淡出收起，关闭时立即退出辅助树与键盘焦点。更新绑定值可重新展开，错误通知使用 alert，其余使用 status。CSS 变量 `--notice-radius` 默认 12px。
 
@@ -371,9 +381,13 @@ bun run dev
 bun run build
 ```
 
-开发地址默认 `http://127.0.0.1:5178/`，纯 HTML 入口为 `/native.html`。示例采用“首页、原生、消息、设置”四个底部 Tab。首页按用途展示普通组件；“原生”集中展示 App、AppBar、Tabbar、Tabs、Page 下拉刷新和原生页面与共享状态；消息保留 Demo 占位页，设置展示大标题、吸顶搜索和圆角分组列表。每个页面自行管理导航头。Web 和桌面 App 使用 Vue Router 在当前窗口导航，Android 12L 及以上的组件列表入口创建独立 Activity。返回保留所属目录的滚动与入口焦点，底部同级切换不增加返回历史，旧 `#/discover` 和 `#/profile` 链接仍可访问。
+开发地址默认 `http://127.0.0.1:5178/`，纯 HTML 入口为 `/native.html`。示例采用“首页、应用、消息、设置”四个底部 Tab；页面里的顶栏、底栏、正文和下拉刷新全部使用 Web 组件。主 Tab 首次访问后保留实例，切换保持输入、计数与滚动位置，不增加返回历史。`#/example/app-bar`、`#/example/tabbar`、`#/example/pull-refresh` 分别演示三个公共组件。
 
-`example/src/router.ts` 定义 Vue Router，`example/src/App.vue` 提供统一弹层和提示宿主，`example/src/pages/native/app/Root.vue` 使用 KeepAlive 保留页面；`example/src/components/DemoLayout.vue` 负责应用容器和栏目导航。`example/src/pages/catalog.ts` 维护目录数据，各文档按目录标识放在 `pages/home/` 或 `pages/native/` 下，通过文档注册表加载；四个栏目的内容也分别位于对应页面目录。公共逻辑集中在 `example/src/commons/`，其中 `navigation.ts` 接入 `tauri-plugin-native-components/router`，`notify.ts` 提供页面共用的提示入口；组件库不依赖 Tauri。Android 子页地址为 `index.html?pageWindow=1#/example/组件标识`；旧的 `#combobox`、`#slider-options` 等链接仍可直接定位。原生 Activity 与共享状态示例位于“原生”目录的“页面与共享”分组。CSS 保存后即时更新；修改 JS 核心会完整刷新示例，避免旧实例残留。构建结果同时提供 Vue 页面、原生页面和原样的 CSS/JS。
+**原生多页面导航保留。** Android 在支持移动端多窗口时，`navigation.push()` 仍创建独立 Activity/WebView，`back()` 关闭当前子页；Web、桌面及不支持多窗口的 Android 使用 Vue Router。UI 渲染方式不改变这个导航契约。旧的 `#/discover`、`#/profile`、`#/native/app-bar`、`#/native/tabbar` 和 `#/page-refresh` 入口继续可访问。
+
+`example/src/router.ts` 定义每个 WebView 内的路由，`App.vue` 提供统一弹层和提示，`components/DemoLayout.vue` 保留主栏目实例并显示详情。Web 同窗口详情通过有数量上限的 KeepAlive 保留往返状态；Android 子 Activity 根据自己的地址展示详情。`commons/navigation.ts` 继续接入 `tauri-plugin-native-components/router`，组件库本身不依赖 Tauri。Android 子页地址仍使用 `index.html?pageWindow=1#/example/组件标识`；目录、指南、源码展示、独立 HTML 和共享持久状态均保留。
+
+CSS 保存后即时更新，修改 JS 核心会完整刷新示例；构建结果同时提供 Vue 页面、普通 HTML 页面与原样的 CSS/JS。
 
 主题偏好由 `example/src/commons/state/theme.ts` 的共享 Pinia store 管理，明暗模式、配色和字重均跨窗口持久化同步；任意窗口修改后，其他窗口与新窗口都会应用。旧的 `my-ui:theme` 设置继续作为迁移来源和首帧快照。`example/src/commons/native-appearance.ts` 同步实际明暗主题到 Android 系统栏文字/图标及桌面窗口装饰，主页面和子页面使用相同逻辑。纯 HTML 在 App 内通过独立的 `native-theme.js` 接入同一存储，不加载 Vue；普通离线 HTML 仍只依赖组件 CSS/JS。
 
@@ -485,7 +499,7 @@ Android 首页使用 `singleTop`，子页保持 `standard`。此前首页的 `si
 
 `tests/picker.browser.html` 检查滚轮跟手、惯性、级联、键盘、禁用态、面板草稿和卸载；`tests/picker-value.test.mjs` 检查多列选值与吸附规则。`tests/image.browser.html` 检查图片加载、缓存、懒加载、切换地址、失败重试、属性、插槽与销毁；`tests/native-core.browser.html` 覆盖原生与 Vue 的值同步、布局尺寸、SVG 显隐、明暗主题、插槽、焦点及弹层生命周期；`tests/input-affixes.browser.html` 检查输入框图标对齐、完整点击区域和显隐操作。其余浏览器回归保留原交互场景。纯函数测试使用 Bun 运行，按改动范围选择测试文件运行。
 
-`tests/upload-structure.browser.html` 定向检查上传状态与取消、移除、重试、对象地址释放、原生与 Vue 同步、顶栏居中、通知焦点和过渡、步骤键盘与语义。`tests/upload-structure.test.mjs` 检查文件校验与步骤状态；级联菜单标题图标的连续显示由 `tests/menu-cascade.browser.html` 的触屏标题用例覆盖。
+`tests/tabbar.browser.html` 检查底栏选择、键盘、禁用、节点保留、安全区和 Vue 同步；`node --test tests/pull-refresh.test.mjs` 使用真实触摸检查连续到顶、反向接力、取消和示例。`tests/upload-structure.browser.html` 定向检查上传状态与取消、移除、重试、对象地址释放、原生与 Vue 同步、顶栏居中、通知焦点和过渡、步骤键盘与语义。`tests/upload-structure.test.mjs` 检查文件校验与步骤状态；级联菜单标题图标的连续显示由 `tests/menu-cascade.browser.html` 的触屏标题用例覆盖。
 
 `bun test ./tests/shared-state.test.ts ./tests/shared-state-tauri.test.ts` 使用真实 Pinia 与官方 Tauri JS 绑定检查恢复、双向同步、异步竞态、不同字段并发、失败重试和销毁；`tests/shared-state.browser.html` 使用两个独立文档检查实际输入与按钮、浏览器存储事件、刷新恢复和后台补同步。测试只清理自己随机生成的存储键。
 
@@ -507,30 +521,10 @@ Android 示例的系统返回优先交给当前 WebView 的最上层弹层：级
 
 临时截图、验证脚本和发布用的仓库副本放在系统临时目录中，用完清理，不在项目内积累 `qa` 或嵌套 Git 仓库。`node_modules` 是可重新安装的本地依赖，`dist` 是构建产物，均不提交。
 
-### 原生导航组件
+### Web UI 与原生导航的边界
 
-独立源码位于 `D:/project/tauri/plugins/tauri-plugin-native-components/`，目录、前端包和 Rust crate 均使用 `tauri-plugin-` 前缀，命令及权限仍使用短标识 `native-components`。示例通过 Bun 本地依赖安装完整源码，尚未创建或发布 GitHub 仓库。
+`@my-ui/vue` 提供 Web AppBar、Tabbar、Tabs 和 PullRefresh。AppBar 负责标题、返回入口及操作插槽，Tabbar 只同步当前栏目；页面结构和状态由 Vue 管理，组件不创建 Activity、不发送布局尺寸，也不维护另一套路由栈。
 
-从 `tauri-plugin-native-components/vue` 引入 `App`、`AppBar`、`Tabbar`、`Tabs`，同时引入 `tauri-plugin-native-components/style.css`。组件按职责命名，通过 Vue 属性、事件和插槽封装平台能力。Android 使用 MaterialToolbar 和 BottomNavigationView，保留官方水波纹；Web 和其他桌面/移动平台显示 Vue 对应内容。CSS 提供尺寸和颜色，插件不生成示例主题。
+`D:/project/tauri/plugins/tauri-plugin-native-components/` 继续作为原生导航插件使用。保留 Android 多 Activity/WebView 的打开、返回、窗口外观、系统返回分发和子窗口首帧确认，移除原生布局容器、Toolbar、BottomNavigation、原生 Tab 内容以及 SwipeRefreshLayout。公共的 `router`、`window` 与页面就绪入口继续可用；不再从插件导入 UI 组件或样式。
 
-`App` 管理底栏和一级页面，页面内的 `Tabs` 通过 `nativeView` 承载宿主注册的 Android 视图。首页和原生目录使用当前 Tauri WebView，消息使用 `DemoNativeTab.kt`，设置使用 `NativeSettingsTab.kt`；原生目录里的 Tabs 示例同样展示原生页面切换与计数保留。组件详情页由同一个插件新建 Activity，各 Tab 不额外打开 Activity 或 WebView。Web/桌面的对应内容保留在 Vue 插槽中，三个独立组件示例按路由名称缓存，互不混用状态。
-
-设置首页参考手机系统设置的原生布局：大标题随正文滚动退出，搜索栏吸顶，列表采用圆角分组和逐行波纹。点击行或搜索栏，通过普通 Android Intent 打开 `NativeSettingsActivity`，子页自行提供返回导航、搜索输入和显示设置 UI，不创建 Tauri 窗口或 WebView。开关、模式选择和滑块仅保留界面状态，不读写系统设置；系统返回后保留首页滚动、控件和底栏实例。
-
-版本边界：普通原生设置子页已在 Android 9 验证；组件详情在支持多窗口的 Android 12L（API 32）及以上创建 Web 子 Activity，更低版本自动使用当前 WebView 的 Vue Router 导航，保留页面、输入和滚动状态。系统返回优先关闭弹层，再返回同窗口上一页，根页面交还系统。参见 [Tauri 移动端多窗口说明](https://tauri.app/learn/mobile-multiwindow/)。
-
-旧版 Android 的导航定向检查为 `node tests/android-navigation-compat.device.mjs`，可通过 `ANDROID_SERIAL` 指定设备、加 `--record` 保存录屏；覆盖真实系统返回、弹层优先级、多层路由、直达链接、状态保留，以及切换中间帧的导航占位和正文位置。
-
-原生资料页的定向设备测试为 `:app:connectedArm64DebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.myui.example.NativeProfileActivityTest`，覆盖真实输入、空昵称校验、保存、开关、重建和取消，运行结束恢复原有资料。
-
-`DemoAppBar.vue` 将结构化标题、返回和主题操作接入原生导航头。放在 Page 的 navbar 插槽时，Android 使用原生页面壳管理导航，Web 弹层出现时保留同一导航实例；正文与弹层始终留在原 WebView 中。原生组件绑定发起调用的窗口，不借用 Tauri 的全局 Activity。
-
-`Page` 提供 navbar、navigation 和默认正文插槽。Android 将 AppBar、原 WebView、BottomNavigation 按上中下分配真实空间，Web 弹层自然限制在中间视口；其他平台及原生失败时使用 Web 模拟。Android 的网页模态遮罩只禁用正文背景，顶部操作、返回按钮和底部导航继续可交互，并保留原生导航实例。安全区和输入法由原生宿主处理，键盘出现时隐藏底栏。
-
-使用 `refreshable`、`v-model:refreshing`、`@refresh` 启用下拉刷新，业务在请求结束后将 refreshing 设为 false。Android 使用原生 SwipeRefreshLayout；Web 和原生接入失败时使用 Web 刷新。`suspended` 只暂停内容区原生控件和刷新，不卸载页面导航。
-
-「原生 → Page 页面与下拉刷新」打开独立的 `#/page-refresh` 动态列表：Android 支持同一次拖动滚到顶部后继续拉出刷新器，向上推回刷新器后继续滚正文，松手超过阈值才刷新。也支持导航栏刷新按钮、刷新完成后更新列表，以及弹窗期间暂停刷新。`Page` 的 `refresh()`、`scrollTo(options)`、`scrollElement` 可用于业务操作；返回原生目录后保留浏览位置。当前默认插槽承载 Web 内容，自有滚动容器和 iframe 不自动接管。目录与返回行为的定向检查为 `bun run test:browser native-catalog demo-layout navigation`。
-
-安装 Android 调试包后，`node tests/android-refresh.device.mjs [--record]` 定向检查连续到顶、回推接力、反向拖动、多次交接及弹窗恢复后的快速拖动。手机需保持解锁、竖屏；回归只重启示例，不清除应用数据，截图、触摸记录和可选录屏保存在系统临时目录。
-
-Android 子页立即开始系统转场，只暂隐尚在交接的 WebView 正文。等 Page 的原生导航接管、网页导航隐藏、视口更新与 WebView 绘制确认后显示稳定正文；原生 HTML 页还会等待 iframe 加载。`node tests/android-page-entry.device.mjs [--record]` 检查普通页、复杂页、重复进入及 iframe，并故意延迟原生确认，验证正文准备不阻塞入场、不会暴露重复导航，返回和切换 Tab 后保留底栏。测试只重启示例，报告和可选录屏写入系统临时目录。
+Android 页面内部的 Web 顶栏、正文、底栏由同一个 WebView 渲染，系统栏与键盘避让由窗口宿主处理；弹层也由 Web 统一处理。页面就绪只等待 Web 内容，不再等待原生导航接管、布局版本或尺寸往返。多页面之间的局部 Vue 状态仍然独立，只有显式共享的数据通过 Pinia 存储适配器同步。

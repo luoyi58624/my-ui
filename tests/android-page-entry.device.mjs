@@ -1,172 +1,114 @@
 import assert from 'node:assert/strict'
-import { execFileSync, spawn } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { chromium } from 'playwright'
 
-assert(process.argv.slice(2).every(value => ['--record', '--attach'].includes(value)), '用法：node tests/android-page-entry.device.mjs [--record] [--attach]')
+// 实际创建子 Activity，验证 Web 首帧、安全视口以及返回后保留父 WebView。
+assert(process.argv.slice(2).every(value => value === '--attach'), '用法：node tests/android-page-entry.device.mjs [--attach]')
 const application = JSON.parse(readFileSync(new URL('../example/src-tauri/tauri.conf.json', import.meta.url))).identifier
 const serial = process.env.ANDROID_SERIAL || execFileSync('adb', ['get-serialno'], { encoding: 'utf8', windowsHide: true }).trim()
-assert(serial && serial !== 'unknown', '请连接一台已授权 USB 调试的手机，或指定 ANDROID_SERIAL')
+assert(serial && serial !== 'unknown', '请连接已授权设备或指定 ANDROID_SERIAL')
 const adbArguments = ['-s', serial]
 const adb = (...args) => execFileSync('adb', [...adbArguments, ...args], { encoding: 'utf8', windowsHide: true, maxBuffer: 16 * 1024 * 1024 }).trim()
-const binary = (...args) => execFileSync('adb', [...adbArguments, ...args], { windowsHide: true, maxBuffer: 24 * 1024 * 1024 })
-const pause = ms => new Promise(resolve => setTimeout(resolve, ms))
 const output = mkdtempSync(join(tmpdir(), 'my-ui-page-entry-')), reports = []
-const screenshot = name => writeFileSync(join(output, name + '.png'), binary('exec-out', 'screencap', '-p'))
+const pause = ms => new Promise(resolve => setTimeout(resolve, ms))
 const until = async (check, message) => {
   const start = Date.now()
-  while (!await check()) { if (Date.now() - start > 15_000) throw Error(message); await pause(60) }
+  while (!await check()) { if (Date.now() - start > 15_000) throw Error(message); await pause(80) }
 }
-const windowState = () => adb('shell', 'dumpsys', 'window', 'windows').split(/\n(?=  Window #\d+)/)
-  .find(value => value.split('\n')[0].includes(application + '/' + application + '.NativePageActivity')) ?? ''
-const foreground = () => adb('shell', 'dumpsys', 'activity', 'activities').split('\n').find(value => value.includes('topResumedActivity=')) ?? ''
-const hierarchy = activity => adb('shell', 'dumpsys', 'activity', application).split(/\n(?=\s*ACTIVITY )/)
-  .find(value => value.includes('ACTIVITY ' + application + '/.' + activity + ' ')) ?? ''
-let browser, port, recording, recordPid, remoteRecording
-
+const foreground = () => adb('shell', 'dumpsys', 'activity', 'activities').split('\n').find(line => /topResumedActivity=|mResumedActivity:/.test(line)) ?? ''
+const hierarchy = () => adb('shell', 'dumpsys', 'activity', application)
+const screenshot = name => writeFileSync(join(output, name + '.png'), execFileSync('adb', [...adbArguments, 'exec-out', 'screencap', '-p'], { windowsHide: true, maxBuffer: 24 * 1024 * 1024 }))
+let browser, port
 try {
-  assert(adb('shell', 'dumpsys', 'power').includes('mWakefulness=Awake'), '请保持手机解锁、亮屏')
-  // 默认重置示例的页面栈；共享真机时可连接已打开的首页，均保留应用数据。
+  assert(Number(adb('shell', 'getprop', 'ro.build.version.sdk')) >= 32, '此测试验证 Android 12L+ 多 Activity；旧版运行 android-navigation-compat.device.mjs')
   if (!process.argv.includes('--attach')) {
     adb('shell', 'am', 'force-stop', application)
     adb('shell', 'am', 'start', '-W', '-n', application + '/.MainActivity')
   }
   const pid = adb('shell', 'pidof', application)
+  const logStart = Number(adb('shell', 'date', '+%s'))
   port = adb('forward', 'tcp:0', 'localabstract:webview_devtools_remote_' + pid)
   await until(async () => {
-    try { return (await (await fetch('http://127.0.0.1:' + port + '/json/list', { signal: AbortSignal.timeout(2000) })).json()).length > 0 } catch { return false }
-  }, '没有找到可调试的 WebView，请先安装 Android 调试包')
+    try { return (await (await fetch('http://127.0.0.1:' + port + '/json/list')).json()).length > 0 } catch { return false }
+  }, '没有可调试的 WebView，请安装 Android 调试包')
   browser = await chromium.connectOverCDP('http://127.0.0.1:' + port)
-  const context = browser.contexts()[0], parent = context.pages().find(page => page.url().includes('tauri.localhost'))
-  await until(async () => {
-    let actual
-    try { actual = adb('shell', 'pidof', application) } catch { throw Error('初始化期间应用进程已退出，请检查启动日志') }
-    assert.equal(actual, pid, '初始化期间应用进程发生重启，请检查启动日志')
-    return await parent.locator('[data-native-layout="true"]').count() > 0
-  }, '首页原生页面壳未就绪')
-  const parentIdentity = await parent.evaluate(() => window.__entryIdentity = crypto.randomUUID())
-  await pause(500)
-
+  const context = browser.contexts()[0], parent = context.pages().find(page => page.url().includes('tauri.localhost') && !page.url().includes('pageWindow='))
+  await parent.locator('[data-demo-tabbar]').waitFor()
+  const identity = await parent.evaluate(() => window.__entryIdentity = crypto.randomUUID())
   await context.addInitScript(() => {
     window.__entryReady = []
     const stringify = JSON.stringify
-    // Tauri 的 invoke 不可改写；只观察 Android IPC 序列化，并延迟目标回调。
-    JSON.stringify = function (value, ...arguments_) {
-      if (value?.cmd?.startsWith('plugin:native-components|')) {
-        const { cmd: command, payload: args, callback } = value
-        if (command === 'plugin:native-components|page_ready') {
-          const navigation = document.querySelector('.nc-page-navbar')
-          window.__entryReady.push({
-            frame: args.frame,
-            native: !!document.querySelector('[data-native-layout="true"]'),
-            navigation: navigation ? getComputedStyle(navigation).display : null,
-            frames: [...document.querySelectorAll('iframe')].map(frame => ({ url: frame.contentDocument?.URL, state: frame.contentDocument?.readyState })),
-          })
-        }
-        if (new URL(location.href).searchParams.has('entryHold') && !window.__entryWillHold
-          && command === 'plugin:native-components|update' && args.surface?.kind === 'layout' && args.surface.visible) {
-          // 原生已创建导航，故意延迟网页收到确认，放大录屏中的重复标题窗口。
-          window.__entryWillHold = true
-          const callbacks = window.__TAURI_INTERNALS__.callbacks, original = callbacks.get(callback)
-          callbacks.set(callback, result => {
-            window.__entryHeld = true
-            window.__releaseEntry = () => original(result)
-          })
-        }
+    // 只观察 IPC：首帧确认时必须已有可见的 Web 页面和完整 iframe。
+    JSON.stringify = function (value, ...args) {
+      if (value?.cmd === 'plugin:native-components|page_ready') {
+        const header = document.querySelector('.my-app-bar')
+        window.__entryReady.push({
+          frame: value.payload.frame,
+          header: !!header && getComputedStyle(header).display !== 'none',
+          frames: [...document.querySelectorAll('iframe')].map(frame => ({ url: frame.contentDocument?.URL, state: frame.contentDocument?.readyState })),
+        })
       }
-      return stringify.call(this, value, ...arguments_)
+      return stringify.call(this, value, ...args)
     }
   })
-
-  if (process.argv.includes('--record')) {
-    let previous = []
-    try { previous = adb('shell', 'pidof', 'screenrecord').split(/\s+/) } catch { /* 没有其他录屏。 */ }
-    remoteRecording = '/sdcard/Download/my-ui-page-entry-' + Date.now() + '.mp4'
-    const child = spawn('adb', [...adbArguments, 'shell', 'screenrecord', '--time-limit', '45', '--size', '628x1380', remoteRecording], { windowsHide: true, stdio: 'ignore' })
-    recording = new Promise((resolve, reject) => { child.once('error', reject); child.once('exit', code => code === 0 ? resolve() : reject(Error('录屏失败'))) })
-    recording.catch(() => {})
+  for (const path of ['/example/button', '/showcase', '/shared-state', '/html']) {
+    assert(foreground().includes(application + '/.MainActivity'), '设备离开了父 Activity')
+    const created = context.waitForEvent('page')
+    await parent.evaluate(path => window.__TAURI_INTERNALS__.invoke('plugin:native-components|push', { path: 'index.html#' + path, title: '首帧回归' }), path)
+    const child = await created, errors = []
+    child.on('pageerror', error => errors.push(error.message))
+    await child.waitForURL(url => url.searchParams.get('pageWindow') === '1' && url.hash === '#' + path)
+    await child.locator('.my-app-bar').first().waitFor()
+    assert.equal(await child.locator('[data-demo-tabbar]:visible').count(), 0, '子 Activity 错误显示了首页主 Tab')
+    await until(() => foreground().includes(application + '/.NativePageActivity'), '没有创建独立子 Activity')
+    await child.waitForFunction(() => window.__entryReady?.length > 0)
     await until(() => {
-      try { recordPid = adb('shell', 'pidof', 'screenrecord').split(/\s+/).find(value => !previous.includes(value)); return !!recordPid } catch { return false }
-    }, '录屏未启动')
-  }
-
-  const open = async (path, name, held = false) => {
-    assert(foreground().includes(application + '/.MainActivity'), '设备已离开示例首页，可能被其他会话占用')
-    assert.equal(adb('shell', 'pidof', application), pid, '测试过程中示例进程被重新启动')
-    const created = context.waitForEvent('page'), errors = [], start = Date.now()
-    await parent.evaluate(path => window.__TAURI_INTERNALS__.invoke('plugin:native-components|push', { path, title: '首帧回归' }), path)
-    const page = await created
-    page.on('pageerror', error => errors.push(error.message))
-    await until(() => windowState().includes('mDrawState=HAS_DRAWN'), '新页没有立即开始入场')
-    const entryElapsed = Date.now() - start
-    if (held) {
-      await page.waitForFunction(() => window.__entryHeld === true)
-      assert.equal(await page.evaluate(() => document.querySelector('.nc-page-navbar') && getComputedStyle(document.querySelector('.nc-page-navbar')).display !== 'none'), true)
-      await pause(350)
-      assert(windowState().includes('mDrawState=HAS_DRAWN'), '正文准备期间仍然阻塞 Activity 入场')
-      assert(/RustWebView\{[^\n]*alpha=0\.0/.test(hierarchy('NativePageActivity')), '网页导航仍可见时暴露了交接中的 WebView')
-      screenshot(name + '-held')
-      await page.evaluate(() => window.__releaseEntry())
-    }
-    await page.waitForSelector('[data-native-layout="true"]')
-    await until(() => /RustWebView\{[^\n]*alpha=1\.0/.test(hierarchy('NativePageActivity')), '正文首帧完成后仍然隐藏 WebView')
-    await pause(600)
-    const ready = await page.evaluate(() => window.__entryReady)
-    assert(ready.length && ready.every(value => value.native && value.navigation === 'none'), '网页导航仍可见时确认了首帧：' + JSON.stringify(ready))
-    assert(ready.every(value => value.frames.every(frame => frame.state === 'complete' && frame.url !== 'about:blank')), 'iframe 内容尚未加载就确认了首帧')
-    const samples = await page.evaluate(async () => {
-      const frames = []
-      for (let index = 0; index < 15; index++) {
+      const block = hierarchy().split(/\n(?=\s*ACTIVITY )/).find(value => value.includes('ACTIVITY ' + application + '/.NativePageActivity ')) ?? ''
+      return /RustWebView\{[^\n]*alpha=1\.0/.test(block)
+    }, '子页面首帧完成后 WebView 仍隐藏')
+    const ready = await child.evaluate(() => window.__entryReady)
+    assert(ready.every(frame => frame.header), 'Web 页面尚未挂载就发送了首帧确认')
+    assert(ready.every(frame => frame.frames.every(item => item.state === 'complete' && item.url !== 'about:blank')), 'iframe 未完成加载就确认了首帧')
+    assert(!/MaterialToolbar\{|BottomNavigationView\{/.test(hierarchy()), '仍创建了原生 UI 导航栏')
+    const frames = await child.evaluate(async () => {
+      const samples = []
+      for (let index = 0; index < 12; index++) {
         await new Promise(requestAnimationFrame)
-        frames.push({ height: innerHeight, navigation: getComputedStyle(document.querySelector('.nc-page-navbar')).display, top: document.querySelector('.nc-page-body').getBoundingClientRect().top })
+        const header = document.querySelector('.my-app-bar').getBoundingClientRect()
+        samples.push({ width: innerWidth, height: innerHeight, top: header.top, bottom: header.bottom })
       }
-      return frames
+      return samples
     })
-    assert(samples.every(value => value.navigation === 'none' && value.top === 0 && value.height === samples[0].height), '入场后正文仍在改变导航占位或视口')
+    assert(frames.every(frame => frame.height === frames[0].height && frame.top >= 0 && frame.bottom <= frame.height), '首帧后视口继续跳动或顶栏超出视口')
     assert.deepEqual(errors, [])
-    screenshot(name)
-    reports.push({ name, passed: true, held, entryElapsed, elapsed: Date.now() - start, ready, samples })
-    console.log(JSON.stringify({ name, passed: true, held, entryElapsed }))
-    await page.evaluate(() => window.__TAURI_INTERNALS__.invoke('plugin:native-components|back')).catch(error => {
+    const timeouts = adb('logcat', '-d', '-v', 'epoch', '-s', 'NativePageFrame:W', '*:S').split('\n')
+      .filter(line => Number(line.match(/^\s*(\d+\.\d+)/)?.[1]) >= logStart && line.includes('准备超时'))
+    assert.deepEqual(timeouts, [], '子页依赖首帧超时才显示，不能视作握手成功')
+    screenshot(path.replaceAll('/', '-'))
+    await child.evaluate(() => window.__TAURI_INTERNALS__.invoke('plugin:native-components|back')).catch(error => {
       if (!/Target.*closed|Execution context was destroyed/.test(error.message)) throw error
     })
-    await until(() => foreground().includes(application + '/.MainActivity'), '返回后没有恢复首页 Activity')
-    assert.equal(await parent.evaluate(() => window.__entryIdentity), parentIdentity, '返回重建了首页 WebView')
-    await pause(600)
+    await until(() => foreground().includes(application + '/.MainActivity'), '返回未恢复父 Activity')
+    assert.equal(await parent.evaluate(() => window.__entryIdentity), identity, '返回重建了父 WebView')
+    reports.push({ path, passed: true, ready, frames })
   }
-
-  await open('index.html#/example/button', 'simple-page')
-  await open('index.html?entryHold=1#/showcase', 'complex-page-held', true)
-  await open('index.html#/showcase', 'complex-page-repeat')
-  await open('index.html#/html', 'html-page')
-  const size = [...adb('shell', 'wm', 'size').matchAll(/(\d+)x(\d+)/g)].at(-1)
-  const width = Number(size[1]), height = Number(size[2])
-  let bottomIdentity
-  for (const [index, route] of [[1, 'native'], [2, 'messages'], [3, 'settings'], [0, 'home']]) {
-    adb('shell', 'input', 'tap', String(Math.round(width * (index + .5) / 4)), String(height - 112))
+  await parent.evaluate(() => window.__entryTabbar = document.querySelector('[data-demo-tabbar]'))
+  for (const [label, route] of [['应用', 'native'], ['消息', 'messages'], ['设置', 'settings'], ['首页', 'home']]) {
+    await parent.locator('[data-demo-tabbar]').getByRole('button', { name: label, exact: true }).click()
     await parent.waitForFunction(route => location.hash === '#/' + route, route)
-    const bottom = hierarchy('MainActivity').match(/BottomNavigationView\{([a-f0-9]+) V[^\n]*alpha=1\.0/)
-    assert(bottom, '切换 ' + route + ' 后底栏消失')
-    bottomIdentity ??= bottom[1]
-    assert.equal(bottom[1], bottomIdentity, '切换 Tab 重建了底栏')
-    assert(await parent.locator('[data-native-layout="true"] > .nc-page-navigation [data-native="true"]').count(), '底栏失去 Page 页面壳绑定')
+    assert(await parent.evaluate(() => window.__entryTabbar === document.querySelector('[data-demo-tabbar]')), 'Tab 切换重建了 Web 底栏')
+    assert(foreground().includes(application + '/.MainActivity'), 'Tab 切换错误创建了子 Activity')
   }
-  reports.push({ name: 'bottom-navigation-survives-tabs-and-back', passed: true })
+  reports.push({ name: 'tab-switch-retains-parent', passed: true })
 } catch (error) {
-  reports.push({ passed: false, error: error.stack })
-  screenshot('failure')
+  reports.push({ passed: false, error: String(error.stack || error) })
   process.exitCode = 1
 } finally {
-  if (recordPid) {
-    try { adb('shell', 'kill', '-2', recordPid) } catch { /* 只停止本次创建的录屏进程。 */ }
-    await recording?.catch(error => { reports.push({ recordingError: error.message }); process.exitCode = 1 })
-    adb('pull', remoteRecording, join(output, 'page-entry.mp4'))
-    adb('shell', 'rm', remoteRecording)
-  }
   await browser?.close()
   if (port) adb('forward', '--remove', 'tcp:' + port)
   writeFileSync(join(output, 'report.json'), JSON.stringify({ serial, reports }, null, 2))
-  console.log(JSON.stringify({ output, reports: reports.map(({ name, passed, error }) => ({ name, passed, error })) }))
+  console.log(JSON.stringify({ output, reports }))
 }

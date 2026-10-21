@@ -5,7 +5,16 @@ import { readPageAppearance } from './native-context'
 export function installNativeAppearance(): () => void {
   const root = document.documentElement
   return installWindowAppearance({
-    read: () => ({ dark: root.dataset.theme === 'dark', ...readPageAppearance(), ...(root.dataset.themePreference === 'system' ? { followSystem: true } : {}) }),
+    read: () => {
+      const surface = root.style.getPropertyValue('--card-background').trim()
+      return {
+        dark: root.dataset.theme === 'dark',
+        ...readPageAppearance(),
+        // 系统栏跟随 AppBar、Tabbar 的表面色，导航传递的正文底色仍保持原义。
+        ...(/^#(?:[\da-f]{3}|[\da-f]{6})$/i.test(surface) ? { background: surface } : {}),
+        ...(root.dataset.themePreference === 'system' ? { followSystem: true } : {}),
+      }
+    },
     subscribe: update => {
       const observer = new MutationObserver(update)
       observer.observe(root, { attributes: true, attributeFilter: ['data-theme', 'data-theme-preference', 'style'] })

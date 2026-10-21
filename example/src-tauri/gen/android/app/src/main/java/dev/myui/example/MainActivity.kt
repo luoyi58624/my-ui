@@ -1,10 +1,4 @@
 package dev.myui.example
 
-import android.os.Bundle
-
-class MainActivity : AppActivity() {
-  override fun onCreate(savedInstanceState: Bundle?) {
-    DemoNativeTabs.register()
-    super.onCreate(savedInstanceState)
-  }
-}
+/** 首页保留原生页面导航宿主，界面完全由 Web 渲染。 */
+class MainActivity : AppActivity()

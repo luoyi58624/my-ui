@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import { computed, nextTick, onActivated, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Button } from '@my-ui/vue'
-import { Page, type PageHandle } from 'tauri-plugin-native-components/vue'
 import DemoAppBar from '../../components/DemoAppBar.vue'
 import CodeFiles from '../../components/CodeFiles.vue'
 import DocumentOutline from '../../components/DocumentOutline.vue'
 import { guides, type GuideKind } from '../../commons/code/guides'
 import { closePage, openPage } from '../../commons/navigation'
-import { useNativeBarsSuspended } from '../../commons/native-components'
+import { usePageReady } from '../../commons/page-ready'
+
+usePageReady()
 
 const props = defineProps<{
-  /** 当前展示基础用法或原生接入指南。 */
+  /** 当前展示基础用法或平台接入指南。 */
   kind: GuideKind
 }>()
 const guide = computed(() => guides[props.kind])
@@ -22,9 +23,8 @@ const outlineItems = computed(() =>
   }))
 )
 const currentSection = ref(guide.value.sections[0]?.id ?? '')
-const page = ref<PageHandle>(),
+const page = ref<HTMLElement>(),
   error = ref('')
-const suspended = useNativeBarsSuspended()
 let scroller: HTMLElement | null = null,
   frame = 0
 function syncOutline() {
@@ -50,7 +50,7 @@ function scheduleOutline() {
   if (!frame) frame = requestAnimationFrame(syncOutline)
 }
 onMounted(() => {
-  scroller = page.value?.scrollElement ?? null
+  scroller = page.value ?? null
   scroller?.addEventListener('scroll', scheduleOutline, { passive: true })
   syncOutline()
 })
@@ -73,17 +73,16 @@ function back() {
 }
 function jumpTo(id: string) {
   currentSection.value = id
-  const target = page.value?.scrollElement?.querySelector(`#guide-${props.kind}-${id}`)
+  const target = page.value?.querySelector(`#guide-${props.kind}-${id}`)
   target?.scrollIntoView({ block: 'start', behavior: 'instant' })
   target?.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true })
 }
 </script>
 
 <template>
-  <Page ref="page" class="guide-page" :suspended="suspended">
-    <template #navbar
-      ><DemoAppBar :title="guide.title" back back-label="返回组件目录" @back="back"
-    /></template>
+  <div class="guide-page demo-view">
+    <DemoAppBar :title="guide.title" back back-label="返回组件目录" @back="back"
+    /><div ref="page" class="demo-scroll">
     <main class="guide-content" :data-guide="kind">
       <div class="guide-body">
         <header class="guide-intro">
@@ -111,23 +110,24 @@ function jumpTo(id: string) {
         <p v-if="error" class="guide-error" role="alert">{{ error }}</p>
         <footer class="guide-footer">
           <span>{{
-            kind === 'quick-start' ? '需要系统导航与下拉刷新？' : '继续了解基础组件的用法'
+            kind === 'quick-start' ? '了解应用布局与平台接入？' : '继续了解基础组件的用法'
           }}</span>
           <Button
             variant="outline"
             @click="navigate(kind === 'quick-start' ? '/guide/native' : '/guide/quick-start')"
-            >{{ kind === 'quick-start' ? '集成原生' : '快速开始' }}</Button
+            >{{ kind === 'quick-start' ? '应用与平台' : '快速开始' }}</Button
           >
         </footer>
       </div>
       <DocumentOutline :items="outlineItems" :value="currentSection" @select="jumpTo" />
     </main>
-  </Page>
+    </div>
+  </div>
 </template>
 
 <style scoped>
 .guide-page {
-  height: 100dvh;
+  height: 100%;
 }
 .guide-content {
   --doc-outline-width: 192px;

@@ -9,5 +9,5 @@ defineProps<{
 </script>
 
 <template>
-  <DemoCatalog title="原生组件" :groups="nativeDemoGroups" :active="active" />
+  <DemoCatalog title="应用与平台" :groups="nativeDemoGroups" :active="active" />
 </template>

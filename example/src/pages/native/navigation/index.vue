@@ -12,12 +12,6 @@ const opening = ref(false)
 const shared = useSharedDemoStore()
 
 async function open() {
-  if (!available) {
-    void openPage('/shared-state', { title: '跨页共享状态' }).catch((error) =>
-      notify(String(error))
-    )
-    return
-  }
   if (opening.value) return
   opening.value = true
   try {
@@ -58,11 +52,7 @@ async function updateCache() {
       <Button variant="text" @click="shared.$reset()">重置数据</Button>
     </div>
     <p class="native-navigation-note">
-      {{
-        available
-          ? '在新页面修改后返回，这里也会更新。系统返回保留首页的滚动位置。'
-          : '在当前窗口进入另一页；返回后保留原来的输入与滚动位置。'
-      }}
+      {{ available ? '打开独立原生窗口，在新页面修改后返回，这里也会更新。' : '在当前窗口进入另一页；返回后保留原来的输入与滚动位置。' }}
     </p>
     <p v-if="shared.$shared?.error" class="native-navigation-error" role="alert">
       本地同步失败：{{ shared.$shared.error.message }}

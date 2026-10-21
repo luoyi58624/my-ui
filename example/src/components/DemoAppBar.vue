@@ -1,83 +1,42 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { AppBar } from 'tauri-plugin-native-components/vue'
-import type { NavigationAction } from 'tauri-plugin-native-components'
+import { ref } from 'vue'
+import { AppBar } from '@my-ui/vue'
 import ThemeSettings from './ThemeSettings.vue'
-import { useNativeBarsSuspended } from '../commons/native-components'
 
-const props = withDefaults(
-  defineProps<{
-    /** 当前页面标题。 */
-    title: string
-    /** 原生导航示例展示的辅助标题。 */
-    subtitle?: string
-    /** 显示返回按钮。 */
-    back?: boolean
-    /** 返回按钮的辅助名称。 */
-    backLabel?: string
-    /** 标题默认居中，导航组件示例可切换对齐方式。 */
-    center?: boolean
-    /** 页面本身需要的导航操作。 */
-    actions?: NavigationAction[]
-    /** 仅首页启用主题和设置入口，子页默认不重复显示。 */
-    settings?: boolean
-    /** 将当前页面自己的顶栏接入 App 的原生页面布局。 */
-    page?: boolean
-  }>(),
-  { back: false, backLabel: '返回', center: true, actions: () => [], settings: false }
-)
+withDefaults(defineProps<{
+  /** 当前页面标题。 */
+  title: string
+  /** 标题的辅助说明。 */
+  subtitle?: string
+  /** 显示返回按钮。 */
+  back?: boolean
+  /** 返回按钮的辅助名称。 */
+  backLabel?: string
+  /** 标题是否居中。 */
+  center?: boolean
+  /** 显示主题设置入口。 */
+  settings?: boolean
+}>(), { back: false, backLabel: '返回', center: true, settings: false })
 const emit = defineEmits<{
-  /** 返回由所在页面处理。 */
+  /** 将返回操作交给当前页面。 */
   back: []
-  /** 将页面导航操作交给所在示例。 */
-  action: [value: string]
-  /** 将原生导航创建失败交给所在示例展示。 */
-  error: [reason: unknown]
 }>()
-const themeSettings = ref<InstanceType<typeof ThemeSettings>>()
-const bar = ref<InstanceType<typeof AppBar>>()
-const actions = computed(() =>
-  props.settings ? (themeSettings.value?.actions ?? []) : props.actions
-)
-const suspended = useNativeBarsSuspended()
-function onAction(value: string) {
-  if (props.settings) themeSettings.value?.handleAction(value)
-  else emit('action', value)
-}
-/** Web 返回组件目录时恢复标题焦点。 */
-defineExpose({ focus: () => bar.value?.focus() })
+const root = ref<HTMLElement>()
+/** 返回目录时恢复标题焦点。 */
+defineExpose({ focus: () => root.value?.querySelector<HTMLElement>('[data-demo-title]')?.focus({ preventScroll: true }) })
 </script>
 
 <template>
-  <div class="demo-native-header" :data-page-navbar="page ? '' : undefined">
-    <AppBar
-      ref="bar"
-      :title="title"
-      :subtitle="subtitle"
-      :back="back"
-      :back-label="backLabel"
-      :center="center"
-      :actions="actions"
-      :suspended="suspended"
-      @back="emit('back')"
-      @action="onAction"
-      @error="emit('error', $event)"
-    />
-    <ThemeSettings v-if="props.settings" ref="themeSettings" :controls="false" />
-  </div>
+  <header ref="root" class="demo-header">
+    <AppBar :title="title" :subtitle="subtitle" :back="back" :back-label="backLabel" :center="center" @back="emit('back')">
+      <span data-demo-title tabindex="-1">{{ title }}</span>
+      <template v-if="settings" #actions><ThemeSettings /></template>
+    </AppBar>
+  </header>
 </template>
 
 <style scoped>
-.demo-native-header {
-  flex: none;
-  width: 100%;
-  border-bottom: 1px solid var(--border);
-  background: var(--card-background);
-}
-.demo-native-header :deep(.nc-app-bar) {
-  width: min(100%, 1160px);
-  height: 56px;
-  margin-inline: auto;
-  border: 0;
-}
+.demo-header { flex: none; width: 100%; border-bottom: 1px solid var(--border); background: var(--card-background); }
+.demo-header :deep(.my-app-bar) { width: min(100%, 1160px); margin-inline: auto; border: 0; }
+[data-demo-title]:focus { outline: none; }
 </style>

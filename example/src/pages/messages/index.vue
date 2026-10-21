@@ -3,9 +3,9 @@ import { Button, Icon, type IconName } from '@my-ui/vue'
 import type { DemoTab } from '../../components/layoutContext'
 
 defineProps<{
-  /** 与原生占位页面共用的栏目配置。 */
+  /** 当前栏目的展示配置。 */
   page: DemoTab
-  /** Web 与原生页面共用的点击次数。 */
+  /** 切换栏目时保留的点击次数。 */
   count: number
 }>()
 const emit = defineEmits<{

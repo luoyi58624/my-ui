@@ -85,29 +85,14 @@
             )
             doc.querySelector('[data-demo-link="native-integration"]').click()
             await until(() => doc.querySelector('[data-guide="native"]'))
-            assert(doc.querySelectorAll('.guide-section').length === 7, '原生接入章节缺失')
+            assert(doc.querySelectorAll('.guide-section').length === 5, '应用平台章节缺失')
             assert(
               [...doc.querySelectorAll('.guide-page details')].every((fold) => fold.open),
-              '集成原生没有默认展开全部代码'
+              '应用指南没有默认展开代码'
             )
-            await until(
-              () => code()?.textContent.includes('tauri-plugin-native-components'),
-              '原生配置未加载'
-            )
-            for (const [name, content] of [
-              ['src-tauri/Cargo.toml', '[dependencies]'],
-              ['src-tauri/src/lib.rs', 'pub fn run()'],
-              ['src-tauri/capabilities/mobile.json', 'native-components:default']
-            ]) {
-              ;[...doc.querySelectorAll('.demo-code-file-list button')]
-                .find((button) => button.textContent === name)
-                .click()
-              await until(
-                () =>
-                  code()?.textContent.includes(content) && code().querySelector('[class^="hljs-"]'),
-                '配置代码没有高亮：' + name
-              )
-            }
+            await until(() => code()?.textContent.includes('createNativeRouter'), '多页面导航代码未加载')
+            assert(doc.querySelector('.guide-page').textContent.includes('Android 使用独立 Activity'), '指南丢失多页面导航能力')
+
           })
           await check('组件文档代码全部默认收起，并支持手动展开、收起和重开', async () => {
             await route('/example/button')
@@ -203,7 +188,7 @@
             )
             const { demoExamples } = await import('/example/src/pages/catalog.ts')
             const { exampleCode } = await import('/example/src/commons/code/examples.ts')
-            for (const item of demoExamples.filter((item) => !item.path?.startsWith('/guide/'))) {
+            for (const item of demoExamples.filter((item) => !item.path || item.id === 'showcase')) {
               const files = exampleCode(item.id)
               assert(files.length > 0, '示例缺少代码：' + item.id)
               for (const file of files) {
@@ -219,26 +204,15 @@
                   assert(source.trim().length > 20, '指南文件为空：' + file.name)
                 }
           })
-          await check('原生示例移除导航栏代码入口，页面操作和刷新保持正常', async () => {
+          await check('旧原生 UI 链接指向 Web 示例，刷新入口仍可使用', async () => {
             await route('/native/app-bar')
-            await until(() => doc.querySelector('[data-component-demo="app-bar"]'))
-            const native = doc.querySelector('[data-component-demo="app-bar"]')
-            assert(!native.querySelector('[aria-label="查看代码"]'), '原生示例仍有导航栏代码入口')
-            native.querySelector('[aria-label="页面操作"]').click()
-            await until(() => native.textContent.includes('已点击页面操作'), '页面操作未响应')
+            await until(() => win.location.hash === '#/example/app-bar' && doc.querySelector('.demo-detail .my-app-bar'))
+            await route('/native/tabbar')
+            await until(() => win.location.hash === '#/example/tabbar' && doc.querySelector('.tabbar-preview .my-tabbar'))
             await route('/page-refresh')
-            await until(() => doc.querySelector('.refresh-demo'))
-            assert(
-              !doc.querySelector('.refresh-demo [aria-label="查看代码"]'),
-              '刷新示例仍有导航栏代码入口'
-            )
-            ;[...doc.querySelectorAll('.refresh-demo button')]
-              .find((button) => button.textContent.trim() === '刷新动态')
-              .click()
-            await until(
-              () => doc.querySelector('.refresh-demo').textContent.includes('已更新 1 次'),
-              '刷新入口受代码操作影响'
-            )
+            await until(() => doc.querySelector('[data-pull-refresh-example]'))
+            doc.querySelector('[data-refresh-button]').click()
+            await until(() => doc.querySelector('[data-refresh-count]').textContent.includes('1'), 'Web 刷新未完成')
           })
           await check('窄屏与桌面代码均完整展开，只保留横向滚动', async () => {
             for (const width of [320, 390, 1100]) {
@@ -297,7 +271,7 @@
                   Math.abs(win.innerWidth - bounds.right - 32) < 1,
                   '指南目录偏离屏幕右侧原有位置'
                 )
-                const scroller = root.querySelector('.nc-page-scroll')
+                const scroller = root.querySelector('.demo-scroll')
                 scroller.scrollTop = 200
                 await pause(60)
                 assert(

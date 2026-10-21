@@ -64,10 +64,12 @@
       const enter = async () => {
         doc.querySelector('[data-showcase-entry]').click()
         await until(() => showcase(), '整页示例未打开')
-        await pause(100)
+        await until(() => ['actions', 'controls', 'surfaces', 'feedback', 'scenarios'].every(id =>
+          showcase().querySelector('#showcase-' + id + ' [data-my-component]')
+        ), '整页异步组件未加载')
       }
       const back = async () => {
-        doc.querySelector('.showcase-page > .nc-page-navbar [aria-label="返回组件目录"]').click()
+        doc.querySelector('.showcase-page > .demo-header [aria-label="返回组件目录"]').click()
         await until(() => home() && !showcase(), '没有返回组件目录')
         await pause(80)
       }
@@ -98,7 +100,7 @@
               '完整示例数量未同步'
             )
             assert(!home().querySelector('.demo-intro [data-showcase-entry]'), '顶部仍有重复按钮')
-            assert(home().querySelectorAll('[data-demo-link]').length === 29, '原有目录丢失')
+            assert(home().querySelectorAll('[data-demo-link]').length === 31, '原有目录丢失')
             assert(!showcase() && !doc.querySelector('.demo-detail'), '首页提前挂载整页交互')
             assert(
               !win.performance
@@ -156,7 +158,7 @@
                 showcase().querySelector('#showcase-' + id + ' [data-my-component]'),
                 '完整交互缺失 ' + id
               )
-            assert(!doc.querySelector('.demo-app'), '目录布局与整页示例同时出现')
+            assert(doc.querySelector('.demo-tab-pages').inert && doc.querySelector('[data-demo-tabbar]').offsetHeight === 0, '详情仍显示目录和底栏')
             assert(
               !showcase().querySelector('[aria-label="主题定制"],[aria-label^="切换到"]'),
               '整页示例仍有重复主题入口'

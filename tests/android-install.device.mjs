@@ -36,7 +36,7 @@ async function connect() {
   browser = await chromium.connectOverCDP('http://127.0.0.1:' + port)
   const page = browser.contexts()[0].pages().find(item => item.url().startsWith('http://tauri.localhost/') && !item.url().includes('pageWindow='))
   assert(page, '首次启动没有创建首页 WebView')
-  await page.waitForSelector('[data-native-layout="true"]', { timeout: 15_000 })
+  await page.waitForSelector('[data-demo-tabbar]', { timeout: 15_000 })
   return { page, processId }
 }
 
@@ -61,8 +61,8 @@ try {
       assert(top().includes('/.MainActivity'), '首次启动意外离开首页：' + state)
       await pause(250)
     }
-    assert(/BottomNavigationView\{[^\n]* V/.test(hierarchy()), '首次启动后底部导航栏不可见')
-    assert(await page.locator('[data-native-layout="true"]').count(), '首次启动后页面壳丢失')
+    assert(await page.locator('[data-demo-tabbar]').isVisible(), '首次启动后 Web 底部导航栏不可见')
+    assert(!/BottomNavigationView\{|MaterialToolbar\{/.test(hierarchy()), '首次启动仍创建了原生 UI 控件')
     const logs = device('logcat', '-d', '-v', 'threadtime', '-t', started)
     writeFileSync(join(output, state + '.log'), logs)
     assert(!logs.split('\n').some(line => line.includes('ShellPackageUpdate') && line.includes('launching the base intent')), '安装后系统仍在自动重复启动任务')

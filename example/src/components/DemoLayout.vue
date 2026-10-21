@@ -1,72 +1,67 @@
 <script setup lang="ts">
-import { inject, provide, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import { App, Tabbar, type AppTab } from 'tauri-plugin-native-components/vue'
+import { computed, inject, provide, ref, watch } from 'vue'
+import { RouterView, useRoute } from 'vue-router'
+import { Tabbar } from '@my-ui/vue'
 import { navigation } from '../commons/navigation'
 import { notifyKey } from '../commons/notify'
 import DemoTabPage from './DemoTabPage.vue'
-import { demoPages } from '../pages/routes'
 import { demoLayoutKey, type DemoTab } from './layoutContext'
 
 const notify = inject(notifyKey)!
 const items: DemoTab[] = [
   { value: 'home', label: '首页', title: '组件示例', icon: 'home' },
-  { value: 'native', label: '原生', title: '原生组件', icon: 'grid' },
+  { value: 'native', label: '应用', title: '应用与平台', icon: 'grid' },
   { value: 'messages', label: '消息', title: '消息', icon: 'message', demo: 2 },
   { value: 'settings', label: '设置', title: '设置', icon: 'sliders' }
 ]
-const tabs: AppTab[] = items.map((page) => ({
-  value: page.value,
-  component: DemoTabPage,
-  props: { page }
-}))
-const active = ref('home'),
-  route = useRoute()
+const route = useRoute()
+const active = ref('home')
+const visited = ref<string[]>([])
+const isTab = computed(() => typeof route.meta.tab === 'string')
 function report(reason: unknown) {
   notify(reason instanceof Error ? reason.message : String(reason))
 }
 function select(value: string) {
-  active.value = value
-  void navigation.replace('/' + value).catch(report)
+  if (value !== active.value || !isTab.value) void navigation.replace('/' + value).catch(report)
 }
 provide(demoLayoutKey, { report })
-watch(
-  () => route.meta.tab,
-  () => {
-    if (!route.meta.tab) return
-    const value = String(route.meta.tab)
-    active.value = items.some((item) => item.value === value) ? value : 'home'
-  },
-  { immediate: true }
-)
+watch(() => route.meta.tab, (tab) => {
+  if (typeof tab !== 'string' || !items.some(item => item.value === tab)) return
+  active.value = tab
+  // 首次访问才创建，之后只切可见性，输入、滚动和局部状态自然保留。
+  if (!visited.value.includes(tab)) visited.value.push(tab)
+}, { immediate: true })
 </script>
 
 <template>
-  <App
-    class="demo-app"
-    :model-value="active"
-    :tabs="tabs"
-    :pages="demoPages"
-    @update:model-value="select"
-  >
-    <template #tabbar="{ value, select }">
-      <Tabbar :model-value="value" :items="items" @update:model-value="select" />
-    </template>
-  </App>
+  <div class="demo-app">
+    <div v-show="isTab" class="demo-tab-pages" :inert="!isTab" :aria-hidden="!isTab || undefined">
+      <template v-for="item in items" :key="item.value">
+        <DemoTabPage v-if="visited.includes(item.value)" v-show="active === item.value" :page="item" :active="isTab && active === item.value" />
+      </template>
+    </div>
+    <div v-show="!isTab" class="demo-route-pages">
+      <RouterView v-slot="{ Component, route: current }">
+        <KeepAlive :max="12"><component :is="Component" v-if="Component && !isTab" :key="current.path" /></KeepAlive>
+      </RouterView>
+    </div>
+    <Tabbar v-show="isTab" data-demo-tabbar :model-value="active" :options="items" label="主要栏目" @update:model-value="select" />
+  </div>
 </template>
 
 <style>
 .demo-app {
+  display: flex;
+  flex-direction: column;
   height: 100dvh;
+  min-height: 0;
+  padding-top: env(safe-area-inset-top);
+  box-sizing: border-box;
   background: var(--background);
 }
-@media (prefers-reduced-motion: reduce) {
-  /* 0.01ms 也会延迟继承的 visibility，栏目返回时需立即显示并接受焦点。 */
-  .demo-app .nc-app-tab-view,
-  .demo-app .nc-app-tab-view * {
-    transition-duration: 0s !important;
-  }
-}
+.demo-tab-pages, .demo-route-pages { flex: 1; min-height: 0; overflow: hidden; }
+.demo-app > [data-demo-tabbar] { flex: none; }
+.demo-scroll { flex: 1; min-height: 0; overflow: auto; overscroll-behavior-y: contain; }
 .demo-tabs {
   height: 100%;
 }

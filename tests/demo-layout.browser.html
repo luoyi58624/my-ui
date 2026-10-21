@@ -55,7 +55,7 @@
         }
       }
       let frame, doc, win
-      const tab = (index) => doc.querySelectorAll('.demo-app > .nc-page-navigation button')[index]
+      const tab = (index) => doc.querySelectorAll('[data-demo-tabbar] button')[index]
       const page = () => doc.querySelector('.demo-page:not([inert])')
       const pick = async (index) => {
         tab(index).click()
@@ -67,7 +67,7 @@
       }
       const open = async (id) => {
         let link = doc.querySelector('[data-demo-link="' + id + '"]')
-        // 原生目录按首次访问创建，直达文档返回后尚未挂载该栏目。
+        // 应用目录按首次访问创建，直达文档返回后尚未挂载该栏目。
         if (!link) {
           await pick(1)
           link = doc.querySelector('[data-demo-link="' + id + '"]')
@@ -102,7 +102,7 @@
           fixture.append(frame)
           await until(
             () =>
-              frame.contentDocument?.querySelectorAll('.demo-app > .nc-page-navigation button').length === 4,
+              frame.contentDocument?.querySelectorAll('[data-demo-tabbar] button').length === 4,
             '示例加载失败'
           )
           doc = frame.contentDocument
@@ -115,18 +115,18 @@
             (id) => !['quick-start', 'native-integration', 'showcase'].includes(id)
           )
           await check(
-            '首页与原生分别展示目录，消息保留 Demo，设置管理自己的大标题与搜索',
+            '首页与应用分别展示目录，消息保留 Demo，设置管理自己的大标题与搜索',
             async () => {
               assert(page().dataset.demoPage === 'home', '首页未展示目录')
               assert(
-                links.length === 29 && new Set(links).size === links.length && ids.length === 26,
+                links.length === 31 && new Set(links).size === links.length && ids.length === 28,
                 '目录不完整或重复'
               )
               assert(doc.querySelectorAll('.demo-detail').length === 0, '首屏提前挂载全部示例')
               assert(
-                [...doc.querySelectorAll('.demo-app > .nc-page-navigation button')]
+                [...doc.querySelectorAll('[data-demo-tabbar] button')]
                   .map((node) => node.textContent.trim())
-                  .join(',') === '首页,原生,消息,设置',
+                  .join(',') === '首页,应用,消息,设置',
                 '底部导航不正确'
               )
               await pick(1)
@@ -134,13 +134,13 @@
                 page().dataset.demoPage === 'native' &&
                   page().querySelectorAll('[data-demo-link]').length === 6 &&
                   !page().querySelector('.demo-placeholder'),
-                '原生目录不完整'
+                '应用目录不完整'
               )
               await pick(2)
               assert(page().querySelector('.demo-placeholder') && page().textContent.includes('Demo 页面'), '消息占位页被修改')
               await pick(3)
               assert(page().querySelector('[data-settings-home]') && page().textContent.includes('显示与亮度'), '设置布局未接入')
-              assert(!doc.querySelector('.nc-app-view-active .demo-top'), '设置仍使用统一导航头')
+              assert(!page().closest('.demo-view').querySelector('.demo-top'), '设置仍使用统一导航头')
               assert(page().querySelector('.settings-search') && page().querySelectorAll('.settings-group').length === 5, '搜索栏或设置分组不完整')
               assert(win.location.hash === '#/settings', '设置路由没有更名')
               await pick(0)
@@ -155,16 +155,16 @@
               '未建立详情返回历史'
             )
             assert(
-              doc.querySelector('.demo-view:not([inert]) .demo-top .nc-heading h1').textContent === 'Button 按钮' &&
+              doc.querySelector('.demo-view:not([inert]) .demo-top [data-demo-title]').textContent === 'Button 按钮' &&
                 page().textContent.includes('主要按钮'),
               '示例或标题错误'
             )
             assert(
-              doc.querySelector('.demo-app .nc-app-tabbar').hidden,
+              win.getComputedStyle(doc.querySelector('[data-demo-tabbar]')).display === 'none',
               '详情仍可操作底栏'
             )
             assert(
-              doc.activeElement === doc.querySelector('.demo-view:not([inert]) .demo-top .nc-heading h1'),
+              doc.activeElement === doc.querySelector('.demo-view:not([inert]) .demo-top [data-demo-title]'),
               '进入详情未转移焦点'
             )
             assert(doc.querySelector('[data-demo-page="home"]').inert, '列表仍可交互')
@@ -191,7 +191,7 @@
             await pick(0)
             assert(Math.abs(page().scrollTop - 630) < 2, '重复点击首页重置了滚动位置')
           })
-          await check('26 个首页目录入口全部有独立内容，返回不会跳到其他示例', async () => {
+          await check('首页目录入口全部有独立内容，返回不会跳到其他示例', async () => {
             for (const id of ids) {
               await open(id)
               assert(page().querySelector('.demo-page-inner').children.length > 0, '空示例 ' + id)
@@ -220,7 +220,7 @@
             for (const hidden of doc.querySelectorAll('.demo-page[inert]'))
               assert(
                 hidden.getAttribute('aria-hidden') === 'true' &&
-                  (win.getComputedStyle(hidden).display === 'none' || win.getComputedStyle(hidden).visibility === 'hidden'),
+                  hidden.getBoundingClientRect().height === 0,
                 '隐藏页面仍可参与交互'
               )
             await back()
@@ -358,7 +358,7 @@
               await pause(100)
               await pick(0)
               const header = doc.querySelector('.demo-view:not([inert]) .demo-top').getBoundingClientRect(),
-                footer = doc.querySelector('.demo-app > .nc-page-navigation').getBoundingClientRect(),
+                footer = doc.querySelector('[data-demo-tabbar]').getBoundingClientRect(),
                 content = page().getBoundingClientRect()
               assert(
                 header.top === 0 &&
@@ -442,14 +442,14 @@
               await until(() => doc.querySelector('.native-page'), '没有进入共享页')
               assert(
                 win.location.hash === '#/shared-state' &&
-                  doc.documentElement.classList.contains('my-native-page'),
+                  doc.querySelector('.native-page.demo-view .demo-scroll'),
                 '共享页未通过路由打开或页面布局错误'
               )
               const note = doc.querySelector('.native-page input')
               note.value = '路由返回保留共享内容'
               note.dispatchEvent(new win.Event('input', { bubbles: true }))
               await pause(60)
-              doc.querySelector('.native-page .nc-app-bar button').click()
+              doc.querySelector('.native-page .my-app-bar button').click()
               await until(
                 () => page()?.dataset.demoPage === 'example/native-navigation',
                 '共享页返回失败'
@@ -478,7 +478,7 @@
               '纯 HTML 组件没有加载'
             )
             assert(win.location.hash === '#/html', 'HTML 示例没有使用 Vue Router')
-            doc.querySelector('.html-page .nc-app-bar button').click()
+            doc.querySelector('.html-page .my-app-bar button').click()
             await until(
               () => page()?.dataset.demoPage === 'example/native-html',
               'HTML 示例返回失败'

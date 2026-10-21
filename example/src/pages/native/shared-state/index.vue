@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { h, ref } from 'vue'
-import { Page } from 'tauri-plugin-native-components/vue'
 import { Button, Card, CellGroup, Icon, Input, ListRow, Menu, Stepper, popup } from '@my-ui/vue'
 import DemoAppBar from '../../../components/DemoAppBar.vue'
 import { closePage, isAndroidNative } from '../../../commons/navigation'
 import { updateDemoCache, useSharedDemoStore } from '../../../commons/state/shared'
+import { usePageReady } from '../../../commons/page-ready'
+
+usePageReady()
 
 const available = isAndroidNative()
 const shared = useSharedDemoStore()
@@ -72,18 +74,14 @@ function openOverlay(kind: 'sheet' | 'drawer') {
 </script>
 
 <template>
-  <Page class="native-page">
-    <template #navbar><DemoAppBar title="跨页共享状态" back @back="back" /></template>
+  <div class="native-page demo-view">
+    <DemoAppBar title="跨页共享状态" back @back="back" /><div class="demo-scroll">
     <main class="native-page-content">
       <div class="native-page-intro">
         <span class="native-page-symbol"><Icon name="layer" /></span>
         <h1>来到另一页</h1>
         <p>
-          {{
-            available
-              ? '从屏幕边缘向内滑动，试试系统的返回效果。'
-              : '在这里修改备注和计数，返回后上一页也会更新。'
-          }}
+          {{ available ? '这是独立原生窗口中的 Web 页面，修改后通过系统返回回到上一页。' : '在这里修改备注和计数，返回后上一页也会更新。' }}
         </p>
       </div>
       <Card title="共享的内容" description="两页修改即时同步，重新打开也会恢复">
@@ -129,19 +127,13 @@ function openOverlay(kind: 'sheet' | 'drawer') {
       </Card>
       <p class="native-page-footnote">备注和计数由两页共用，滚动位置与打开时间各自保留。</p>
     </main>
-  </Page>
+    </div>
+  </div>
 </template>
 
 <style scoped>
-:global(html.my-native-page),
-:global(html.my-native-page body) {
-  height: 100%;
-  overflow: hidden;
-  padding: 0;
-  scrollbar-gutter: auto;
-}
 .native-page {
-  height: 100dvh;
+  height: 100%;
   background: var(--background);
 }
 .native-page-content {

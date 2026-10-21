@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright'
 import { createServer } from 'vite'
 
-test('Web 下拉刷新：触摸边界、浏览器滚动和示例接入', { timeout: 180_000 }, async (t) => {
+test('Web 下拉刷新：触摸边界、浏览器滚动和示例接入', { timeout: 240_000 }, async (t) => {
   const cacheDir = mkdtempSync(join(tmpdir(), 'my-ui-pull-refresh-'))
   let server, browser, context
   try {
@@ -111,18 +111,26 @@ test('Web 下拉刷新：触摸边界、浏览器滚动和示例接入', { timeo
       await settled()
       assert.equal((await snapshot()).requests, 0)
     })
-    await t.test('取消、多指、不可取消事件均回弹且不刷新', async () => {
-      for (const mode of ['cancel', 'multi', 'uncancelable']) {
+    await t.test('取消和多指均回弹且释放滚动锁', async () => {
+      for (const mode of ['cancel', 'multi']) {
         await reset()
         await send('touchstart')
         await send('touchmove', 0, 250)
         await frame()
         if (mode === 'cancel') await send('touchcancel', 0, 250)
-        else await send('touchmove', 0, 260, mode === 'multi' ? { multi: true } : { cancelable: false })
+        else await send('touchmove', 0, 260, { multi: true })
         await send('touchend', 0, 260)
         await settled()
         assert.equal((await snapshot()).requests, 0, mode)
+        assert.equal(await page.locator('.my-pull-refresh-viewport').evaluate((element) => element.style.overflowY), '')
       }
+    })
+    await t.test('不可取消的触摸只观察位移，不尝试 preventDefault', async () => {
+      await reset()
+      await send('touchstart')
+      assert.equal(await send('touchmove', 0, 250, { cancelable: false }), false)
+      await send('touchend', 0, 250, { cancelable: false })
+      assert.equal((await snapshot()).requests, 1)
     })
     await t.test('非顶部、嵌套滚动、横向和输入框不被接管', async () => {
       for (const mode of ['scrolled', 'nested', 'horizontal', 'input']) {
@@ -201,6 +209,18 @@ test('Web 下拉刷新：触摸边界、浏览器滚动和示例接入', { timeo
       await beforeRelease?.()
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
     }
+    const realMove = async (x, from, to, steps = 16) => {
+      for (let i = 1; i <= steps; i++) {
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: from + (to - from) * i / steps, id: 1 }] })
+        await page.waitForTimeout(20)
+      }
+    }
+    const scrollSnapshot = () => page.locator('.my-pull-refresh-viewport').evaluate((element) => ({
+      top: element.scrollTop,
+      overflow: element.style.overflowY,
+      offset: new DOMMatrixReadOnly(getComputedStyle(element.firstElementChild).transform).m42,
+      state: element.parentElement.dataset.state,
+    }))
     await t.test('真实触摸：正常上滑保留浏览器滚动，非顶部下滑不误刷新', async () => {
       await reset()
       await realDrag(160, 340, 90)
@@ -213,6 +233,81 @@ test('Web 下拉刷新：触摸边界、浏览器滚动和示例接入', { timeo
       assert.ok(await scroller.evaluate((element) => element.scrollTop) < before)
       assert.equal((await snapshot()).requests, 0)
     })
+    await t.test('真实触摸：同一手指从正文滚到顶，继续下拉直接刷新', async () => {
+      await reset()
+      await realDrag(320, 340, 240)
+      await page.waitForTimeout(300)
+      assert.ok((await scrollSnapshot()).top > 30, '必须先由真实触摸滚离顶部')
+      const before = (await snapshot()).renders
+      await page.evaluate(() => {
+        window.__refreshMoveEvents = []
+        document.querySelector('.my-pull-refresh-viewport').addEventListener('touchmove', (event) => {
+          window.__refreshMoveEvents.push({ trusted: event.isTrusted, cancelable: event.cancelable })
+        }, { passive: true })
+      })
+      await realDrag(320, 180, 760, async () => {
+        const state = await scrollSnapshot()
+        assert.equal(state.top, 0)
+        assert.equal(state.state, 'ready')
+        assert.equal(state.overflow, 'hidden')
+        assert.ok(state.offset >= 64)
+        assert.equal((await snapshot()).renders, before)
+        const events = await page.evaluate(() => window.__refreshMoveEvents)
+        assert.ok(events.every(event => event.trusted))
+        assert.ok(events.some(event => !event.cancelable), '必须覆盖浏览器接管后的不可取消事件')
+      })
+      assert.equal((await snapshot()).requests, 1)
+      assert.equal((await scrollSnapshot()).overflow, '')
+    })
+    await t.test('真实触摸：越顶下拉再回拉，未抬手也恢复正文滚动', async () => {
+      await reset()
+      await realDrag(320, 340, 240)
+      await page.waitForTimeout(300)
+      assert.ok((await scrollSnapshot()).top > 30)
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 320, y: 180, id: 1 }] })
+      await realMove(320, 180, 700)
+      assert.equal((await scrollSnapshot()).state, 'ready')
+      await realMove(320, 700, 580, 6)
+      assert.equal((await scrollSnapshot()).top, 0, '收回刷新区域期间正文不能一起上滚')
+      await realMove(320, 580, 40, 24)
+      const state = await scrollSnapshot()
+      assert.equal(state.offset, 0)
+      assert.equal(state.overflow, '')
+      assert.ok(state.top > 50, '同一触摸回拉后应由浏览器恢复正文滚动')
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+      assert.equal((await snapshot()).requests, 0)
+    })
+    await t.test('真实触摸：嵌套滚动到顶不触发外层刷新', async () => {
+      await reset()
+      const nested = await page.locator('#nested').boundingBox()
+      const x = nested.x + 30, y = nested.y + nested.height - 10
+      await realDrag(x, y, y - 100)
+      await page.waitForTimeout(300)
+      assert.ok(await page.locator('#nested').evaluate((element) => element.scrollTop) > 20)
+      await realDrag(x, nested.y + 15, nested.y + 300)
+      assert.equal(await page.locator('#nested').evaluate((element) => element.scrollTop), 0)
+      assert.equal((await scrollSnapshot()).offset, 0)
+      assert.equal((await snapshot()).requests, 0)
+    })
+    await t.test('真实触摸：取消下拉后下一次手势恢复浏览器滚动', async () => {
+      await reset()
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 320, y: 40, id: 1 }] })
+      await realMove(320, 40, 280)
+      assert.equal((await scrollSnapshot()).state, 'ready')
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] })
+      await settled()
+      assert.equal((await scrollSnapshot()).overflow, '')
+      await realDrag(320, 340, 180)
+      assert.ok((await scrollSnapshot()).top > 50)
+      assert.equal((await snapshot()).requests, 0)
+    })
+    await t.test('真实触摸：短内容也能下拉刷新', async () => {
+      await reset()
+      await page.locator('.test-row, #controls, #nested').evaluateAll((elements) => elements.forEach(element => element.remove()))
+      assert.equal(await page.locator('.my-pull-refresh-viewport').evaluate((element) => element.scrollHeight === element.clientHeight), true)
+      await realDrag(320, 40, 280)
+      assert.equal((await snapshot()).requests, 1)
+    })
     await t.test('真实触摸：顶部下拉刷新，拖动按钮不误点，普通点击可用', async () => {
       await reset()
       const button = await page.locator('#content-button').boundingBox()
@@ -224,7 +319,7 @@ test('Web 下拉刷新：触摸边界、浏览器滚动和示例接入', { timeo
       await page.locator('#content-button').tap()
       assert.equal((await snapshot()).clicks, 1)
     })
-    await t.test('示例目录、刷新反馈及可复制代码可用', async () => {
+    await t.test('示例目录、刷新反馈及可复制代码可用', { skip: process.env.MY_UI_PULL_REFRESH_FIXTURE_ONLY === '1' }, async () => {
       await page.goto(new URL('example/index.html#/home', server.resolvedUrls.local[0]).href)
       await page.locator('[data-demo-link="pull-refresh"]').click()
       await page.waitForURL((url) => url.hash === '#/example/pull-refresh')
@@ -237,15 +332,21 @@ test('Web 下拉刷新：触摸边界、浏览器滚动和示例接入', { timeo
       assert.equal(await page.locator('[data-message-id="1001"]').count(), 1)
       mkdirSync(new URL('../qa/pull-refresh/', import.meta.url), { recursive: true })
       await page.screenshot({ path: fileURLToPath(new URL('../qa/pull-refresh/mobile.png', import.meta.url)), fullPage: true })
+      await page.locator('.my-pull-refresh').scrollIntoViewIfNeeded()
       const viewport = await page.locator('.my-pull-refresh-viewport').boundingBox()
-      await realDrag(viewport.x + 40, viewport.y + 35, viewport.y + 235, async () => {
+      await realDrag(viewport.x + 40, viewport.y + 280, viewport.y + 180)
+      await page.waitForTimeout(300)
+      assert.ok((await scrollSnapshot()).top > 30, '真实示例必须先由触摸滚离顶部')
+      await realDrag(viewport.x + 40, viewport.y + 35, viewport.y + 350, async () => {
         assert.equal(await page.locator('.my-pull-refresh').getAttribute('data-state'), 'ready')
+        assert.equal((await scrollSnapshot()).top, 0)
         await page.screenshot({ path: fileURLToPath(new URL('../qa/pull-refresh/pulled.png', import.meta.url)) })
       })
       await page.screenshot({ path: fileURLToPath(new URL('../qa/pull-refresh/loading.png', import.meta.url)) })
       await page.waitForFunction(() => document.querySelector('.my-pull-refresh').dataset.state === 'idle')
       assert.match(await page.locator('[data-refresh-count]').textContent(), /已刷新 2 次/)
       await page.setViewportSize({ width: 1280, height: 900 })
+      await page.locator('[data-demo-page="example/pull-refresh"]').evaluate((element) => { element.scrollTop = 0 })
       await frame()
       await page.screenshot({ path: fileURLToPath(new URL('../qa/pull-refresh/desktop.png', import.meta.url)), fullPage: true })
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, '示例横向溢出')

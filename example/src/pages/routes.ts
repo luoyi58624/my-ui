@@ -1,8 +1,8 @@
-import type { AppPage } from 'tauri-plugin-native-components/vue'
+import type { RouteRecordRaw } from 'vue-router'
 import { demoExamples } from './catalog'
 
-/** 文档独立页同时交给 App 与 Vue Router，旧组件链接仍指向同一页面。 */
-export const demoPages: AppPage[] = demoExamples
+/** 文档独立页统一交给 Vue Router，旧组件链接仍指向同一页面。 */
+export const demoPages: RouteRecordRaw[] = demoExamples
   .filter((item) => !item.path)
   .map((item) => ({
     name: 'demo-' + item.id,

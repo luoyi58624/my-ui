@@ -1,5 +1,4 @@
 import type { CodeFile } from './types'
-import { appExampleFiles } from './app'
 
 const sources = import.meta.glob<string>('../../pages/**/*.vue', {
   query: '?raw',
@@ -104,7 +103,7 @@ const pages: Record<string, { file: string }[]> = {
     { file: 'pages/home/scenarios/ProfileFormExample.vue' },
     { file: 'pages/home/scenarios/index.vue' }
   ],
-  'native-app': [{ file: 'pages/native/app/index.vue' }],
+  tabbar: [{ file: 'pages/home/tabbar/index.vue' }],
   'native-navigation': [{ file: 'pages/native/navigation/index.vue' }]
 }
 
@@ -254,7 +253,6 @@ export function previewFiles(
   setup = name,
   related: readonly CodeFile[] = []
 ): readonly CodeFile[] {
-  if (appExampleFiles[name]) return appExampleFiles[name]
   const path = sourcePath(file)
   const read = async () => {
     const load = sources[path]
