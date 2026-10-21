@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { Icon } from '@my-ui/vue'
 import 'highlight.js/styles/atom-one-dark.css'
-import type { CodeLanguage } from './code/types'
+import type { CodeLanguage } from '../commons/code/types'
 
 const props = withDefaults(
   defineProps<{
@@ -113,7 +113,7 @@ onBeforeUnmount(() => {
 /* 随示例打包同一份代码字体，保证各平台使用指定的字体文件。 */
 @font-face {
   font-family: 'MyUI Demo Consolas';
-  src: url('./assets/fonts/Consolas-Regular.ttf') format('truetype');
+  src: url('../commons/assets/fonts/Consolas-Regular.ttf') format('truetype');
   font-style: normal;
   font-weight: 400;
   font-display: swap;

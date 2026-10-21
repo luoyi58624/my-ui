@@ -3,13 +3,13 @@ import { computed, inject, nextTick, onActivated, onDeactivated, ref, watch } fr
 import { useRoute } from 'vue-router'
 import { Button, CellGroup, Icon, ListRow, type IconName } from '@my-ui/vue'
 import { Tabs, useApp, type NavigationItem } from 'tauri-plugin-native-components/vue'
-import DemoAppBar from '../DemoAppBar.vue'
-import { openPage } from '../navigation'
-import { useNativeBarsSuspended } from '../native-components'
-import { demoGroups, nativeDemoGroups, type DemoExample } from './catalog'
+import DemoAppBar from './DemoAppBar.vue'
+import { openPage } from '../commons/navigation'
+import { useNativeBarsSuspended } from '../commons/native-components'
+import { demoGroups, nativeDemoGroups, type DemoExample } from '../demo/catalog'
 import { demoLayoutKey, type DemoTab } from './layoutContext'
 import { useDemoScroll } from './useDemoScroll'
-import ProfileHome from './ProfileHome.vue'
+import ProfileHome from '../demo/ProfileHome.vue'
 
 const props = defineProps<{
   /** 当前栏目的展示及原生页面配置。 */

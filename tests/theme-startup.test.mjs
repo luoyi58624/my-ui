@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { readFileSync } from 'node:fs'
 import { runInNewContext } from 'node:vm'
-import { applyTheme, createTheme } from '../example/src/theme/index.js'
+import { applyTheme, createTheme } from '../example/src/commons/theme/index.js'
 
 const bootstrap = readFileSync(new URL('../example/public/theme-init.js', import.meta.url), 'utf8')
 function start({ settings, cached, inherited, systemDark = false, storageBlocked = false } = {}) {

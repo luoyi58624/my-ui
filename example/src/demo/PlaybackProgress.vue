@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import DemoExample from './DemoExample.vue'
+import DemoExample from '../components/DemoExample.vue'
 import { computed, onBeforeUnmount, onDeactivated, ref, watch } from 'vue'
 import { Button, Card, Divider, Progress, Slider } from '@my-ui/vue'
 

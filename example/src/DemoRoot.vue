@@ -3,7 +3,7 @@ import { onBeforeUnmount, provide, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { Popup } from '@my-ui/vue'
 import 'tauri-plugin-native-components/style.css'
-import { nativeBarsSuspendedKey } from './native-components'
+import { nativeBarsSuspendedKey } from './commons/native-components'
 import NativeAppRoot from './demo/native-app/Root.vue'
 
 const suspended = ref(false)

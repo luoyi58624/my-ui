@@ -3,9 +3,9 @@ import test from 'node:test'
 import { createApp, nextTick } from 'vue'
 import { createPinia, disposePinia, type Pinia } from 'pinia'
 import { createSharedStatePlugin, sharedStateKey, type SharedStateStorage } from '../packages/vue/state'
-import { installThemeState, useThemeStore } from '../example/src/stores/theme'
-import { readThemeSnapshot, themeStateKey } from '../example/src/theme/preferences'
-import { installNativeAppearance } from '../example/src/native-appearance'
+import { installThemeState, useThemeStore } from '../example/src/commons/state/theme'
+import { readThemeSnapshot, themeStateKey } from '../example/src/commons/theme/preferences'
+import { installNativeAppearance } from '../example/src/commons/native-appearance'
 
 const settle = async () => { for(let i=0;i<25;i++){ await Promise.resolve(); await nextTick() } }
 function cache() {

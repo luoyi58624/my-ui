@@ -12,7 +12,7 @@ import { useRoute } from 'vue-router'
 import { Icon } from '@my-ui/vue'
 import { Page } from 'tauri-plugin-native-components/vue'
 import DemoAppBar from './DemoAppBar.vue'
-import { closePage, openPage } from './navigation'
+import { closePage, openPage } from '../commons/navigation'
 
 const emit = defineEmits<{
   /** 将导航失败交给示例页的统一提示。 */

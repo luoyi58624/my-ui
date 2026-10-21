@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import DemoExample from './DemoExample.vue'
+import DemoExample from '../components/DemoExample.vue'
 import { h, ref } from 'vue'
 import { Button, Card, Icon, Segmented, popup, type Option } from '@my-ui/vue'
-import SelectionPanel from './SelectionPanel.vue'
-import DrawerExample from './DrawerExample.vue'
+import SelectionPanel from '../components/SelectionPanel.vue'
+import DrawerExample from '../components/DrawerExample.vue'
 
 const emit = defineEmits<{
   /** 把示例的操作结果交给页面轻提示。 */

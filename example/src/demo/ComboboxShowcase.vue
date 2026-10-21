@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import DemoExample from './DemoExample.vue'
+import DemoExample from '../components/DemoExample.vue'
 import { onBeforeUnmount, ref } from 'vue'
 import { Avatar, Badge, Button, Card, Combobox, type Option } from '@my-ui/vue'
 

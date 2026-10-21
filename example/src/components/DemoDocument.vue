@@ -21,7 +21,6 @@ const outlineItems = computed(() =>
     href: '#example-' + props.id + '-' + example.name
   }))
 )
-let firstExample: string | undefined
 let scroller: HTMLElement | null = null,
   frame = 0
 function update() {
@@ -47,10 +46,6 @@ function schedule() {
 }
 provide(documentKey, {
   id: props.id,
-  defaultCodeOpen(name) {
-    firstExample ??= name
-    return firstExample === name
-  },
   register(example) {
     examples.value.push(example)
     void nextTick(schedule)

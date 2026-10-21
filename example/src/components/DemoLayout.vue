@@ -2,10 +2,10 @@
 import { provide, ref, useSlots, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { App, Tabbar, type AppTab } from 'tauri-plugin-native-components/vue'
-import { navigation } from './navigation'
-import DemoTabPage from './demo/DemoTabPage.vue'
-import { demoPages } from './demo/routes'
-import { demoLayoutKey, type DemoTab } from './demo/layoutContext'
+import { navigation } from '../commons/navigation'
+import DemoTabPage from './DemoTabPage.vue'
+import { demoPages } from '../demo/routes'
+import { demoLayoutKey, type DemoTab } from './layoutContext'
 
 const emit = defineEmits<{
   /** 将主 Demo 的导航失败交给统一提示。 */

@@ -1,6 +1,6 @@
 import { createNativeRouter } from 'tauri-plugin-native-components/router'
 import type { PageOptions } from 'tauri-plugin-native-components/router'
-import { router } from './router'
+import { router } from '../router'
 import { readPageAppearance } from './native-context'
 
 export { isAndroidNative, isNativePage as isChildPage } from 'tauri-plugin-native-components/router'

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import DemoExample from './DemoExample.vue'
+import DemoExample from '../components/DemoExample.vue'
 import { ref } from 'vue'
 import { Button, Card, Icon, Input } from '@my-ui/vue'
-import { isAndroidNative, openPage } from '../navigation'
-import { updateDemoCache, useSharedDemoStore } from '../stores/shared'
+import { isAndroidNative, openPage } from '../commons/navigation'
+import { updateDemoCache, useSharedDemoStore } from '../commons/state/shared'
 
 const emit = defineEmits<{ notify: [message: string] }>()
 const available = isAndroidNative()

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { Icon } from '@my-ui/vue'
-import { openPage } from '../navigation'
-import { exampleCode } from './code/examples'
+import { openPage } from '../commons/navigation'
+import { exampleCode } from '../commons/code/examples'
 import CodeFiles from './CodeFiles.vue'
-import { previewGroups, type PreviewCodeGroup } from './code/source'
+import { previewGroups, type PreviewCodeGroup } from '../commons/code/source'
 
 const props = defineProps<{
   /** 组件目录中的示例标识。 */

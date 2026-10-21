@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Page } from 'tauri-plugin-native-components/vue'
-import DemoAppBar from './DemoAppBar.vue'
-import { closePage } from './navigation'
+import DemoAppBar from './components/DemoAppBar.vue'
+import { closePage } from './commons/navigation'
 
 const error = ref('')
 const loaded = ref(false)

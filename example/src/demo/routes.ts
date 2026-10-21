@@ -6,7 +6,7 @@ export const demoPages: AppPage[] = demoExamples.filter(item => !item.path).map(
   name: 'demo-' + item.id,
   path: '/example/' + item.id,
   alias: ['/' + item.id, ...(item.anchors ?? []).map(anchor => '/' + anchor)],
-  component: () => import('./DemoDetailPage.vue'),
+  component: () => import('../components/DemoDetailPage.vue'),
   props: { id: item.id },
   meta: { title: item.title },
 }))

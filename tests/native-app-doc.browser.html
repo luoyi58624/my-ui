@@ -37,7 +37,7 @@ if (mode) {
     try {
       await load();
       await check('App 用法集中在一个示例，只展示 App 与 Tabbar 的必要配置', async () => {
-        const { previewGroups } = await import('/example/src/demo/code/source.ts');
+        const { previewGroups } = await import('/example/src/commons/code/source.ts');
         const groups = await previewGroups('native-app');
         assert(groups.map(group => group.name).join() === 'app-basic' && root().querySelectorAll('[data-example]').length === 1, 'App 用法仍拆分成多个示例');
         for (const group of groups) {

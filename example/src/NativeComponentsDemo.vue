@@ -8,9 +8,9 @@ import {
   type NavigationAction,
   type NavigationItem
 } from 'tauri-plugin-native-components/vue'
-import DemoAppBar from './DemoAppBar.vue'
-import { closePage } from './navigation'
-import { useNativeBarsSuspended } from './native-components'
+import DemoAppBar from './components/DemoAppBar.vue'
+import { closePage } from './commons/navigation'
+import { useNativeBarsSuspended } from './commons/native-components'
 
 const props = defineProps<{ kind: 'app-bar' | 'tabbar' | 'tabs' }>()
 const suspended = useNativeBarsSuspended()

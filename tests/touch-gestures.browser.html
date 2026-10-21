@@ -4,7 +4,7 @@
 <div id="app"></div><script type="module">
 import{createApp,h,nextTick,ref}from'vue'
 import { Button, Drawer, Sheet, Tabs, Popup, popup } from '/packages/vue/index.ts'
-import { applyTheme } from '/example/src/theme/index.js'
+import { applyTheme } from '/example/src/commons/theme/index.js'
 applyTheme({backdropBlur:false})
 const frame=()=>new Promise(resolve=>requestAnimationFrame(resolve))
 // 后台标签页的帧回调可能节流，等待预算与组件的实际动画时长分开。

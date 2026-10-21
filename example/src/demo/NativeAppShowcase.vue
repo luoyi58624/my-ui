@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Button } from '@my-ui/vue'
 import { isAndroidNative } from 'tauri-plugin-native-components/router'
-import DemoExample from './DemoExample.vue'
-import { openPage } from '../navigation'
+import DemoExample from '../components/DemoExample.vue'
+import { openPage } from '../commons/navigation'
 
 const native = isAndroidNative()
 const preview = new URL(location.href)

@@ -2,9 +2,9 @@
 import { h, ref } from 'vue'
 import { Page } from 'tauri-plugin-native-components/vue'
 import { Button, Card, CellGroup, Icon, Input, ListRow, Menu, Stepper, popup } from '@my-ui/vue'
-import DemoAppBar from './DemoAppBar.vue'
-import { closePage, isAndroidNative } from './navigation'
-import { updateDemoCache, useSharedDemoStore } from './stores/shared'
+import DemoAppBar from './components/DemoAppBar.vue'
+import { closePage, isAndroidNative } from './commons/navigation'
+import { updateDemoCache, useSharedDemoStore } from './commons/state/shared'
 
 const available = isAndroidNative()
 const shared = useSharedDemoStore()

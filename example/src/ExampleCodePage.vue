@@ -2,12 +2,12 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { Page, type PageHandle } from 'tauri-plugin-native-components/vue'
-import DemoAppBar from './DemoAppBar.vue'
-import ExampleCode from './demo/ExampleCode.vue'
+import DemoAppBar from './components/DemoAppBar.vue'
+import ExampleCode from './components/ExampleCode.vue'
 import { demoExamples } from './demo/catalog'
-import { exampleCode } from './demo/code/examples'
-import { closePage } from './navigation'
-import { useNativeBarsSuspended } from './native-components'
+import { exampleCode } from './commons/code/examples'
+import { closePage } from './commons/navigation'
+import { useNativeBarsSuspended } from './commons/native-components'
 
 const route = useRoute(), page = ref<PageHandle>(), error = ref('')
 const suspended = useNativeBarsSuspended()

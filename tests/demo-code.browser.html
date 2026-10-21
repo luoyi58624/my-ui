@@ -109,7 +109,7 @@
               )
             }
           })
-          await check('组件文档只默认展开第一例代码，并支持手动收起和重开', async () => {
+          await check('组件文档代码全部默认收起，并支持手动展开、收起和重开', async () => {
             await route('/example/button')
             await until(() => doc.querySelector('.demo-detail:not([inert]) .demo-code-files'))
             const detail = doc.querySelector('.demo-detail:not([inert])'),
@@ -119,11 +119,11 @@
               '按钮示例没有分别对应代码'
             )
             assert(!detail.querySelector('.example-code'), '页面底部仍然堆放总代码')
-            assert(fold.open, '第一例代码没有默认展开')
             assert(
-              [...detail.querySelectorAll('details')].slice(1).every((item) => !item.open),
-              '其他示例代码没有默认收起'
+              [...detail.querySelectorAll('details')].every((item) => !item.open),
+              '示例代码没有全部默认收起'
             )
+            fold.querySelector('summary').click()
             await until(() => code()?.querySelector('.hljs-tag'), 'Vue 代码没有高亮')
             assert(
               code().textContent.includes("from '@my-ui/vue'") &&
@@ -202,7 +202,7 @@
               '切换文件后代码未更新'
             )
             const { demoExamples } = await import('/example/src/demo/catalog.ts')
-            const { exampleCode } = await import('/example/src/demo/code/examples.ts')
+            const { exampleCode } = await import('/example/src/commons/code/examples.ts')
             for (const item of demoExamples.filter((item) => !item.path?.startsWith('/guide/'))) {
               const files = exampleCode(item.id)
               assert(files.length > 0, '示例缺少代码：' + item.id)
@@ -211,7 +211,7 @@
                 assert(source.trim().length > 20, '代码为空：' + file.name)
               }
             }
-            const { guides } = await import('/example/src/demo/code/guides.ts')
+            const { guides } = await import('/example/src/commons/code/guides.ts')
             for (const guide of Object.values(guides))
               for (const section of guide.sections)
                 for (const file of section.files ?? []) {

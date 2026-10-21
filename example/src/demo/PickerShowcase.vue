@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import DemoExample from './DemoExample.vue'
+import DemoExample from '../components/DemoExample.vue'
 import { computed, ref } from 'vue'
 import { Button, Card, Picker, Sheet, type PickerOption, type PickerValue } from '@my-ui/vue'
 

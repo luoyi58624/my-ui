@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { Button, Dialog, Icon, Input, Segmented, Slider, Switch } from '@my-ui/vue'
-import { createTheme, contrastRatio, defaultThemeOptions, themeColors, themeStyles, type ThemeColorId, type ThemeMode, type ThemeStyleId } from '../theme/index.js'
-import { createSystemFontWeightSync, supportsSystemFontWeight } from '../font-weight'
-import { useThemeStore } from '../stores/theme'
-import { defaultThemeState } from '../theme/preferences'
+import { createTheme, contrastRatio, defaultThemeOptions, themeColors, themeStyles, type ThemeColorId, type ThemeMode, type ThemeStyleId } from '../commons/theme/index.js'
+import { createSystemFontWeightSync, supportsSystemFontWeight } from '../commons/font-weight'
+import { useThemeStore } from '../commons/state/theme'
+import { defaultThemeState } from '../commons/theme/preferences'
 import type { NavigationAction } from 'tauri-plugin-native-components'
 
 withDefaults(defineProps<{ controls?: boolean }>(), { controls: true })

@@ -3,8 +3,8 @@ import { computed, inject, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Card } from '@my-ui/vue'
 import CodeFiles from './CodeFiles.vue'
 import { documentKey } from './document'
-import { previewFiles } from './code/source'
-import type { CodeFile } from './code/types'
+import { previewFiles } from '../commons/code/source'
+import type { CodeFile } from '../commons/code/types'
 
 defineOptions({ inheritAttrs: false })
 const props = defineProps<{
@@ -26,7 +26,6 @@ const props = defineProps<{
   bare?: boolean
 }>()
 const document = inject(documentKey, undefined)
-const codeOpen = document?.defaultCodeOpen(props.name) ?? false
 const root = ref<HTMLElement>()
 const heading = computed(() => 'example-' + document?.id + '-' + props.name)
 const files = computed(() => previewFiles(props.source, props.name, props.setup, props.related))
@@ -62,7 +61,7 @@ onBeforeUnmount(() => unregister?.())
     </header>
     <div class="doc-example-frame">
       <div class="doc-example-preview"><slot /></div>
-      <CodeFiles :files="files" :open="codeOpen" title="示例代码" />
+      <CodeFiles :files="files" title="示例代码" />
     </div>
   </section>
   <div v-else-if="bare" v-bind="$attrs">

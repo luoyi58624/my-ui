@@ -24,7 +24,7 @@ async function withRuntime(run: (context: any) => Promise<void>) {
   console.warn = (...args) => { warnings.push(args) }
   try {
     // Bun 会合并仅查询参数不同的文件模块，独立源码 URL 用于隔离每项测试的缓存。
-    const source = readFileSync(new URL('../example/src/font-weight.ts', import.meta.url), 'utf8')
+    const source = readFileSync(new URL('../example/src/commons/font-weight.ts', import.meta.url), 'utf8')
     const js = new Bun.Transpiler({ loader: 'ts' }).transformSync(source) + '\n// instance ' + ++instance
     const api = await import('data:text/javascript;base64,' + Buffer.from(js).toString('base64'))
     await run({ ...api, calls, storage, warnings, bridge, respond: (next: () => unknown) => { response = next } })

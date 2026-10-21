@@ -16,8 +16,8 @@
 <script type="module">
 import { createApp, h, nextTick, ref } from 'vue'
 import { Button, Input, Popup, popup } from '/packages/vue/index.ts'
-import { applyTheme } from '/example/src/theme/index.js'
-import SelectionPanel from '/example/src/demo/SelectionPanel.vue'
+import { applyTheme } from '/example/src/commons/theme/index.js'
+import SelectionPanel from '/example/src/components/SelectionPanel.vue'
 
 applyTheme({ mode: 'dark', backdropBlur: true })
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms))

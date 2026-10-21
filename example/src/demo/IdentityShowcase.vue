@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import DemoExample from './DemoExample.vue'
+import DemoExample from '../components/DemoExample.vue'
 import { ref } from 'vue'
 import { Avatar, Badge, Button, Card, Divider } from '@my-ui/vue'
-import portrait from './assets/avatar-lan.svg'
+import portrait from '../commons/assets/avatar-lan.svg'
 
 const unread = ref(12),
   quiet = ref(false)

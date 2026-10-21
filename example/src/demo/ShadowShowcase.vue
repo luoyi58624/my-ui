@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import DemoExample from './DemoExample.vue'
+import DemoExample from '../components/DemoExample.vue'
 import { ref } from 'vue'
 import { Button, Card, Dialog, Icon, Menu, type IconName, type MenuOption } from '@my-ui/vue'
 

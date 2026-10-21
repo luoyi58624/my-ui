@@ -13,7 +13,5 @@ export interface DocumentExample {
 /** 组件文档向预览提供独立的目录注册范围。 */
 export const documentKey: InjectionKey<{
   id: string
-  /** 首次渲染时只展开第一例代码，后续开合仍由用户控制。 */
-  defaultCodeOpen: (name: string) => boolean
   register: (example: DocumentExample) => () => void
 }> = Symbol('demo-document')

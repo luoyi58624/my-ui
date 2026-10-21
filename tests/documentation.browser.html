@@ -68,7 +68,7 @@
           doc = frame.contentDocument
           win = frame.contentWindow
           const { demoExamples } = await import('/example/src/demo/catalog.ts')
-          const { previewGroups } = await import('/example/src/demo/code/source.ts')
+          const { previewGroups } = await import('/example/src/commons/code/source.ts')
           const pages = demoExamples.filter((item) => !item.path)
           let exampleCount = 0,
             sourceCount = 0
@@ -91,7 +91,7 @@
                     blocks.map((item) => item.dataset.example).join(),
                   '独立代码页与文档不对应 ' + page.id
                 )
-              for (const [index, block] of blocks.entries()) {
+              for (const block of blocks) {
                 assert(
                   block.querySelectorAll('.doc-example-preview').length === 1 &&
                     block.querySelectorAll('.demo-code-files').length === 1,
@@ -102,8 +102,8 @@
                   '缺少用法说明 ' + block.dataset.example
                 )
                 const fold = block.querySelector('details')
-                assert(fold.open === (index === 0), '默认展开状态错误 ' + block.dataset.example)
-                if (!fold.open) fold.querySelector('summary').click()
+                assert(!fold.open, '示例代码没有默认收起 ' + block.dataset.example)
+                fold.querySelector('summary').click()
                 await until(
                   () =>
                     fold.querySelector('.demo-code code') || fold.querySelector('[role="alert"]')

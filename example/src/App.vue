@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, h, reactive, ref } from 'vue'
-import DemoLayout from './DemoLayout.vue'
-import DemoExample from './demo/DemoExample.vue'
-import { openPage } from './navigation'
+import DemoLayout from './components/DemoLayout.vue'
+import DemoExample from './components/DemoExample.vue'
+import { openPage } from './commons/navigation'
 import NativeNavigationShowcase from './demo/NativeNavigationShowcase.vue'
 import EssentialsShowcase from './demo/EssentialsShowcase.vue'
 import PopupShowcase from './demo/PopupShowcase.vue'
@@ -20,7 +20,7 @@ import DateTimeShowcase from './demo/DateTimeShowcase.vue'
 import UploadShowcase from './demo/UploadShowcase.vue'
 import AppBarShowcase from './demo/AppBarShowcase.vue'
 import NoticeStepsShowcase from './demo/NoticeStepsShowcase.vue'
-import SharePanel from './demo/SharePanel.vue'
+import SharePanel from './components/SharePanel.vue'
 import {
   Button,
   Card,
@@ -49,7 +49,7 @@ const props = defineProps<{
   /** 按需加载旧版整页示例，组件和交互与独立示例共用。 */
   showcase?: boolean
 }>()
-const ShowcaseLayout = defineAsyncComponent(() => import('./ShowcaseLayout.vue'))
+const ShowcaseLayout = defineAsyncComponent(() => import('./components/ShowcaseLayout.vue'))
 const NativeAppShowcase = defineAsyncComponent(() => import('./demo/NativeAppShowcase.vue'))
 const layout = computed(() => (props.showcase ? ShowcaseLayout : DemoLayout))
 // #endregion

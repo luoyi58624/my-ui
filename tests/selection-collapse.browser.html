@@ -4,7 +4,7 @@
 <div id="app"></div><script type="module">
 import {createApp,h,nextTick,ref} from 'vue'
 import { Radio, RadioGroup, Checkbox, CheckboxGroup, Choices, Collapse, CollapseItem, Button } from '/packages/vue/index.ts'
-import { applyTheme } from '/example/src/theme/index.js'
+import { applyTheme } from '/example/src/commons/theme/index.js'
 
 applyTheme({mode:'light'})
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms)), frame=()=>new Promise(resolve=>requestAnimationFrame(resolve))

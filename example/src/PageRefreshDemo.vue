@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref } from 'vue'
 import { Page, type NavigationAction, type PageHandle } from 'tauri-plugin-native-components/vue'
-import DemoAppBar from './DemoAppBar.vue'
+import DemoAppBar from './components/DemoAppBar.vue'
 import { Button, popup } from '@my-ui/vue'
-import { closePage, isAndroidNative } from './navigation'
-import { useNativeBarsSuspended } from './native-components'
+import { closePage, isAndroidNative } from './commons/navigation'
+import { useNativeBarsSuspended } from './commons/native-components'
 
 const page = ref<PageHandle>(),
   refreshing = ref(false),

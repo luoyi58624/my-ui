@@ -1,7 +1,7 @@
 import { createApp, defineComponent, h, onMounted, provide, ref } from 'vue'
 import { AppBar, Tabbar, Page } from 'tauri-plugin-native-components/vue'
 import { pageLayoutKey } from '../example/node_modules/tauri-plugin-native-components/vue/usePageLayout'
-import { Button, Dialog, Drawer } from '../packages/vue/index'
+import { Button, Dialog, Drawer } from '../packages/vue'
 import 'tauri-plugin-native-components/style.css'
 
 const w = window as any

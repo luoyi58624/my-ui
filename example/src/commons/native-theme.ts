@@ -1,6 +1,6 @@
 import { applyTheme, createTheme } from './theme/index.js'
 import { readThemeSnapshot, saveThemeSnapshot, themeStateKey, type ThemeSettingsState } from './theme/preferences'
-import { sharedStorage } from './stores/storage'
+import { sharedStorage } from './state/storage'
 import { installNativeAppearance } from './native-appearance'
 
 // 原生 HTML 直接接入同一份存储，不加载 Vue 或 Pinia。

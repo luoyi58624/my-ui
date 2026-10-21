@@ -2,12 +2,12 @@
 import { computed, nextTick, onActivated, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Button } from '@my-ui/vue'
 import { Page, type PageHandle } from 'tauri-plugin-native-components/vue'
-import DemoAppBar from './DemoAppBar.vue'
-import CodeFiles from './demo/CodeFiles.vue'
-import DocumentOutline from './demo/DocumentOutline.vue'
-import { guides, type GuideKind } from './demo/code/guides'
-import { closePage, openPage } from './navigation'
-import { useNativeBarsSuspended } from './native-components'
+import DemoAppBar from './components/DemoAppBar.vue'
+import CodeFiles from './components/CodeFiles.vue'
+import DocumentOutline from './components/DocumentOutline.vue'
+import { guides, type GuideKind } from './commons/code/guides'
+import { closePage, openPage } from './commons/navigation'
+import { useNativeBarsSuspended } from './commons/native-components'
 
 const props = defineProps<{
   /** 当前展示基础用法或原生接入指南。 */

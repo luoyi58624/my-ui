@@ -2,8 +2,8 @@
 import { computed, ref } from 'vue'
 import { AppBar } from 'tauri-plugin-native-components/vue'
 import type { NavigationAction } from 'tauri-plugin-native-components'
-import ThemeSettings from './demo/ThemeSettings.vue'
-import { useNativeBarsSuspended } from './native-components'
+import ThemeSettings from './ThemeSettings.vue'
+import { useNativeBarsSuspended } from '../commons/native-components'
 
 const props = withDefaults(
   defineProps<{

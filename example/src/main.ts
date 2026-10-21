@@ -1,13 +1,13 @@
-import './mobile'
+import './commons/mobile'
 import { createApp } from 'vue'
 import DemoRoot from './DemoRoot.vue'
 import { router } from './router'
-import { applyTheme } from './theme/index.js'
-import { sharedPinia } from './stores/shared'
-import { installNativeOverlayBack } from './overlay-back'
-import { installNativeAppearance } from './native-appearance'
-import { installThemeState } from './stores/theme'
-import { readThemeSnapshot } from './theme/preferences'
+import { applyTheme } from './commons/theme/index.js'
+import { sharedPinia } from './commons/state/shared'
+import { installNativeOverlayBack } from './commons/overlay-back'
+import { installNativeAppearance } from './commons/native-appearance'
+import { installThemeState } from './commons/state/theme'
+import { readThemeSnapshot } from './commons/theme/preferences'
 
 applyTheme(readThemeSnapshot())
 const app = createApp(DemoRoot).use(sharedPinia).use(router)

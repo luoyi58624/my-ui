@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Icon } from '@my-ui/vue'
 import CodeBlock from './CodeBlock.vue'
-import type { CodeFile } from './code/types'
+import type { CodeFile } from '../commons/code/types'
 
 const props = defineProps<{
   /** 当前示例的用法代码与相关源文件。 */

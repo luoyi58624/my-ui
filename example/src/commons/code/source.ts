@@ -6,7 +6,7 @@ const sources = import.meta.glob<string>('../../**/*.vue', { query: '?raw', impo
 const share: CodeFile = {
   name: 'demo/SharePanel.vue',
   language: 'vue',
-  source: () => import('../SharePanel.vue?raw').then((module) => module.default)
+  source: () => import('../../components/SharePanel.vue?raw').then((module) => module.default)
 }
 const portrait: CodeFile = {
   name: 'assets/avatar-lan.svg',
@@ -22,43 +22,43 @@ const companions: Record<string, readonly CodeFile[]> = {
     {
       name: 'DrawerExample.vue',
       language: 'vue',
-      source: () => import('../DrawerExample.vue?raw').then((module) => module.default)
+      source: () => import('../../components/DrawerExample.vue?raw').then((module) => module.default)
     }
   ],
   'selection-sheet': [
     {
       name: 'SelectionPanel.vue',
       language: 'vue',
-      source: () => import('../SelectionPanel.vue?raw').then((module) => module.default)
+      source: () => import('../../components/SelectionPanel.vue?raw').then((module) => module.default)
     }
   ],
   'profile-form': [
     {
       name: 'profile.ts',
       language: 'typescript',
-      source: () => import('../profile.ts?raw').then((module) => module.default)
+      source: () => import('../../demo/profile.ts?raw').then((module) => module.default)
     }
   ],
   'shared-state': [
     {
       name: '../navigation.ts',
       language: 'typescript',
-      source: () => import('../../navigation.ts?raw').then((module) => module.default)
+      source: () => import('../navigation.ts?raw').then((module) => module.default)
     },
     {
       name: '../native-context.ts',
       language: 'typescript',
-      source: () => import('../../native-context.ts?raw').then((module) => module.default)
+      source: () => import('../native-context.ts?raw').then((module) => module.default)
     },
     {
       name: '../stores/shared.ts',
       language: 'typescript',
-      source: () => import('../../stores/shared.ts?raw').then((module) => module.default)
+      source: () => import('../state/shared.ts?raw').then((module) => module.default)
     },
     {
       name: '../stores/storage.ts',
       language: 'typescript',
-      source: () => import('../../stores/storage.ts?raw').then((module) => module.default)
+      source: () => import('../state/storage.ts?raw').then((module) => module.default)
     }
   ]
 }
@@ -99,7 +99,7 @@ const pages: Record<string, { file: string; names?: string[] }[]> = {
 }
 
 function sourcePath(file: string) {
-  return file === 'App.vue' ? '../../App.vue' : '../' + file
+  return file === 'App.vue' ? '../../App.vue' : '../../demo/' + file
 }
 function previewTags(source: string) {
   return [...source.matchAll(/<DemoExample\b(?:"[^"]*"|'[^']*'|[^'">])*>/g)]

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import DemoExample from './DemoExample.vue'
+import DemoExample from '../components/DemoExample.vue'
 import { Card, Icon, type IconName } from '@my-ui/vue'
 
 const emit = defineEmits<{

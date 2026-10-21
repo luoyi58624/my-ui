@@ -266,14 +266,14 @@ async function share() {
   <Popup />
 </template>`
     ),
-    vue('SharePanel.vue', () => import('../SharePanel.vue?raw').then((m) => m.default))
+    vue('SharePanel.vue', () => import('../../components/SharePanel.vue?raw').then((m) => m.default))
   ],
-  card: [vue('CardShowcase.vue', () => import('../CardShowcase.vue?raw').then((m) => m.default))],
+  card: [vue('CardShowcase.vue', () => import('../../demo/CardShowcase.vue?raw').then((m) => m.default))],
   shadows: [
-    vue('ShadowShowcase.vue', () => import('../ShadowShowcase.vue?raw').then((m) => m.default))
+    vue('ShadowShowcase.vue', () => import('../../demo/ShadowShowcase.vue?raw').then((m) => m.default))
   ],
   identity: [
-    vue('IdentityShowcase.vue', () => import('../IdentityShowcase.vue?raw').then((m) => m.default)),
+    vue('IdentityShowcase.vue', () => import('../../demo/IdentityShowcase.vue?raw').then((m) => m.default)),
     {
       name: 'assets/avatar-lan.svg',
       language: 'html',
@@ -281,64 +281,64 @@ async function share() {
     }
   ],
   image: [
-    vue('ImageShowcase.vue', () => import('../ImageShowcase.vue?raw').then((m) => m.default))
+    vue('ImageShowcase.vue', () => import('../../demo/ImageShowcase.vue?raw').then((m) => m.default))
   ],
   'app-bar': [
-    vue('AppBarShowcase.vue', () => import('../AppBarShowcase.vue?raw').then((m) => m.default))
+    vue('AppBarShowcase.vue', () => import('../../demo/AppBarShowcase.vue?raw').then((m) => m.default))
   ],
   'selection-collapse': [
     vue('SelectionCollapseShowcase.vue', () =>
-      import('../SelectionCollapseShowcase.vue?raw').then((m) => m.default)
+      import('../../demo/SelectionCollapseShowcase.vue?raw').then((m) => m.default)
     )
   ],
   combobox: [
-    vue('ComboboxShowcase.vue', () => import('../ComboboxShowcase.vue?raw').then((m) => m.default))
+    vue('ComboboxShowcase.vue', () => import('../../demo/ComboboxShowcase.vue?raw').then((m) => m.default))
   ],
   picker: [
-    vue('PickerShowcase.vue', () => import('../PickerShowcase.vue?raw').then((m) => m.default))
+    vue('PickerShowcase.vue', () => import('../../demo/PickerShowcase.vue?raw').then((m) => m.default))
   ],
   'date-time-picker': [
-    vue('DateTimeShowcase.vue', () => import('../DateTimeShowcase.vue?raw').then((m) => m.default))
+    vue('DateTimeShowcase.vue', () => import('../../demo/DateTimeShowcase.vue?raw').then((m) => m.default))
   ],
   upload: [
-    vue('UploadShowcase.vue', () => import('../UploadShowcase.vue?raw').then((m) => m.default))
+    vue('UploadShowcase.vue', () => import('../../demo/UploadShowcase.vue?raw').then((m) => m.default))
   ],
   primitives: [
     vue('FeedbackPrimitives.vue', () =>
-      import('../FeedbackPrimitives.vue?raw').then((m) => m.default)
+      import('../../demo/FeedbackPrimitives.vue?raw').then((m) => m.default)
     ),
-    vue('PlaybackProgress.vue', () => import('../PlaybackProgress.vue?raw').then((m) => m.default)),
-    vue('SliderShowcase.vue', () => import('../SliderShowcase.vue?raw').then((m) => m.default))
+    vue('PlaybackProgress.vue', () => import('../../demo/PlaybackProgress.vue?raw').then((m) => m.default)),
+    vue('SliderShowcase.vue', () => import('../../demo/SliderShowcase.vue?raw').then((m) => m.default))
   ],
   'notice-steps': [
     vue('NoticeStepsShowcase.vue', () =>
-      import('../NoticeStepsShowcase.vue?raw').then((m) => m.default)
+      import('../../demo/NoticeStepsShowcase.vue?raw').then((m) => m.default)
     )
   ],
   popup: [
-    vue('PopupShowcase.vue', () => import('../PopupShowcase.vue?raw').then((m) => m.default)),
-    vue('SelectionPanel.vue', () => import('../SelectionPanel.vue?raw').then((m) => m.default)),
-    vue('DrawerExample.vue', () => import('../DrawerExample.vue?raw').then((m) => m.default))
+    vue('PopupShowcase.vue', () => import('../../demo/PopupShowcase.vue?raw').then((m) => m.default)),
+    vue('SelectionPanel.vue', () => import('../../components/SelectionPanel.vue?raw').then((m) => m.default)),
+    vue('DrawerExample.vue', () => import('../../components/DrawerExample.vue?raw').then((m) => m.default))
   ],
-  menu: [vue('MenuShowcase.vue', () => import('../MenuShowcase.vue?raw').then((m) => m.default))],
+  menu: [vue('MenuShowcase.vue', () => import('../../demo/MenuShowcase.vue?raw').then((m) => m.default))],
   'touch-gestures': [
-    vue('TouchShowcase.vue', () => import('../TouchShowcase.vue?raw').then((m) => m.default))
+    vue('TouchShowcase.vue', () => import('../../demo/TouchShowcase.vue?raw').then((m) => m.default))
   ],
   scenarios: [
     vue('EssentialsShowcase.vue', () =>
-      import('../EssentialsShowcase.vue?raw').then((m) => m.default)
+      import('../../demo/EssentialsShowcase.vue?raw').then((m) => m.default)
     ),
     vue('ProfileFormExample.vue', () =>
-      import('../ProfileFormExample.vue?raw').then((m) => m.default)
+      import('../../demo/ProfileFormExample.vue?raw').then((m) => m.default)
     ),
     {
       name: 'profile.ts',
       language: 'typescript',
-      source: () => import('../profile.ts?raw').then((m) => m.default)
+      source: () => import('../../demo/profile.ts?raw').then((m) => m.default)
     }
   ],
   showcase: [
-    vue('ShowcaseLayout.vue', () => import('../../ShowcaseLayout.vue?raw').then((m) => m.default))
+    vue('ShowcaseLayout.vue', () => import('../../components/ShowcaseLayout.vue?raw').then((m) => m.default))
   ],
   'native-html': [
     {
@@ -353,27 +353,27 @@ async function share() {
   'page-refresh': [vue('PageExample.vue', pageCode)],
   'native-navigation': [
     vue('NativeNavigationShowcase.vue', () =>
-      import('../NativeNavigationShowcase.vue?raw').then((m) => m.default)
+      import('../../demo/NativeNavigationShowcase.vue?raw').then((m) => m.default)
     ),
     {
       name: '../navigation.ts',
       language: 'typescript',
-      source: () => import('../../navigation.ts?raw').then((m) => m.default)
+      source: () => import('../navigation.ts?raw').then((m) => m.default)
     },
     {
       name: '../native-context.ts',
       language: 'typescript',
-      source: () => import('../../native-context.ts?raw').then((m) => m.default)
+      source: () => import('../native-context.ts?raw').then((m) => m.default)
     },
     {
       name: '../stores/shared.ts',
       language: 'typescript',
-      source: () => import('../../stores/shared.ts?raw').then((m) => m.default)
+      source: () => import('../state/shared.ts?raw').then((m) => m.default)
     },
     {
       name: '../stores/storage.ts',
       language: 'typescript',
-      source: () => import('../../stores/storage.ts?raw').then((m) => m.default)
+      source: () => import('../state/storage.ts?raw').then((m) => m.default)
     }
   ]
 }
