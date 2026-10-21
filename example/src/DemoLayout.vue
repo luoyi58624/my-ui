@@ -11,7 +11,7 @@ import {
 } from 'vue'
 import { useRoute } from 'vue-router'
 import { Button, CellGroup, Icon, ListRow } from '@my-ui/vue'
-import { Tabs, type NavigationItem } from 'tauri-plugin-native-components/vue'
+import { BottomNavigation, Page, Tabs, type NavigationItem } from 'tauri-plugin-native-components/vue'
 import DemoAppBar from './DemoAppBar.vue'
 import DemoDocument from './demo/DemoDocument.vue'
 import { demoDescriptions } from './demo/descriptions'
@@ -184,8 +184,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="demo-app" :class="{ 'demo-app-detail': example }">
-    <div class="demo-top">
+  <Page class="demo-app" :class="{ 'demo-app-detail': example }">
+    <template #navbar>
       <DemoAppBar
         ref="titleElement"
         :title="title"
@@ -198,15 +198,15 @@ onBeforeUnmount(() => {
               ? '返回原生组件'
               : '返回组件列表'
         "
-        class="demo-app-bar"
+        class="demo-app-bar demo-top"
         @back="goBack"
       />
-    </div>
+    </template>
     <Tabs
       class="demo-tabs"
       :model-value="active"
       :items="nativePages"
-      :navigation-visible="!example"
+      :navigation-visible="false"
       :suspended="suspended"
       @select="navigate"
       @action="tabAction"
@@ -293,20 +293,19 @@ onBeforeUnmount(() => {
         </section>
       </main>
     </Tabs>
-  </div>
+    <template v-if="!example" #navigation>
+      <BottomNavigation :model-value="active" :items="nativePages" @select="navigate" @error="console.error" />
+    </template>
+  </Page>
 </template>
 
 <style scoped>
 .demo-app {
-  display: grid;
-  grid-template-rows: calc(57px + env(safe-area-inset-top)) minmax(0, 1fr);
   height: 100dvh;
   background: var(--background);
 }
-.demo-top {
-  padding-top: env(safe-area-inset-top);
-  background: var(--card-background);
-  z-index: 40;
+.demo-tabs {
+  height: 100%;
 }
 .demo-main {
   height: 100%;

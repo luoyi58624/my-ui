@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { Page } from 'tauri-plugin-native-components/vue'
 import DemoAppBar from './DemoAppBar.vue'
 import { closePage } from './navigation'
 
@@ -13,11 +14,11 @@ function back() {
 </script>
 
 <template>
-  <div class="html-page">
-    <DemoAppBar title="原生 HTML 示例" back @back="back" @error="error = String($event)" />
+  <Page class="html-page">
+    <template #navbar><DemoAppBar title="原生 HTML 示例" back @back="back" @error="error = String($event)" /></template>
     <p v-if="error" role="alert">{{ error }}</p>
     <iframe :src="source" title="直接使用 CSS 与 JavaScript 的组件示例" @my:back.prevent="back" />
-  </div>
+  </Page>
 </template>
 
 <style scoped>
@@ -25,14 +26,13 @@ function back() {
   display: flex;
   flex-direction: column;
   height: 100dvh;
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
   background: var(--background);
 }
 .html-page iframe {
   flex: 1;
   min-height: 0;
   width: 100%;
+  height: 100%;
   border: 0;
 }
 </style>

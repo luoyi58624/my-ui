@@ -82,6 +82,7 @@ function tabAction(event: { tab: string; value: string }) {
         v-model="tab"
         class="native-component-tabs"
         :items="nativeItems"
+        :navigation-visible="false"
         :suspended="suspended"
         label="示例页面"
         @action="tabAction"
@@ -120,17 +121,18 @@ function tabAction(event: { tab: string; value: string }) {
             >点一下 · {{ counts[selected] }}</Button
           >
         </div>
-        <BottomNavigation
-          v-if="kind === 'bottom-navigation'"
-          v-model="selected"
-          :items="items"
-          :suspended="suspended"
-          label="示例底部导航"
-          @error="message = String($event)"
-        />
       </template>
       <p v-if="message" class="native-component-message" role="status">{{ message }}</p>
     </div>
+    <template v-if="kind !== 'app-bar'" #navigation>
+      <BottomNavigation
+        :model-value="kind === 'tabs' ? tab : selected"
+        :items="kind === 'tabs' ? nativeItems : items"
+        label="示例底部导航"
+        @update:model-value="kind === 'tabs' ? tab = $event : selected = $event"
+        @error="message = String($event)"
+      />
+    </template>
   </Page>
 </template>
 

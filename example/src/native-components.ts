@@ -1,9 +1,9 @@
 import { inject, ref, type InjectionKey, type Ref } from 'vue'
 
-/** 弹层覆盖页面时，切换为能被同一遮罩覆盖的 Web 导航。 */
+/** 页面需要主动暂停内容原生控件时共用状态，Web 弹层不再切换导航。 */
 export const nativeBarsSuspendedKey: InjectionKey<Ref<boolean>> = Symbol('native-bars-suspended')
 
-/** 获取当前页面的导航遮罩状态。 */
+/** 获取当前页面显式设置的原生内容暂停状态。 */
 export function useNativeBarsSuspended() {
   return inject(nativeBarsSuspendedKey, ref(false))
 }

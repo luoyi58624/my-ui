@@ -52,11 +52,11 @@ if(params.has('frame')){
       assert(win.page.scrollElement.scrollTop===230&&win.refreshes===count,`缓存页位置 ${win.page.scrollElement.scrollTop}，刷新 ${win.refreshes}/${count}`);
     });
     await load('android');
-    await check('Android 注册内容区域且保持 Web 内容可见，导航继承页面遮罩状态',async()=>{
+    await check('Android 页面宿主接管导航，暂停内容时保留导航实例',async()=>{
       await until(()=>doc.querySelector('[data-native-refresh="true"]'));
-      assert(latest().bounds.height===504&&latest().enabled&&!latest().refreshing,'原生页面配置不完整');
+      assert(latest().bounds.height===doc.querySelector('.nc-page-body').clientHeight&&latest().enabled&&!latest().refreshing,'原生页面配置不完整');
       assert(win.getComputedStyle(doc.querySelector('#content')).visibility==='visible','原生刷新隐藏了 Web 内容');
-      win.state.suspended.value=true;await until(()=>latest().visible===false);assert(!doc.querySelector('[data-native="true"]'),'导航未继承遮罩状态');
+      win.state.suspended.value=true;await until(()=>latest().visible===false);assert(doc.querySelector('[data-native="true"]'),'暂停内容误卸载页面导航');
       win.state.suspended.value=false;await until(()=>latest().visible&&doc.querySelector('[data-native="true"]'));
     });
     await check('关闭下拉时保持普通页面，外部刷新状态只控制指示器',async()=>{

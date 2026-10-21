@@ -323,7 +323,7 @@ pub fn run() {
         id: 'page',
         title: '03 · Page、导航栏与下拉刷新',
         paragraphs: [
-          '先引入插件样式。Page 的 navbar 插槽固定在顶部，默认插槽是主滚动内容；页面必须有确定高度，例如 100dvh。不要再给普通正文嵌套一个独立的纵向滚动容器。',
+          '先引入插件样式。Page 的 navbar、navigation 插槽分别放顶部 AppBar 和底部 BottomNavigation，默认插槽放正文。Android 使用原生导航与中间原 WebView 的三段布局；其他平台使用 Web 模拟相同结构。页面必须有确定高度，例如 100dvh。',
           '设置 refreshable，绑定 v-model:refreshing，在 @refresh 中请求数据，并在 finally 中把 refreshing 设为 false。按钮可调用组件引用的 refresh()，共用同一套刷新流程。直接设置 refreshing=true 只显示指示器，不触发业务请求。'
         ],
         files: [file('PageExample.vue', 'vue', pageCode)],
@@ -347,35 +347,24 @@ pub fn run() {
         id: 'overlay',
         title: '05 · 与 Web 弹窗配合',
         paragraphs: [
-          '原生控件覆盖在 WebView 之上。打开 my-ui 弹窗、抽屉或菜单时，通过 MyUI.layers 订阅弹层状态，传给 Page 的 suspended；navbar 内的 AppBar 自动继承。独立使用的 BottomNavigation、Tabs 也应接收相同的 suspended 值。'
+          'Page 的原生导航位于 WebView 的实际边界之外，Dialog、Drawer、Menu 等 Web 弹层只覆盖中间正文，Vue 插槽和状态保持原样。无需订阅弹层状态来切换导航版本；遮罩出现时页面导航保留实例并暂停操作。内容区内额外放置的原生控件仍会按 DOM 的 inert 状态暂停。'
         ],
         files: [
           file(
             'App.vue',
             'vue',
             `<script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { Button, Popup, popup } from '@my-ui/vue'
 import { AppBar, Page } from 'tauri-plugin-native-components/vue'
 import 'tauri-plugin-native-components/style.css'
 
-const suspended = ref(false)
-let stop: (() => void) | undefined
-onMounted(() => {
-  stop = MyUI.layers.subscribe((value) => {
-    suspended.value = value
-  })
-})
-onBeforeUnmount(() => {
-  stop?.()
-})
 function showDialog() {
-  void popup.showAlert({ title: '提示', message: '弹窗遮罩会覆盖导航区域。' })
+  void popup.showAlert({ title: '提示', message: '弹窗只覆盖正文，页面导航保持原生实例。' })
 }
 </script>
 
 <template>
-  <Page style="height: 100dvh" :suspended="suspended">
+  <Page style="height: 100dvh">
     <template #navbar><AppBar title="设置" /></template>
     <Button @click="showDialog">打开弹窗</Button>
   </Page>

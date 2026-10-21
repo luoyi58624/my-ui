@@ -1,0 +1,85 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Page 原生导航与 Web 弹层回归</title><style>body{font:14px system-ui;margin:20px}iframe{width:390px;height:700px;border:1px solid #ddd}pre{white-space:pre-wrap}</style>
+<button id="run">运行回归</button><pre id="result">尚未运行</pre><div id="fixture"></div>
+<script type="module">
+const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms)),params=new URLSearchParams(location.search);
+if(params.has('frame')){
+  window.calls=[];window.errors=[];window.failLayout=false;
+  if(params.get('frame')==='android'){
+    Object.defineProperty(navigator,'userAgent',{value:'Android Tauri',configurable:true});window.isTauri=true;
+    window.__TAURI_INTERNALS__={invoke:async(command,args)=>{window.calls.push({command,args});if(window.failLayout&&args.surface.kind==='layout')throw Error('layout denied')}};
+  }
+  document.body.innerHTML='<div id="app"></div>';document.body.style.margin='0';
+  await import('/tests/page-layout.fixture.ts');
+}else{
+  const reports=[],assert=(value,message)=>{if(!value)throw Error(message)},until=async(check,message='等待超时')=>{const start=performance.now();while(!check()){if(performance.now()-start>10000)throw Error(message);await pause(25)}};
+  let frame,doc,win;
+  const load=async platform=>{document.querySelector('#fixture').replaceChildren();frame=document.createElement('iframe');frame.src='?frame='+platform;document.querySelector('#fixture').append(frame);await until(()=>frame.contentWindow.state);doc=frame.contentDocument;win=frame.contentWindow;await pause(150)};
+  const layout=()=>win.calls.filter(call=>call.args.surface.kind==='layout').at(-1)?.args.surface;
+  const send=(id,action,value)=>win.dispatchEvent(new win.CustomEvent('native-components',{detail:{id,action,value}}));
+  const check=async(name,fn)=>{await fn();reports.push({name,passed:true})};
+  document.querySelector('#run').onclick=async()=>{document.querySelector('#run').disabled=true;try{
+    for(const platform of ['web','ios']){
+      await load(platform);
+      await check(platform+' 保持 Web 导航、内容和底栏布局',async()=>{
+        const header=doc.querySelector('.nc-page-navbar').getBoundingClientRect(),body=doc.querySelector('.nc-page-body').getBoundingClientRect(),footer=doc.querySelector('.nc-page-navigation').getBoundingClientRect();
+        assert(header.height===56&&footer.height===64&&Math.abs(body.top-header.bottom)<1&&Math.abs(body.bottom-footer.top)<1,'Web 三段布局异常');
+        assert(win.calls.length===0&&!doc.querySelector('[data-native-layout]'),'非 Android 调用了原生布局');
+      });
+    }
+    await load('android');
+    await until(()=>doc.querySelector('[data-native-layout="true"]')&&layout()?.bottom);
+    let topId,bottomId,input;
+    await check('Android 由 Page 汇总导航，正文保持原 Web 内容',async()=>{
+      const payload=layout();topId=payload.top.id;bottomId=payload.bottom.id;input=doc.querySelector('#note');
+      assert(payload.top.kind==='appBar'&&payload.bottom.kind==='bottomNavigation'&&payload.top.bounds.height===56&&payload.bottom.bounds.height===64,'导航配置不完整');
+      assert(!win.calls.some(call=>['appBar','bottomNavigation'].includes(call.args.surface.kind)),'页面导航仍走独立覆盖层');
+      assert(win.getComputedStyle(doc.querySelector('.nc-page-navbar')).display==='none'&&win.getComputedStyle(doc.querySelector('.nc-page-navigation')).display==='none','重复预留导航空间');
+      assert(input.getClientRects().length&&win.state.note.value===input.value,'正文不可见或丢失状态');
+    });
+    await check('导航事件进入原 Vue 状态，选中项同步到原生配置',async()=>{
+      send(topId,'action','settings');send(bottomId,'select','saved');await until(()=>layout().bottom.modelValue==='saved');
+      assert(win.events.join(',')==='settings'&&win.state.tab.value==='saved','导航事件没有进入原组件');
+    });
+    await check('Dialog 开关仅阻断导航操作，不切换导航和 Vue 实例',async()=>{
+      input.value='仍是同一份输入';input.dispatchEvent(new win.Event('input',{bubbles:true}));win.state.dialog.value=true;
+      await until(()=>layout().blocked&&doc.querySelector('[role="dialog"]'));
+      assert(doc.querySelectorAll('[data-native="true"]').length===2&&layout().top.id===topId&&layout().bottom.id===bottomId,'弹窗打开替换了导航');
+      send(topId,'back');assert(!win.events.includes('back'),'背景导航仍可操作');
+      win.state.dialog.value=false;await until(()=>!layout().blocked&&!doc.querySelector('[role="dialog"]'));
+      assert(doc.querySelector('#note')===input&&input.value==='仍是同一份输入','弹窗重建了正文或丢失输入');
+      send(topId,'back');assert(win.events.includes('back'),'关闭后没有恢复导航操作');
+    });
+    await check('四向 Drawer 保留导航和正文，弹层坐标限制在网页视口',async()=>{
+      for(const side of ['left','right','top','bottom']){
+        win.state.placement.value=side;win.state.drawer.value=true;await until(()=>layout().blocked&&doc.querySelector('.my-drawer-overlay'));
+        const rect=doc.querySelector('.my-drawer-overlay').getBoundingClientRect();
+        assert(rect.left>=-.5&&rect.top>=-.5&&rect.right<=win.innerWidth+.5&&rect.bottom<=win.innerHeight+.5,'抽屉溢出 WebView');
+        assert(layout().top.id===topId&&layout().bottom.id===bottomId&&doc.querySelectorAll('[data-native="true"]').length===2,'抽屉切换了导航');
+        win.state.drawer.value=false;await until(()=>!layout().blocked&&!doc.querySelector('.my-drawer-overlay'));
+      }
+      assert(doc.querySelector('#note')===input,'抽屉重建了正文');
+    });
+    await check('抽屉嵌套 Dialog 按层恢复背景，原导航与输入保持不变',async()=>{
+      win.state.drawer.value=true;await until(()=>doc.querySelector('.my-drawer-overlay')&&layout().blocked);
+      win.state.dialog.value=true;await until(()=>doc.querySelectorAll('[role="dialog"]').length===2);
+      win.state.dialog.value=false;await until(()=>doc.querySelectorAll('[role="dialog"]').length===1);
+      assert(layout().blocked&&doc.querySelector('.my-drawer-overlay')&&!doc.querySelector('.my-drawer-overlay').inert,'关闭内层误恢复页面或禁用外层');
+      win.state.drawer.value=false;await until(()=>!doc.querySelector('[role="dialog"]')&&!layout().blocked);
+      assert(doc.querySelector('#note')===input&&input.value==='仍是同一份输入'&&layout().top.id===topId&&layout().bottom.id===bottomId,'嵌套弹窗重建了正文或导航');
+    });
+    await check('页面失活释放宿主，恢复时仍使用原正文',async()=>{
+      win.state.active.value=false;await until(()=>layout().visible===false&&!doc.querySelector('[data-native-layout]'));
+      win.state.active.value=true;await until(()=>layout().visible&&doc.querySelector('[data-native-layout="true"]'));
+      assert(doc.querySelector('#note')===input,'页面恢复重建了正文');
+    });
+    await check('原生失败恢复 Web 布局并可重试，卸载释放页面宿主',async()=>{
+      win.failLayout=true;win.state.title.value='失败测试';await until(()=>win.errors.length&&!doc.querySelector('[data-native-layout]'));
+      assert(win.getComputedStyle(doc.querySelector('.nc-page-navbar')).display!=='none'&&input.getClientRects().length,'失败回退丢失页面');
+      win.failLayout=false;win.state.title.value='恢复页面';await until(()=>doc.querySelector('[data-native-layout="true"]'));
+      const id=layout().id;win.app.unmount();await until(()=>win.calls.some(call=>call.args.surface.id===id&&call.args.surface.remove));
+    });
+    document.querySelector('#result').textContent=JSON.stringify({reports},null,2);
+  }catch(error){document.querySelector('#result').textContent=JSON.stringify({error:error.stack,reports},null,2)}finally{document.querySelector('#run').disabled=false}};
+}
+</script></html>

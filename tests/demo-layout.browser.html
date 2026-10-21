@@ -55,7 +55,7 @@
         }
       }
       let frame, doc, win
-      const tab = (index) => doc.querySelectorAll('.nc-tabs-navigation button')[index]
+      const tab = (index) => doc.querySelectorAll('.demo-app > .nc-page-navigation button')[index]
       const page = () => doc.querySelector('.demo-page:not([inert])')
       const pick = async (index) => {
         tab(index).click()
@@ -75,7 +75,7 @@
       }
       const back = async () => {
         const catalog = page().dataset.demoPage === 'example/native-navigation' ? 'native' : 'home'
-        doc.querySelector('.demo-top [aria-label^="返回"]').click()
+        doc.querySelector('.demo-app > .nc-page-navbar [aria-label^="返回"]').click()
         await until(() => page()?.dataset.demoPage === catalog, '无法返回列表')
         await pause(70)
       }
@@ -96,7 +96,7 @@
           fixture.append(frame)
           await until(
             () =>
-              frame.contentDocument?.querySelectorAll('.nc-tabs-navigation button').length === 4,
+              frame.contentDocument?.querySelectorAll('.demo-app > .nc-page-navigation button').length === 4,
             '示例加载失败'
           )
           doc = frame.contentDocument
@@ -118,7 +118,7 @@
               )
               assert(doc.querySelectorAll('.demo-detail').length === 0, '首屏提前挂载全部示例')
               assert(
-                [...doc.querySelectorAll('.nc-tabs-navigation button')]
+                [...doc.querySelectorAll('.demo-app > .nc-page-navigation button')]
                   .map((node) => node.textContent.trim())
                   .join(',') === '首页,原生,消息,我的',
                 '底部导航不正确'
@@ -151,17 +151,16 @@
               '未建立详情返回历史'
             )
             assert(
-              doc.querySelector('.demo-top .nc-heading h1').textContent === 'Button 按钮' &&
+              doc.querySelector('.demo-app > .nc-page-navbar .nc-heading h1').textContent === 'Button 按钮' &&
                 page().textContent.includes('主要按钮'),
               '示例或标题错误'
             )
             assert(
-              win.getComputedStyle(doc.querySelector('.nc-tabs-navigation')).display === 'none' &&
-                doc.querySelector('.nc-tabs-navigation').inert,
+              !doc.querySelector('.demo-app > .nc-page-navigation'),
               '详情仍可操作底栏'
             )
             assert(
-              doc.activeElement === doc.querySelector('.demo-top .nc-heading h1'),
+              doc.activeElement === doc.querySelector('.demo-app > .nc-page-navbar .nc-heading h1'),
               '进入详情未转移焦点'
             )
             assert(doc.querySelector('[data-demo-page="home"]').inert, '列表仍可交互')
@@ -341,8 +340,8 @@
               frame.style.width = width + 'px'
               await pause(100)
               await pick(0)
-              const header = doc.querySelector('.demo-top').getBoundingClientRect(),
-                footer = doc.querySelector('.nc-tabs-navigation').getBoundingClientRect(),
+              const header = doc.querySelector('.demo-app > .nc-page-navbar').getBoundingClientRect(),
+                footer = doc.querySelector('.demo-app > .nc-page-navigation').getBoundingClientRect(),
                 content = page().getBoundingClientRect()
               assert(
                 header.top === 0 &&

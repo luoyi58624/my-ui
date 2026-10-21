@@ -477,8 +477,10 @@ Android 示例的系统返回优先交给当前 WebView 的最上层弹层：级
 
 `Tabs` 同时管理底栏和各 Tab 的原生页面，`nativeView` 指向宿主注册的 Android 页面工厂。首页和原生目录使用当前 Tauri WebView，消息和我的使用 `DemoNativeTab.kt` 中的独立 Android View；原生目录里的 Tabs 示例同样展示原生页面切换与计数保留。详情页由同一个插件新建 Activity，各 Tab 不额外打开 Activity 或 WebView。Web/桌面的对应内容保留在 Vue 插槽中，三个独立组件示例按路由名称缓存，互不混用状态。
 
-`DemoAppBar.vue` 将结构化标题、返回和主题操作接入原生导航头；Web 弹层出现时通过 `suspended` 显示 Web 对应内容，退出后恢复原生视图。原生组件绑定发起调用的窗口，不借用 Tauri 的全局 Activity，不改动现有 WebView 生命周期策略。
+`DemoAppBar.vue` 将结构化标题、返回和主题操作接入原生导航头。放在 Page 的 navbar 插槽时，Android 使用原生页面壳管理导航，Web 弹层出现时保留同一导航实例；正文与弹层始终留在原 WebView 中。原生组件绑定发起调用的窗口，不借用 Tauri 的全局 Activity。
 
-`Page` 封装固定 `navbar` 插槽、默认内容的主滚动区域和下拉刷新。使用 `refreshable`、`v-model:refreshing`、`@refresh`，业务在请求结束后将 `refreshing` 设为 false。Android 使用原生 `SwipeRefreshLayout`；Web 和原生接入失败时使用 Web 刷新。首次启用时为 WebView 增加一次刷新容器，后续页面切换保持 WebView 实例。通过 `suspended` 暂停弹窗下的手势，navbar 内的原生组件自动继承该状态。
+`Page` 提供 navbar、navigation 和默认正文插槽。Android 将 AppBar、原 WebView、BottomNavigation 按上中下分配真实空间，Web 弹层自然限制在中间视口；其他平台及原生失败时使用 Web 模拟。Web 模态遮罩只阻断导航操作，不再切换导航版本。安全区和输入法由原生宿主处理，键盘出现时隐藏底栏。
+
+使用 `refreshable`、`v-model:refreshing`、`@refresh` 启用下拉刷新，业务在请求结束后将 refreshing 设为 false。Android 使用原生 SwipeRefreshLayout；Web 和原生接入失败时使用 Web 刷新。`suspended` 只暂停内容区原生控件和刷新，不卸载页面导航。
 
 「原生 → Page 页面与下拉刷新」打开独立的 `#/page-refresh` 动态列表：支持顶部下拉、导航栏刷新按钮、刷新完成后更新列表，以及弹窗期间暂停刷新。`Page` 的 `refresh()`、`scrollTo(options)`、`scrollElement` 可用于业务操作；返回原生目录后保留浏览位置。当前默认插槽承载 Web 内容，自有滚动容器和 iframe 不自动接管。目录与返回行为的定向检查为 `bun run test:browser native-catalog demo-layout navigation`。

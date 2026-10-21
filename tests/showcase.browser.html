@@ -67,7 +67,7 @@
         await pause(100)
       }
       const back = async () => {
-        showcase().querySelector('[aria-label="返回组件目录"]').click()
+        doc.querySelector('.showcase-page > .nc-page-navbar [aria-label="返回组件目录"]').click()
         await until(() => home() && !showcase(), '没有返回组件目录')
         await pause(80)
       }

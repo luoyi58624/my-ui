@@ -10,6 +10,7 @@ import {
 } from 'vue'
 import { useRoute } from 'vue-router'
 import { Icon } from '@my-ui/vue'
+import { Page } from 'tauri-plugin-native-components/vue'
 import DemoAppBar from './DemoAppBar.vue'
 import { closePage, openPage } from './navigation'
 
@@ -40,7 +41,7 @@ function syncHeader() {
   let current = ''
   for (const item of sections) {
     const section = page.querySelector<HTMLElement>('#showcase-' + item.id)
-    if (section && section.getBoundingClientRect().top <= page.clientHeight * 0.35)
+    if (section && section.getBoundingClientRect().top - page.getBoundingClientRect().top <= page.clientHeight * 0.35)
       current = item.id
   }
   currentSection.value = current
@@ -104,6 +105,10 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
+  <Page class="showcase-page">
+    <template #navbar>
+      <DemoAppBar title="完整交互示例" back back-label="返回组件目录" @back="back" @error="reportError" />
+    </template>
   <div
     ref="root"
     class="showcase-layout"
@@ -111,13 +116,6 @@ onBeforeUnmount(() => {
     @scroll.passive="scheduleHeader"
   >
     <header class="masthead" :class="{ scrolled }">
-      <DemoAppBar
-        title="完整交互示例"
-        back
-        back-label="返回组件目录"
-        @back="back"
-        @error="reportError"
-      />
       <div class="shell">
         <nav class="site-nav" aria-label="页面导航">
           <a
@@ -260,6 +258,7 @@ onBeforeUnmount(() => {
       </footer>
     </div>
   </div>
+  </Page>
 </template>
 
 <style scoped>
@@ -661,7 +660,7 @@ footer strong {
   position: sticky;
   top: 0;
   z-index: 40;
-  padding-top: env(safe-area-inset-top);
+  padding-top: 0;
   background: var(--card-background);
   transition: box-shadow 0.22s ease;
 }
@@ -839,8 +838,9 @@ footer strong {
   margin-top: 22px;
 }
 
+.showcase-page { height: 100dvh; }
 .showcase-layout {
-  height: 100dvh;
+  height: 100%;
   overflow: auto;
   overscroll-behavior-y: contain;
   background: var(--background);
