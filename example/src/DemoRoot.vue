@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { onBeforeUnmount, provide, ref, watch } from 'vue'
-import { RouterView, useRoute } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { Popup } from '@my-ui/vue'
 import 'tauri-plugin-native-components/style.css'
 import { nativeBarsSuspendedKey } from './native-components'
+import NativeAppRoot from './demo/native-app/Root.vue'
 
 const suspended = ref(false)
 provide(nativeBarsSuspendedKey, suspended)
@@ -17,7 +18,7 @@ onBeforeUnmount(() => { document.documentElement.classList.remove('my-native-pag
 </script>
 
 <template>
-  <RouterView v-slot="{ Component, route: pageRoute }"><KeepAlive><component :is="Component" :key="pageRoute.name" /></KeepAlive></RouterView>
+  <NativeAppRoot />
   <Popup />
 </template>
 

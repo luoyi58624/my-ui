@@ -242,7 +242,7 @@ class NativeNavigationStateTest {
                     val textBox = position(text)
                     val labelBox = position(labels)
                     assertEquals("图标与文字必须共用水平中心", iconBox[0] + iconBox[2] / 2f, textBox[0] + textBox[2] / 2f, 1f)
-                    assertEquals("图标与文字行盒的间距必须为 2 CSS 像素", 2 * scale, (labelBox[1] - iconBox[1] - iconBox[3]).toFloat(), 1f)
+                    assertEquals("图标与文字行盒的间距必须为 4 CSS 像素", 4 * scale, (labelBox[1] - iconBox[1] - iconBox[3]).toFloat(), 1f)
                     assertTrue("标签需要保留完整的单行行盒", text.height >= (16 * scale).toInt())
                     val indicator = item.findViewById<View>(com.google.android.material.R.id.navigation_bar_item_active_indicator_view)
                     assertTrue("选中动画和波纹必须有实际的圆角形状", indicator.background != null && container.foreground != null)

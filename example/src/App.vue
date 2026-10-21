@@ -50,6 +50,7 @@ const props = defineProps<{
   showcase?: boolean
 }>()
 const ShowcaseLayout = defineAsyncComponent(() => import('./ShowcaseLayout.vue'))
+const NativeAppShowcase = defineAsyncComponent(() => import('./demo/NativeAppShowcase.vue'))
 const layout = computed(() => (props.showcase ? ShowcaseLayout : DemoLayout))
 // #endregion
 
@@ -702,6 +703,9 @@ async function selectAction(action: Option) {
     </template>
     <template #native-navigation>
       <NativeNavigationShowcase @notify="notify" />
+    </template>
+    <template #native-app>
+      <NativeAppShowcase @notify="notify" />
     </template>
     <template #scenarios>
       <EssentialsShowcase @notify="notify" />

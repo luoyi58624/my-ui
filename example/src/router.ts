@@ -1,9 +1,11 @@
 import { createRouter, createWebHashHistory, type Router } from 'vue-router'
+import { appRoutes } from './demo/native-app/routes'
 
 /** 各平台共用路由，旧的 HTML 子页入口继续可用。 */
 export const router: Router = import.meta.hot?.data.router ?? createRouter({
   history: createWebHashHistory(),
   routes: [
+    ...appRoutes,
     { path: '/', redirect: () => location.pathname.endsWith('/native-page.html') ? '/shared-state' : '/home' },
     { path: '/shared-state', name: 'shared-state', component: () => import('./NativePage.vue') },
     { path: '/html', name: 'html', component: () => import('./NativeHtmlPage.vue') },

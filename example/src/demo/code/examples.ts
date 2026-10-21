@@ -1,5 +1,6 @@
 import type { CodeFile } from './types'
 import { appBarCode, bottomNavigationCode, pageCode, tabsCode } from './native'
+import { appExampleFiles } from './app'
 
 function vue(name: string, source: CodeFile['source']): CodeFile {
   return { name, language: 'vue', source }
@@ -7,6 +8,7 @@ function vue(name: string, source: CodeFile['source']): CodeFile {
 
 // 独立示例直接读取原文件；内联在 App 中的示例提供可独立使用的最小组件。
 const examples: Record<string, CodeFile[]> = {
+  'native-app': [...appExampleFiles['app-container']!, ...appExampleFiles['app-pages']!],
   button: [
     vue(
       'ButtonExample.vue',

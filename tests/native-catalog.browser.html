@@ -20,7 +20,7 @@ if(new URLSearchParams(location.search).has('frame')){
     await load('/native');
     await check('第二导航集中展示全部原生组件，首页保留普通组件与纯 HTML 示例',async()=>{
       assert([...doc.querySelectorAll('.demo-tabs > .nc-tabs-navigation button')].map(node=>node.textContent.trim()).join(',')==='首页,原生,消息,我的','导航名称错误');
-      assert([...catalog().querySelectorAll('[data-demo-link]')].map(node=>node.dataset.demoLink).join(',')==='native-app-bar,native-bottom-navigation,native-tabs,page-refresh,native-navigation','原生目录缺项或顺序错误');
+      assert([...catalog().querySelectorAll('[data-demo-link]')].map(node=>node.dataset.demoLink).join(',')==='native-app,native-app-bar,native-bottom-navigation,native-tabs,page-refresh,native-navigation','原生目录缺项或顺序错误');
       const home=doc.querySelector('[data-demo-page="home"]');assert(!home.querySelector('[data-demo-link="native-navigation"]')&&home.querySelector('[data-demo-link="native-html"]'),'目录归属不正确');
     });
     await check('AppBar 示例支持操作与对齐切换，返回恢复原生目录位置和焦点',async()=>{
@@ -48,10 +48,10 @@ if(new URLSearchParams(location.search).has('frame')){
       await load('/discover');assert(catalog(),'旧发现链接失效');await load('/native/app-bar');await back();assert(win.location.hash==='#/native','直达详情的回退目录错误');
       await load('/example/native-navigation');await until(()=>doc.querySelector('.demo-detail:not([inert])'));doc.querySelector('[aria-label="返回原生组件"]').click();await until(()=>catalog());assert(win.location.hash==='#/native','旧共享示例未归属原生目录');
     });
-    await check('Android 目录保留当前页面，五个入口调用各自原生页面地址',async()=>{
+    await check('Android 目录保留当前页面，六个入口调用各自原生页面地址',async()=>{
       const calls=[];Object.defineProperty(win.navigator,'userAgent',{configurable:true,value:'Android Tauri'});win.isTauri=true;
       win.__TAURI_INTERNALS__={invoke:async(command,args)=>{if(command==='plugin:native-components|push')calls.push(args)}};
-      const paths=['/native/app-bar','/native/bottom-navigation','/native/tabs','/page-refresh','/example/native-navigation'];
+      const paths=['/example/native-app','/native/app-bar','/native/bottom-navigation','/native/tabs','/page-refresh','/example/native-navigation'];
       const links=[...catalog().querySelectorAll('[data-demo-link]')];
       for(let index=0;index<links.length;index++){links[index].click();await until(()=>calls.length===index+1);assert(calls[index].path.endsWith('#'+paths[index]),'原生跳转地址错误');assert(catalog()&&win.location.hash==='#/native','原生跳转改变了父目录')}
     });

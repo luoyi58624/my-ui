@@ -1,4 +1,5 @@
 import type { CodeFile } from './types'
+import { appExampleFiles } from './app'
 
 const sources = import.meta.glob<string>('../../**/*.vue', { query: '?raw', import: 'default' })
 
@@ -93,7 +94,8 @@ const pages: Record<string, { file: string; names?: string[] }[]> = {
   menu: [{ file: 'MenuShowcase.vue' }],
   'touch-gestures': [{ file: 'TouchShowcase.vue' }],
   scenarios: [{ file: 'ProfileFormExample.vue' }, { file: 'EssentialsShowcase.vue' }],
-  'native-navigation': [{ file: 'NativeNavigationShowcase.vue' }]
+  'native-navigation': [{ file: 'NativeNavigationShowcase.vue' }],
+  'native-app': [{ file: 'NativeAppShowcase.vue' }]
 }
 
 function sourcePath(file: string) {
@@ -204,6 +206,7 @@ export function previewFiles(
   setup = name,
   related: readonly CodeFile[] = []
 ): readonly CodeFile[] {
+  if (appExampleFiles[name]) return appExampleFiles[name]
   const path = sourcePath(file)
   const read = async () => {
     const load = sources[path]

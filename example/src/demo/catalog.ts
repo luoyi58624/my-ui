@@ -88,6 +88,7 @@ export const nativeDemoGroups: { title: string; items: DemoExample[] }[] = [
   {
     title: '原生组件',
     items: [
+      { id: 'native-app', title: 'App 应用容器', icon: 'layer' },
       {
         id: 'native-app-bar',
         title: 'AppBar 顶部导航',

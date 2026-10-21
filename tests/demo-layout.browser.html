@@ -126,7 +126,7 @@
               await pick(1)
               assert(
                 page().dataset.demoPage === 'native' &&
-                  page().querySelectorAll('[data-demo-link]').length === 5 &&
+                  page().querySelectorAll('[data-demo-link]').length === 6 &&
                   !page().querySelector('.demo-placeholder'),
                 '原生目录不完整'
               )

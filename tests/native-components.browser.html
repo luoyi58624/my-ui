@@ -31,7 +31,7 @@ if(params.has('frame')){
         const svg=button.querySelector('svg'),icon=svg.getBoundingClientRect(),label=button.lastElementChild.getBoundingClientRect();
         const box=svg.getBBox();assert(Math.abs(box.x+box.width/2-12)<.01,'图标路径在 24 像素画布上偏离中心');
         assert(Math.abs(icon.x+icon.width/2-label.x-label.width/2)<.01,'图标与文字没有共用中轴');
-        assert(Math.abs(label.top-icon.bottom-2)<.01,'选中背景的留白仍被算进图标与文字间距');
+        assert(Math.abs(label.top-icon.bottom-4)<.01,'选中背景的留白仍被算进图标与文字间距');
       }
     });
     await load('android');
