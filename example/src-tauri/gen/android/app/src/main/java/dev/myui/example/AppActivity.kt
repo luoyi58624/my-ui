@@ -12,7 +12,7 @@ abstract class AppActivity : TauriActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         NativeWindow.prepare(this)
         super.onCreate(savedInstanceState)
-        nativeWindow.onCreate()
+        nativeWindow.onCreate(waitForPage = releaseWebViewOnDestroy)
     }
 
     override fun onWebViewCreate(webView: WebView) {

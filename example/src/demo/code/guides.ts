@@ -379,6 +379,7 @@ function showDialog() {
         paragraphs: [
           '只使用上面的导航控件和 Page 时不需要新 Activity。需要 Android push 打开独立系统页面时，将 Vue Router 交给 createNativeRouter；浏览器与桌面仍在当前窗口内跳转。路由名称、页面组件由业务项目定义。',
           'Android 页面导航要求 API 32+，Rust 端改用 Builder 并指定 NativePageActivity。宿主需要注册子 Activity：MainActivity 使用 singleTop，子页使用默认 standard、exported=false，两个 Activity 的 configChanges 保持一致。',
+          '子页主题继承宿主主题并设置 windowDisablePreview=true，AppActivity 为独立子页启用 waitForPage。Activity 立即开始系统转场，Page 只暂隐正在交接的 WebView 正文，等导航隐藏与正文首帧确认后显示；未使用 Page 的自定义内容在挂载后调用 /router 的 readyPage()。',
           '下面提供当前示例的宿主文件作为接入参考。迁移时替换 dev.myui.example 包名、主题名及业务 Tab 注册。AppActivity 的生命周期转发顺序应保留。每个 Activity 有独立 Vue 实例，共享数据需要另外接入存储或状态同步。'
         ],
         files: [
@@ -421,6 +422,11 @@ export const navigation = createNativeRouter(router)
           ),
           file('AndroidManifest.xml', 'html', () =>
             import('../../../src-tauri/gen/android/app/src/main/AndroidManifest.xml?raw').then(
+              (m) => m.default
+            )
+          ),
+          file('themes.xml', 'html', () =>
+            import('../../../src-tauri/gen/android/app/src/main/res/values/themes.xml?raw').then(
               (m) => m.default
             )
           ),

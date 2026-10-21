@@ -34,6 +34,7 @@
         <!-- 子页使用默认 standard 模式，创建新实例并加入当前任务。 -->
         <activity
             android:name=".NativePageActivity"
+            android:theme="@style/Theme.my_ui_example.Page"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
             android:exported="false" />
 

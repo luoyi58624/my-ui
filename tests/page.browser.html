@@ -7,7 +7,7 @@ if(params.has('frame')){
   window.calls=[];window.failPage=false;
   if(params.get('frame')==='android'){
     Object.defineProperty(navigator,'userAgent',{value:'Android Tauri',configurable:true});window.isTauri=true;
-    window.__TAURI_INTERNALS__={invoke:async(command,args)=>{window.calls.push({command,args});if(window.failPage&&args.surface.kind==='page')throw Error('page denied')}};
+    window.__TAURI_INTERNALS__={invoke:async(command,args)=>{window.calls.push({command,args});if(window.failPage&&args.surface?.kind==='page')throw Error('page denied')}};
   }
   document.body.innerHTML='<div id="app"></div>';
   await import('/tests/page.fixture.ts').catch(error=>{document.body.textContent=error.stack;throw error});
@@ -18,7 +18,7 @@ if(params.has('frame')){
   const point=selector=>{const rect=doc.querySelector(selector).getBoundingClientRect();return {x:rect.left+rect.width/2,y:rect.top+Math.min(15,rect.height/2)}};
   const touch=(target,type,x,y)=>{const item=new win.Touch({identifier:1,target,clientX:x,clientY:y,pageX:x,pageY:y});const event=new win.TouchEvent(type,{bubbles:true,cancelable:true,touches:/end|cancel/.test(type)?[]:[item],targetTouches:/end|cancel/.test(type)?[]:[item],changedTouches:[item]});target.dispatchEvent(event);return event};
   const pull=async(selector='#pull-start',dx=0,dy=160,end='touchend')=>{const target=doc.querySelector(selector),p=point(selector);touch(target,'touchstart',p.x,p.y);const event=touch(target,'touchmove',p.x+dx,p.y+dy);touch(target,end,p.x+dx,p.y+dy);await pause(40);return event};
-  const latest=()=>win.calls.filter(call=>call.args.surface.kind==='page').at(-1)?.args.surface;
+  const latest=()=>win.calls.filter(call=>call.args.surface?.kind==='page').at(-1)?.args.surface;
   const probeState=selector=>{const p=point(selector),detail={id:latest().id,x:p.x,y:p.y,allowed:false,atTop:false};win.dispatchEvent(new win.CustomEvent('native-components-refresh-probe',{detail}));return detail};
   const probe=selector=>probeState(selector).allowed;
   const refreshEvent=(request,id=latest().id)=>win.dispatchEvent(new win.CustomEvent('native-components',{detail:{id,action:'refresh',request}}));
@@ -73,9 +73,9 @@ if(params.has('frame')){
       for(const selector of ['#input','#nested','#horizontal','#excluded'])assert(!probe(selector),'未排除 '+selector);
       win.page.scrollTo({top:20});const moving=probeState('#pull-start');
       assert(moving.allowed&&!moving.atTop,'未到顶时把整次手势拒绝，或误判为到顶');await until(()=>latest().atTop===false);
-      const calls=win.calls.filter(call=>call.args.surface.kind==='page').length;
+      const calls=win.calls.filter(call=>call.args.surface?.kind==='page').length;
       for(const top of [40,60,80])win.page.scrollTo({top,behavior:'instant'});await pause(80);
-      assert(win.calls.filter(call=>call.args.surface.kind==='page').length===calls,'普通滚动逐帧更新了原生桥');
+      assert(win.calls.filter(call=>call.args.surface?.kind==='page').length===calls,'普通滚动逐帧更新了原生桥');
       win.page.scrollTo({top:0});await until(()=>latest().atTop===true);
       win.state.disabled.value=true;await pause(40);assert(!probe('#pull-start'),'禁用时仍允许手势');win.state.disabled.value=false;await pause(40);
     });
@@ -94,7 +94,7 @@ if(params.has('frame')){
     });
     await check('卸载释放原生页面与探测监听，迟到刷新事件被忽略',async()=>{
       const id=latest().id,count=win.refreshes;win.app.unmount();await pause(50);
-      assert(win.calls.some(call=>call.args.surface.id===id&&call.args.surface.remove),'未释放原生页面');
+      assert(win.calls.some(call=>call.args.surface?.id===id&&call.args.surface.remove),'未释放原生页面');
       const detail={id,x:30,y:80,allowed:false};win.dispatchEvent(new win.CustomEvent('native-components-refresh-probe',{detail}));refreshEvent(99,id);
       assert(!detail.allowed&&win.refreshes===count,'卸载后仍响应事件');
     });

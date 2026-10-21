@@ -3,4 +3,8 @@
     <style name="Theme.my_ui_example" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your theme here. -->
     </style>
+    <!-- 子页直接使用实际窗口，避免系统额外创建空白预览。 -->
+    <style name="Theme.my_ui_example.Page" parent="Theme.my_ui_example">
+        <item name="android:windowDisablePreview">true</item>
+    </style>
 </resources>

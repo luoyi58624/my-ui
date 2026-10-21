@@ -5,6 +5,7 @@ import DemoAppBar from './DemoAppBar.vue'
 import { closePage } from './navigation'
 
 const error = ref('')
+const loaded = ref(false)
 const source = new URL('native.html', document.baseURI).href
 function back() {
   void closePage().catch((reason) => {
@@ -14,10 +15,10 @@ function back() {
 </script>
 
 <template>
-  <Page class="html-page">
+  <Page class="html-page" :active="loaded">
     <template #navbar><DemoAppBar title="原生 HTML 示例" back @back="back" @error="error = String($event)" /></template>
     <p v-if="error" role="alert">{{ error }}</p>
-    <iframe :src="source" title="直接使用 CSS 与 JavaScript 的组件示例" @my:back.prevent="back" />
+    <iframe :src="source" title="直接使用 CSS 与 JavaScript 的组件示例" @load="loaded = true" @my:back.prevent="back" />
   </Page>
 </template>
 

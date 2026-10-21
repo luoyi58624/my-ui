@@ -490,3 +490,5 @@ Android 示例的系统返回优先交给当前 WebView 的最上层弹层：级
 「原生 → Page 页面与下拉刷新」打开独立的 `#/page-refresh` 动态列表：Android 支持同一次拖动滚到顶部后继续拉出刷新器，向上推回刷新器后继续滚正文，松手超过阈值才刷新。也支持导航栏刷新按钮、刷新完成后更新列表，以及弹窗期间暂停刷新。`Page` 的 `refresh()`、`scrollTo(options)`、`scrollElement` 可用于业务操作；返回原生目录后保留浏览位置。当前默认插槽承载 Web 内容，自有滚动容器和 iframe 不自动接管。目录与返回行为的定向检查为 `bun run test:browser native-catalog demo-layout navigation`。
 
 安装 Android 调试包后，`node tests/android-refresh.device.mjs [--record]` 定向检查连续到顶、回推接力、反向拖动、多次交接及弹窗恢复后的快速拖动。手机需保持解锁、竖屏；回归只重启示例，不清除应用数据，截图、触摸记录和可选录屏保存在系统临时目录。
+
+Android 子页立即开始系统转场，只暂隐尚在交接的 WebView 正文。等 Page 的原生导航接管、网页导航隐藏、视口更新与 WebView 绘制确认后显示稳定正文；原生 HTML 页还会等待 iframe 加载。`node tests/android-page-entry.device.mjs [--record]` 检查普通页、复杂页、重复进入及 iframe，并故意延迟原生确认，验证正文准备不阻塞入场、不会暴露重复导航，返回和切换 Tab 后保留底栏。测试只重启示例，报告和可选录屏写入系统临时目录。
