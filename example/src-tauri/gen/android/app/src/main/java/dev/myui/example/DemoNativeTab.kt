@@ -36,7 +36,15 @@ private class DemoNativeTab(activity: Activity, action: (String) -> Unit) : Nati
     private val home = Button(activity)
     private var count = 0
     init {
-        for (child in listOf(icon, badge, title, description, counter, home)) view.addView(child)
+        for (child in listOf(icon, badge, title, description, counter, home)) {
+            if (child is TextView) {
+                // 后续数据与主题更新只调整字重，不重新覆盖字体家族。
+                child.typeface = Typeface.create("sans-serif", Typeface.NORMAL)
+                child.includeFontPadding = false
+                child.gravity = Gravity.CENTER
+            }
+            view.addView(child)
+        }
         counter.setOnClickListener { count++; counter.text = "点一下 · $count"; action("increment") }
         home.setOnClickListener { action("home") }
     }
@@ -55,11 +63,8 @@ private class DemoNativeTab(activity: Activity, action: (String) -> Unit) : Nati
         fun text(view: TextView, size: Int, color: Int, weight: Int) {
             view.setTextSize(TypedValue.COMPLEX_UNIT_PX, size * scale)
             view.setTextColor(color)
-            view.gravity = Gravity.CENTER
-            view.typeface = Typeface.create("sans-serif", Typeface.NORMAL)
             if (Build.VERSION.SDK_INT >= 26) view.fontVariationSettings = "'wght' $weight"
             else view.setTypeface(view.typeface, if (weight >= 600) Typeface.BOLD else Typeface.NORMAL)
-            view.includeFontPadding = false
         }
         badge.text = props.optString("badge", "DEMO ${props.optInt("demo")}"); text(badge, 11, muted, appearance.getInt("fontWeight"))
         badge.letterSpacing = .15f

@@ -24,10 +24,10 @@ import org.json.JSONObject
 internal class NativeProfileTab(private val activity: Activity, action: (String) -> Unit) : NativeTabContent {
     override val view = ScrollView(activity).apply { isFillViewport = true; clipToPadding = false }
     private val content = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
-    private val avatar = TextView(activity)
-    private val name = TextView(activity)
-    private val signature = TextView(activity)
-    private val section = TextView(activity).apply { text = "账号与偏好" }
+    private val avatar = textView()
+    private val name = textView()
+    private val signature = textView()
+    private val section = textView().apply { text = "账号与偏好" }
     private val card = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
     private val details = row("个人资料", "昵称、个性签名与展示偏好", arrayOf("M20 21v-2a7 7 0 0 0-14 0v2", "M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0"))
     private val browse = row("浏览组件", "发现更多界面与交互", arrayOf("M3 3h7v7H3z", "M14 3h7v7h-7z", "M3 14h7v7H3z", "M14 14h7v7h-7z"))
@@ -58,12 +58,18 @@ internal class NativeProfileTab(private val activity: Activity, action: (String)
 
     private data class Row(val root: LinearLayout, val icon: ImageView, val title: TextView, val description: TextView, val arrow: ImageView)
 
+    private fun textView() = TextView(activity).apply {
+        // 字体家族只在创建时设置，重设会覆盖已生效的可变字重。
+        typeface = Typeface.create("sans-serif", Typeface.NORMAL)
+        includeFontPadding = false
+    }
+
     private fun row(title: String, description: String, paths: Array<String>): Row {
         val root = LinearLayout(activity).apply { gravity = Gravity.CENTER_VERTICAL; isClickable = true; isFocusable = true }
         val icon = ImageView(activity).apply { setImageDrawable(NavigationIcon(JSONArray(paths), 24)) }
         val text = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
-        val heading = TextView(activity).apply { this.text = title }
-        val caption = TextView(activity).apply { this.text = description }
+        val heading = textView().apply { this.text = title }
+        val caption = textView().apply { this.text = description }
         val arrow = ImageView(activity).apply { setImageDrawable(NavigationIcon(JSONArray(arrayOf("M9 5l7 7-7 7")), 20)) }
         text.addView(heading); text.addView(caption)
         root.addView(icon); root.addView(text, LinearLayout.LayoutParams(0, -2, 1f)); root.addView(arrow)
@@ -122,8 +128,6 @@ internal class NativeProfileTab(private val activity: Activity, action: (String)
     private fun style(view: TextView, size: Int, color: Int, weight: Int) {
         view.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, size * scale)
         view.setTextColor(color)
-        view.includeFontPadding = false
-        view.typeface = Typeface.create("sans-serif", Typeface.NORMAL)
         if (Build.VERSION.SDK_INT >= 26) view.fontVariationSettings = "'wght' $weight"
         else view.setTypeface(view.typeface, if (weight >= 600) Typeface.BOLD else Typeface.NORMAL)
     }
