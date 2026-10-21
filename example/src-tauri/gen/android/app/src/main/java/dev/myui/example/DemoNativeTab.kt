@@ -22,6 +22,7 @@ object DemoNativeTabs {
     fun register() {
         NativeTabViews.register("demo") { activity, action -> DemoNativeTab(activity, action) }
         NativeTabViews.register("profile") { activity, action -> NativeProfileTab(activity, action) }
+        NativeTabViews.register("settings") { activity, _ -> NativeSettingsTab(activity) }
     }
 }
 

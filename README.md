@@ -336,7 +336,7 @@ bun run dev
 bun run build
 ```
 
-开发地址默认 `http://127.0.0.1:5178/`，纯 HTML 入口为 `/native.html`。示例采用顶部导航与“首页、原生、消息、我的”四个底部 Tab。首页按用途展示普通组件；“原生”集中展示 App、AppBar、Tabbar、Tabs、Page 下拉刷新和原生页面与共享状态；消息保留 Demo 占位页，我的展示个人中心。Web 和桌面 App 使用 Vue Router 在当前窗口导航，Android 的每个列表入口创建独立 Activity。返回保留所属目录的滚动与入口焦点，底部同级切换不增加返回历史，旧 `#/discover` 链接进入原生目录。
+开发地址默认 `http://127.0.0.1:5178/`，纯 HTML 入口为 `/native.html`。示例采用“首页、原生、消息、设置”四个底部 Tab。首页按用途展示普通组件；“原生”集中展示 App、AppBar、Tabbar、Tabs、Page 下拉刷新和原生页面与共享状态；消息保留 Demo 占位页，设置展示大标题、吸顶搜索和圆角分组列表。每个页面自行管理导航头。Web 和桌面 App 使用 Vue Router 在当前窗口导航，Android 12L 及以上的组件列表入口创建独立 Activity。返回保留所属目录的滚动与入口焦点，底部同级切换不增加返回历史，旧 `#/discover` 和 `#/profile` 链接仍可访问。
 
 `example/src/router.ts` 定义 Vue Router，`example/src/App.vue` 提供统一弹层和提示宿主，`example/src/pages/native/app/Root.vue` 使用 KeepAlive 保留页面；`example/src/components/DemoLayout.vue` 负责应用容器和栏目导航。`example/src/pages/catalog.ts` 维护目录数据，各文档按目录标识放在 `pages/home/` 或 `pages/native/` 下，通过文档注册表加载；四个栏目的内容也分别位于对应页面目录。公共逻辑集中在 `example/src/commons/`，其中 `navigation.ts` 接入 `tauri-plugin-native-components/router`，`notify.ts` 提供页面共用的提示入口；组件库不依赖 Tauri。Android 子页地址为 `index.html?pageWindow=1#/example/组件标识`；旧的 `#combobox`、`#slider-options` 等链接仍可直接定位。原生 Activity 与共享状态示例位于“原生”目录的“页面与共享”分组。CSS 保存后即时更新；修改 JS 核心会完整刷新示例，避免旧实例残留。构建结果同时提供 Vue 页面、原生页面和原样的 CSS/JS。
 
@@ -476,11 +476,13 @@ Android 示例的系统返回优先交给当前 WebView 的最上层弹层：级
 
 独立源码位于 `D:/project/tauri/plugins/tauri-plugin-native-components/`，目录、前端包和 Rust crate 均使用 `tauri-plugin-` 前缀，命令及权限仍使用短标识 `native-components`。示例通过 Bun 本地依赖安装完整源码，尚未创建或发布 GitHub 仓库。
 
-从 `tauri-plugin-native-components/vue` 引入 `AppBar`、`BottomNavigation`、`Tabs`，同时引入 `tauri-plugin-native-components/style.css`。组件按职责命名，通过 Vue 属性、事件和插槽封装平台能力。Android 使用 MaterialToolbar 和 BottomNavigationView，保留官方水波纹；Web 和其他桌面/移动平台显示 Vue 对应内容。CSS 提供尺寸和颜色，插件不生成示例主题。
+从 `tauri-plugin-native-components/vue` 引入 `App`、`AppBar`、`Tabbar`、`Tabs`，同时引入 `tauri-plugin-native-components/style.css`。组件按职责命名，通过 Vue 属性、事件和插槽封装平台能力。Android 使用 MaterialToolbar 和 BottomNavigationView，保留官方水波纹；Web 和其他桌面/移动平台显示 Vue 对应内容。CSS 提供尺寸和颜色，插件不生成示例主题。
 
-`Tabs` 同时管理底栏和各 Tab 的原生页面，`nativeView` 指向宿主注册的 Android 页面工厂。首页和原生目录使用当前 Tauri WebView，消息使用 `DemoNativeTab.kt`，我的使用 `NativeProfileTab.kt` 中的 Android 个人中心；原生目录里的 Tabs 示例同样展示原生页面切换与计数保留。组件详情页由同一个插件新建 Activity，各 Tab 不额外打开 Activity 或 WebView。Web/桌面的对应内容保留在 Vue 插槽中，三个独立组件示例按路由名称缓存，互不混用状态。
+`App` 管理底栏和一级页面，页面内的 `Tabs` 通过 `nativeView` 承载宿主注册的 Android 视图。首页和原生目录使用当前 Tauri WebView，消息使用 `DemoNativeTab.kt`，设置使用 `NativeSettingsTab.kt`；原生目录里的 Tabs 示例同样展示原生页面切换与计数保留。组件详情页由同一个插件新建 Activity，各 Tab 不额外打开 Activity 或 WebView。Web/桌面的对应内容保留在 Vue 插槽中，三个独立组件示例按路由名称缓存，互不混用状态。
 
-「我的 → 个人资料」通过普通 Android Intent 打开 `NativeProfileActivity`：使用 AppCompatActivity、MaterialToolbar、原生输入框与开关，页面完全由 Android View 绘制，不创建 Tauri 窗口或 WebView。保存昵称、签名与展示偏好后，个人中心通过 SharedPreferences 监听立即更新；系统返回取消未提交内容，输入草稿在 Activity 重建后保留。页面继承来源主题并处理系统栏、输入法安全区，返回交给系统，不注册常驻拦截。Web/桌面展示个人中心预览，并说明资料编辑需要在 Android 应用内体验。
+设置首页参考手机系统设置的原生布局：大标题随正文滚动退出，搜索栏吸顶，列表采用圆角分组和逐行波纹。点击行或搜索栏，通过普通 Android Intent 打开 `NativeSettingsActivity`，子页自行提供返回导航、搜索输入和显示设置 UI，不创建 Tauri 窗口或 WebView。开关、模式选择和滑块仅保留界面状态，不读写系统设置；系统返回后保留首页滚动、控件和底栏实例。
+
+版本边界：普通原生设置子页已在 Android 9 验证；组件详情目前使用 Tauri 多窗口创建 Web 子 Activity，这条路径要求 Android 12L（API 32）及以上。旧版 Android 的同 WebView 路由回退尚未实现，不能用应用最低安装版本代替这项能力的版本要求。参见 [Tauri 移动端多窗口说明](https://tauri.app/learn/mobile-multiwindow/)。
 
 原生资料页的定向设备测试为 `:app:connectedArm64DebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.myui.example.NativeProfileActivityTest`，覆盖真实输入、空昵称校验、保存、开关、重建和取消，运行结束恢复原有资料。
 

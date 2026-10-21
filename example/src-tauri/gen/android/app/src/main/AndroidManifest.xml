@@ -38,7 +38,12 @@
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
             android:exported="false" />
 
-        <!-- 纯原生资料页沿用系统 Activity 栈，不创建或销毁 Tauri WebView。 -->
+        <!-- 原生设置子页自己管理导航、键盘和系统返回。 -->
+        <activity
+            android:name=".NativeSettingsActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
         <activity
             android:name=".NativeProfileActivity"
             android:exported="false"

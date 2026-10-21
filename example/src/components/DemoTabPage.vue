@@ -9,7 +9,8 @@ import { useDemoScroll } from './useDemoScroll'
 import HomePage from '../pages/home/index.vue'
 import NativePage from '../pages/native/index.vue'
 import MessagesPage from '../pages/messages/index.vue'
-import ProfilePage from '../pages/profile/index.vue'
+import SettingsPage from '../pages/settings/index.vue'
+import { settingsAccount, settingsGroups } from '../pages/settings/data'
 
 const props = defineProps<{
   /** 当前栏目的展示及原生页面配置。 */
@@ -19,7 +20,7 @@ const tabPages = {
   home: HomePage,
   native: NativePage,
   messages: MessagesPage,
-  profile: ProfilePage
+  settings: SettingsPage
 }
 const app = useApp(),
   route = useRoute()
@@ -33,8 +34,8 @@ const suspended = useNativeBarsSuspended()
 const items = computed<NavigationItem[]>(() => [
   {
     ...props.page,
-    ...(props.page.value === 'profile'
-      ? { nativeView: 'profile' }
+    ...(props.page.value === 'settings'
+      ? { nativeView: 'settings', nativeProps: { account: settingsAccount, groups: settingsGroups } }
       : props.page.demo
         ? {
             nativeView: 'demo',
@@ -47,8 +48,8 @@ const content = computed(() => tabPages[props.page.value as keyof typeof tabPage
 const contentProps = computed(() => {
   if (props.page.value === 'home' || props.page.value === 'native') return { active: active.value }
   const onHome = () => app.select('home')
-  return props.page.value === 'profile'
-    ? { onHome }
+  return props.page.value === 'settings'
+    ? {}
     : { page: props.page, count: count.value, onHome, onIncrement: () => count.value++ }
 })
 function action(event: { value: string }) {
@@ -66,6 +67,7 @@ onDeactivated(() => {
 <template>
   <div class="demo-view" :inert="!active" :aria-hidden="!active || undefined">
     <DemoAppBar
+      v-if="page.value !== 'settings'"
       page
       :title="page.title"
       :settings="page.value === 'home'"
@@ -82,6 +84,7 @@ onDeactivated(() => {
       <section
         ref="scroller"
         class="demo-page"
+        :class="{ 'demo-settings-page': page.value === 'settings' }"
         :data-demo-page="page.value"
         :aria-label="page.title"
         :inert="!active"
@@ -93,3 +96,7 @@ onDeactivated(() => {
     </Tabs>
   </div>
 </template>
+
+<style scoped>
+.demo-page.demo-settings-page { padding: 0; }
+</style>

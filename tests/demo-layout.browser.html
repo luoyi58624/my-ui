@@ -115,7 +115,7 @@
             (id) => !['quick-start', 'native-integration', 'showcase'].includes(id)
           )
           await check(
-            '首页与原生分别展示目录，消息保留 Demo，我的展示个人中心',
+            '首页与原生分别展示目录，消息保留 Demo，设置管理自己的大标题与搜索',
             async () => {
               assert(page().dataset.demoPage === 'home', '首页未展示目录')
               assert(
@@ -126,7 +126,7 @@
               assert(
                 [...doc.querySelectorAll('.demo-app > .nc-page-navigation button')]
                   .map((node) => node.textContent.trim())
-                  .join(',') === '首页,原生,消息,我的',
+                  .join(',') === '首页,原生,消息,设置',
                 '底部导航不正确'
               )
               await pick(1)
@@ -139,14 +139,10 @@
               await pick(2)
               assert(page().querySelector('.demo-placeholder') && page().textContent.includes('Demo 页面'), '消息占位页被修改')
               await pick(3)
-              assert(page().querySelector('[data-profile-home]') && page().textContent.includes('个人资料'), '我的没有展示个人中心入口')
-              assert(!page().querySelector('.demo-placeholder'), '我的仍然是占位页')
-              assert(page().textContent.includes('Android 应用内体验'), '没有说明原生资料编辑的平台要求')
-              const profileEntry = [...page().querySelectorAll('button')].find(node => node.textContent.includes('个人资料'))
-              assert(profileEntry?.disabled || profileEntry?.getAttribute('aria-disabled') === 'true', '浏览器不应伪装为可打开 Android 页面')
-              const browseEntry = [...page().querySelectorAll('button')].find(node => node.textContent.includes('浏览组件'))
-              browseEntry.click()
-              await until(() => page().dataset.demoPage === 'home', '个人中心没有切回组件目录')
+              assert(page().querySelector('[data-settings-home]') && page().textContent.includes('显示与亮度'), '设置布局未接入')
+              assert(!doc.querySelector('.nc-app-view-active .demo-top'), '设置仍使用统一导航头')
+              assert(page().querySelector('.settings-search') && page().querySelectorAll('.settings-group').length === 5, '搜索栏或设置分组不完整')
+              assert(win.location.hash === '#/settings', '设置路由没有更名')
               await pick(0)
             }
           )

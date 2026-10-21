@@ -19,7 +19,7 @@ if(new URLSearchParams(location.search).has('frame')){
   document.querySelector('#run').onclick=async()=>{document.querySelector('#run').disabled=true;reports.length=0;try{
     await load('/native');
     await check('第二导航集中展示全部原生组件，首页保留普通组件与纯 HTML 示例',async()=>{
-      assert([...doc.querySelectorAll('.demo-app .nc-app-tabbar button')].map(node=>node.textContent.trim()).join(',')==='首页,原生,消息,我的','导航名称错误');
+      assert([...doc.querySelectorAll('.demo-app .nc-app-tabbar button')].map(node=>node.textContent.trim()).join(',')==='首页,原生,消息,设置','导航名称错误');
       assert([...catalog().querySelectorAll('[data-demo-link]')].map(node=>node.dataset.demoLink).join(',')==='native-app,native-app-bar,native-tabbar,native-tabs,page-refresh,native-navigation','原生目录缺项或顺序错误');
       const nav=doc.querySelector('.demo-app .nc-app-tabbar');nav.querySelector('[aria-label="首页"]').click();await until(()=>doc.querySelector('[data-demo-page="home"]:not([inert])'));const home=doc.querySelector('[data-demo-page="home"]');assert(!home.querySelector('[data-demo-link="native-navigation"]')&&home.querySelector('[data-demo-link="native-html"]'),'目录归属不正确');nav.querySelector('[aria-label="原生"]').click();await until(()=>catalog());
     });

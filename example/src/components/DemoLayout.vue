@@ -13,7 +13,7 @@ const items: DemoTab[] = [
   { value: 'home', label: '首页', title: '组件示例', icon: 'home' },
   { value: 'native', label: '原生', title: '原生组件', icon: 'grid' },
   { value: 'messages', label: '消息', title: '消息', icon: 'message', demo: 2 },
-  { value: 'profile', label: '我的', title: '我的', icon: 'user' }
+  { value: 'settings', label: '设置', title: '设置', icon: 'sliders' }
 ]
 const tabs: AppTab[] = items.map((page) => ({
   value: page.value,

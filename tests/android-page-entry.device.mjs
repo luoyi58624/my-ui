@@ -144,7 +144,7 @@ try {
   const size = [...adb('shell', 'wm', 'size').matchAll(/(\d+)x(\d+)/g)].at(-1)
   const width = Number(size[1]), height = Number(size[2])
   let bottomIdentity
-  for (const [index, route] of [[1, 'native'], [2, 'messages'], [3, 'profile'], [0, 'home']]) {
+  for (const [index, route] of [[1, 'native'], [2, 'messages'], [3, 'settings'], [0, 'home']]) {
     adb('shell', 'input', 'tap', String(Math.round(width * (index + .5) / 4)), String(height - 112))
     await parent.waitForFunction(route => location.hash === '#/' + route, route)
     const bottom = hierarchy('MainActivity').match(/BottomNavigationView\{([a-f0-9]+) V[^\n]*alpha=1\.0/)

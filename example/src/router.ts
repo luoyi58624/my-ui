@@ -79,8 +79,9 @@ export const router: Router =
         component: () => import('./components/DemoLayout.vue'),
         children: [
           // Tab 由 App 渲染；这些记录只同步入口地址，不创建第二个页面视图。
-          ...['home', 'native', 'messages', 'profile', 'discover'].map((tab) => ({
+          ...['home', 'native', 'messages', 'settings', 'discover'].map((tab) => ({
             path: tab,
+            ...(tab === 'settings' ? { alias: '/profile' } : {}),
             name: 'tab-' + tab,
             components: {},
             meta: { tab: tab === 'discover' ? 'native' : tab }
