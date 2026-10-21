@@ -16,6 +16,7 @@ if(params.has('frame')){
   let frame,doc,win;
   const load=async platform=>{document.querySelector('#fixture').replaceChildren();frame=document.createElement('iframe');frame.src='?frame='+platform;document.querySelector('#fixture').append(frame);await until(()=>frame.contentWindow.state);doc=frame.contentDocument;win=frame.contentWindow;await pause(150)};
   const layout=()=>win.calls.filter(call=>call.args.surface.kind==='layout').at(-1)?.args.surface;
+  const backgroundInert=()=>doc.querySelector('#app').inert;
   const send=(id,action,value)=>win.dispatchEvent(new win.CustomEvent('native-components',{detail:{id,action,value}}));
   const check=async(name,fn)=>{await fn();reports.push({name,passed:true})};
   document.querySelector('#run').onclick=async()=>{document.querySelector('#run').disabled=true;try{
@@ -33,6 +34,7 @@ if(params.has('frame')){
     await check('Android 由 Page 汇总导航，正文保持原 Web 内容',async()=>{
       const payload=layout();topId=payload.top.id;bottomId=payload.bottom.id;input=doc.querySelector('#note');
       assert(payload.top.kind==='appBar'&&payload.bottom.kind==='bottomNavigation'&&payload.top.bounds.height===56&&payload.bottom.bounds.height===64,'导航配置不完整');
+      assert(!('blocked' in payload),'页面仍向原生传递导航交互锁');
       assert(!win.calls.some(call=>['appBar','bottomNavigation'].includes(call.args.surface.kind)),'页面导航仍走独立覆盖层');
       assert(win.getComputedStyle(doc.querySelector('.nc-page-navbar')).display==='none'&&win.getComputedStyle(doc.querySelector('.nc-page-navigation')).display==='none','重复预留导航空间');
       assert(input.getClientRects().length&&win.state.note.value===input.value,'正文不可见或丢失状态');
@@ -41,31 +43,38 @@ if(params.has('frame')){
       send(topId,'action','settings');send(bottomId,'select','saved');await until(()=>layout().bottom.modelValue==='saved');
       assert(win.events.join(',')==='settings'&&win.state.tab.value==='saved','导航事件没有进入原组件');
     });
-    await check('Dialog 开关仅阻断导航操作，不切换导航和 Vue 实例',async()=>{
+    await check('Dialog 仅禁用正文背景，顶部操作、返回和底部导航继续可用',async()=>{
       input.value='仍是同一份输入';input.dispatchEvent(new win.Event('input',{bubbles:true}));win.state.dialog.value=true;
-      await until(()=>layout().blocked&&doc.querySelector('[role="dialog"]'));
+      await until(()=>backgroundInert()&&doc.querySelector('[role="dialog"]'));
       assert(doc.querySelectorAll('[data-native="true"]').length===2&&layout().top.id===topId&&layout().bottom.id===bottomId,'弹窗打开替换了导航');
-      send(topId,'back');assert(!win.events.includes('back'),'背景导航仍可操作');
-      win.state.dialog.value=false;await until(()=>!layout().blocked&&!doc.querySelector('[role="dialog"]'));
+      const count=win.events.length;send(topId,'action','settings');send(topId,'back');send(bottomId,'select','home');
+      await until(()=>layout().bottom.modelValue==='home');
+      assert(win.events.slice(count).join(',')==='settings,back'&&win.state.tab.value==='home','弹窗期间导航事件被拦截');
+      assert(backgroundInert()&&doc.querySelector('[role="dialog"]')&&!('blocked' in layout()),'导航交互误恢复正文背景或仍携带交互锁');
+      win.state.dialog.value=false;await until(()=>!backgroundInert()&&!doc.querySelector('[role="dialog"]'));
       assert(doc.querySelector('#note')===input&&input.value==='仍是同一份输入','弹窗重建了正文或丢失输入');
-      send(topId,'back');assert(win.events.includes('back'),'关闭后没有恢复导航操作');
+      send(topId,'back');assert(win.events.length===count+3,'关闭后导航事件异常');
     });
     await check('四向 Drawer 保留导航和正文，弹层坐标限制在网页视口',async()=>{
       for(const side of ['left','right','top','bottom']){
-        win.state.placement.value=side;win.state.drawer.value=true;await until(()=>layout().blocked&&doc.querySelector('.my-drawer-overlay'));
+        win.state.placement.value=side;win.state.drawer.value=true;await until(()=>backgroundInert()&&doc.querySelector('.my-drawer-overlay'));
         const rect=doc.querySelector('.my-drawer-overlay').getBoundingClientRect();
         assert(rect.left>=-.5&&rect.top>=-.5&&rect.right<=win.innerWidth+.5&&rect.bottom<=win.innerHeight+.5,'抽屉溢出 WebView');
         assert(layout().top.id===topId&&layout().bottom.id===bottomId&&doc.querySelectorAll('[data-native="true"]').length===2,'抽屉切换了导航');
-        win.state.drawer.value=false;await until(()=>!layout().blocked&&!doc.querySelector('.my-drawer-overlay'));
+        const count=win.events.length,next=win.state.tab.value==='home'?'saved':'home';
+        send(topId,'action','settings');send(bottomId,'select',next);await until(()=>layout().bottom.modelValue===next);
+        assert(win.events.length===count+1&&win.state.tab.value===next&&backgroundInert(),'抽屉期间导航不可用或正文背景被解锁');
+        win.state.drawer.value=false;await until(()=>!backgroundInert()&&!doc.querySelector('.my-drawer-overlay'));
       }
       assert(doc.querySelector('#note')===input,'抽屉重建了正文');
     });
     await check('抽屉嵌套 Dialog 按层恢复背景，原导航与输入保持不变',async()=>{
-      win.state.drawer.value=true;await until(()=>doc.querySelector('.my-drawer-overlay')&&layout().blocked);
+      win.state.drawer.value=true;await until(()=>doc.querySelector('.my-drawer-overlay')&&backgroundInert());
       win.state.dialog.value=true;await until(()=>doc.querySelectorAll('[role="dialog"]').length===2);
+      const count=win.events.length;send(topId,'back');assert(win.events.length===count+1,'嵌套弹窗拦截了原生返回按钮');
       win.state.dialog.value=false;await until(()=>doc.querySelectorAll('[role="dialog"]').length===1);
-      assert(layout().blocked&&doc.querySelector('.my-drawer-overlay')&&!doc.querySelector('.my-drawer-overlay').inert,'关闭内层误恢复页面或禁用外层');
-      win.state.drawer.value=false;await until(()=>!doc.querySelector('[role="dialog"]')&&!layout().blocked);
+      assert(backgroundInert()&&doc.querySelector('.my-drawer-overlay')&&!doc.querySelector('.my-drawer-overlay').inert,'关闭内层误恢复页面或禁用外层');
+      win.state.drawer.value=false;await until(()=>!doc.querySelector('[role="dialog"]')&&!backgroundInert());
       assert(doc.querySelector('#note')===input&&input.value==='仍是同一份输入'&&layout().top.id===topId&&layout().bottom.id===bottomId,'嵌套弹窗重建了正文或导航');
     });
     await check('页面失活释放宿主，恢复时仍使用原正文',async()=>{

@@ -347,7 +347,7 @@ pub fn run() {
         id: 'overlay',
         title: '05 · 与 Web 弹窗配合',
         paragraphs: [
-          'Page 的原生导航位于 WebView 的实际边界之外，Dialog、Drawer、Menu 等 Web 弹层只覆盖中间正文，Vue 插槽和状态保持原样。无需订阅弹层状态来切换导航版本；遮罩出现时页面导航保留实例并暂停操作。内容区内额外放置的原生控件仍会按 DOM 的 inert 状态暂停。'
+          'Page 的原生导航位于 WebView 的实际边界之外，Dialog、Drawer、Menu 等 Web 弹层只覆盖中间正文，Vue 插槽和状态保持原样。无需订阅弹层状态来切换导航版本；遮罩出现时顶部操作、返回按钮和底部导航继续可交互，原生导航实例保持不变。内容区内额外放置的原生控件仍会按 DOM 的 inert 状态暂停。'
         ],
         files: [
           file(

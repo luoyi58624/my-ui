@@ -479,7 +479,7 @@ Android 示例的系统返回优先交给当前 WebView 的最上层弹层：级
 
 `DemoAppBar.vue` 将结构化标题、返回和主题操作接入原生导航头。放在 Page 的 navbar 插槽时，Android 使用原生页面壳管理导航，Web 弹层出现时保留同一导航实例；正文与弹层始终留在原 WebView 中。原生组件绑定发起调用的窗口，不借用 Tauri 的全局 Activity。
 
-`Page` 提供 navbar、navigation 和默认正文插槽。Android 将 AppBar、原 WebView、BottomNavigation 按上中下分配真实空间，Web 弹层自然限制在中间视口；其他平台及原生失败时使用 Web 模拟。Web 模态遮罩只阻断导航操作，不再切换导航版本。安全区和输入法由原生宿主处理，键盘出现时隐藏底栏。
+`Page` 提供 navbar、navigation 和默认正文插槽。Android 将 AppBar、原 WebView、BottomNavigation 按上中下分配真实空间，Web 弹层自然限制在中间视口；其他平台及原生失败时使用 Web 模拟。Android 的网页模态遮罩只禁用正文背景，顶部操作、返回按钮和底部导航继续可交互，并保留原生导航实例。安全区和输入法由原生宿主处理，键盘出现时隐藏底栏。
 
 使用 `refreshable`、`v-model:refreshing`、`@refresh` 启用下拉刷新，业务在请求结束后将 refreshing 设为 false。Android 使用原生 SwipeRefreshLayout；Web 和原生接入失败时使用 Web 刷新。`suspended` 只暂停内容区原生控件和刷新，不卸载页面导航。
 
