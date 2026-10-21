@@ -29,6 +29,8 @@ export function androidArguments(args) {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const cwd = fileURLToPath(new URL('../example', import.meta.url))
   const env = androidEnvironment()
+  // 仅开发安装需要结束目标设备上的旧实例，普通 APK 构建不操作设备。
+  env.MY_UI_ANDROID_DEV = '1'
   if (!process.env.NDK_HOME && env.NDK_HOME) console.log('使用 Android NDK：' + env.NDK_HOME)
   const child = spawn(process.execPath, [join(cwd, 'node_modules/@tauri-apps/cli/tauri.js'), ...androidArguments(process.argv.slice(2))], { cwd, env, stdio: 'inherit', windowsHide: true })
   child.once('error', error => { console.error('安卓启动失败：' + error.message); process.exitCode = 1 })

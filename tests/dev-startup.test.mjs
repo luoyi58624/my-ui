@@ -6,6 +6,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { test } from 'node:test'
 import { ensureDevServer } from '../scripts/dev-server.mjs'
 import { androidArguments, androidEnvironment } from '../scripts/dev-android.mjs'
+import { prepareAndroidInstall } from '../scripts/prepare-android-install.mjs'
 
 const temporary = mkdtempSync(join(tmpdir(), 'my-ui-dev-startup-'))
 
@@ -54,5 +55,20 @@ test('开发服务和安卓启动', async context => {
     assert.equal(source.NDK_HOME, undefined)
     assert.equal(androidEnvironment({ ANDROID_HOME: sdk, NDK_HOME: 'custom-ndk' }).NDK_HOME, 'custom-ndk')
     assert.deepEqual(androidEnvironment({}), {})
+  })
+  await context.test('安装前只关闭唯一或显式指定设备上的当前示例，不猜测其他设备', () => {
+    const commands = []
+    const devices = 'List of devices attached\nphone-a\tdevice\nphone-b\tdevice\n'
+    const adb = args => { commands.push(args); return args[0] === 'devices' ? devices : '' }
+    assert.deepEqual(prepareAndroidInstall({ environment: {}, adb, log() {} }), { stopped: false })
+    assert.equal(commands.length, 1)
+    assert.deepEqual(prepareAndroidInstall({ environment: { ANDROID_SERIAL: 'phone-b' }, adb, log() {} }), { stopped: true, serial: 'phone-b' })
+    assert.deepEqual(commands.at(-1), ['-s', 'phone-b', 'shell', 'am', 'force-stop', 'dev.myui.example'])
+    const count = commands.length
+    assert.deepEqual(prepareAndroidInstall({ environment: { ANDROID_SERIAL: 'offline' }, adb, log() {} }), { stopped: false })
+    assert.equal(commands.length, count + 1)
+    const single = args => { commands.push(args); return args[0] === 'devices' ? 'only-phone\tdevice\nunauthorized-phone\tunauthorized\n' : '' }
+    assert.deepEqual(prepareAndroidInstall({ environment: {}, adb: single, log() {} }), { stopped: true, serial: 'only-phone' })
+    assert.equal(commands.at(-1)[1], 'only-phone')
   })
 })

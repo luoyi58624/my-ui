@@ -16,6 +16,10 @@ allprojects {
     }
 }
 
+// 示例采用原生 Activity 返回栈，按窗口状态接管弹层返回。
+apply(from = "native-back.gradle.kts")
+apply(from = "dev-install.gradle.kts")
+
 tasks.register("clean").configure {
     delete("build")
 }

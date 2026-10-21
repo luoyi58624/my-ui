@@ -398,6 +398,8 @@ bun run dev:android      # 自动复用或启动 Vite，通过 USB 编译、安�
 
 开发命令默认连接 `127.0.0.1:5178`，由 Tauri 自动设置 USB 端口转发，无需手动运行 `adb reverse`。已运行的服务必须确认属于当前项目才会复用；启动失败不会关闭已有服务。未设置 `NDK_HOME` 时自动选择 SDK 中最新的稳定 NDK，显式设置时保留原值；额外设备参数与 `--host` 仍可传入。
 
+开发 APK 组装成功后、实际安装前会结束目标手机上的旧示例进程，避免系统在更新时恢复旧首页、开发工具又同时启动首页。只有 `dev:android` 启用此步骤，构建 APK 不操作设备；多设备时请用 `ANDROID_SERIAL` 明确目标，脚本不会猜测或关闭另一台设备的应用。
+
 构建 APK 前需显式指定本机 NDK：
 
 ```powershell
@@ -450,6 +452,10 @@ Android 首页使用 `singleTop`，子页保持 `standard`。此前首页的 `si
 `bun test ./tests/shared-state.test.ts ./tests/shared-state-tauri.test.ts` 使用真实 Pinia 与官方 Tauri JS 绑定检查恢复、双向同步、异步竞态、不同字段并发、失败重试和销毁；`tests/shared-state.browser.html` 使用两个独立文档检查实际输入与按钮、浏览器存储事件、刷新恢复和后台补同步。测试只清理自己随机生成的存储键。
 
 Android 示例的系统返回优先交给当前 WebView 的最上层弹层：级联菜单逐级返回，退出动画期间继续拦截，全部关闭后恢复原生 Activity 返回。可在原生子页的“弹层优先返回”卡片体验菜单、嵌套确认与抽屉；首页的所有弹层同样生效。输入法可见时保持系统先收起键盘的行为。
+
+这个壳使用原生 Activity 栈导航，首页没有弹层时不接管系统返回，子页也由系统处理返回与预测动画。`gen/android/native-back.gradle.kts` 只在本工程编译输入中移除 Tauri 2.12.4 `AppPlugin` 的常驻网页返回回调，不修改 Cargo 缓存；窗口外观与退出命令保持完整。升级 Tauri 后如果原实现改变，构建会要求重新核对补丁。不要在本壳使用 `onBackButtonPress` 另行注册全局网页返回处理。
+
+保持手机解锁、竖屏与手势导航，运行 `dev:android` 后可执行 `node tests/android-back.device.mjs --record`，定向检查首页回桌面、取消手势、弹层关闭及释放、子页返回；截图与可选录屏保存在系统临时目录。回归会重启当前示例，不清除应用数据。
 
 宿主可通过 `MyUI.layers.dismissTop()` 请求返回，通过 `MyUI.layers.subscribe(active => {})` 立即订阅是否存在弹层并取得取消订阅方法。接口不依赖 Tauri；安卓桥接只放在 example 中。禁用 `closeOnEscape` 的弹窗也会消费系统返回，等待业务操作关闭；滑块常驻数值提示不占用返回。
 
