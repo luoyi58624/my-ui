@@ -16,6 +16,12 @@
             android:launchMode="singleTop"
             android:label="@string/main_activity_title"
             android:name=".MainActivity"
+            android:exported="true" />
+
+        <!-- 桌面重进只恢复已有任务，避免在原生子页上方再次初始化 Tauri 首页。 -->
+        <activity
+            android:name=".LauncherActivity"
+            android:theme="@android:style/Theme.NoDisplay"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -30,6 +36,12 @@
             android:name=".NativePageActivity"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
             android:exported="false" />
+
+        <!-- 纯原生资料页沿用系统 Activity 栈，不创建或销毁 Tauri WebView。 -->
+        <activity
+            android:name=".NativeProfileActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
 
         <provider
           android:name="androidx.core.content.FileProvider"
