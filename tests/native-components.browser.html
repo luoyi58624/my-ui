@@ -26,6 +26,14 @@ if(params.has('frame')){
       assert(win.state.selected.value==='discover'&&win.events.join(',')==='back,settings,discover','事件未正常传递');
       doc.querySelector('[aria-label="消息"]').click();assert(win.state.selected.value==='discover','禁用项被选中');assert(win.calls.length===0,'Web 调用了原生接口');
     });
+    await check('导航图形与文字共用中轴，间距不包含选中背景的留白',async()=>{
+      for(const button of doc.querySelectorAll('.nc-bottom-navigation button')){
+        const svg=button.querySelector('svg'),icon=svg.getBoundingClientRect(),label=button.lastElementChild.getBoundingClientRect();
+        const box=svg.getBBox();assert(Math.abs(box.x+box.width/2-12)<.01,'图标路径在 24 像素画布上偏离中心');
+        assert(Math.abs(icon.x+icon.width/2-label.x-label.width/2)<.01,'图标与文字没有共用中轴');
+        assert(Math.abs(label.top-icon.bottom-2)<.01,'选中背景的留白仍被算进图标与文字间距');
+      }
+    });
     await load('android');
     await check('Android 创建两种控件，传递真实尺寸、图标和颜色，成功后隐藏 Web 对应内容',async()=>{
       await until(()=>doc.querySelectorAll('[data-native="true"]').length===2);
@@ -51,6 +59,14 @@ if(params.has('frame')){
       assert(doc.querySelector('.nc-tabs-web').inert,'底层 Web 内容仍可交互');
       win.dispatchEvent(new win.CustomEvent('native-components',{detail:{id:tabs.id,action:'tabAction',tab:'profile',value:'increment'}}));await pause(30);
       assert(win.events.includes('profile:increment'),'原生页面操作没有通知 Vue');
+    });
+    await check('页面计数更新只交给内容容器，不触碰底栏配置',async()=>{
+      const calls=win.calls.filter(call=>call.args.surface.kind==='bottomNavigation').length;
+      const item=win.state.items.value.find(item=>item.value==='profile');item.nativeProps.count=19;await pause(180);
+      assert(win.calls.filter(call=>call.args.surface.kind==='bottomNavigation').length===calls,'页面业务更新仍触发底栏桥接');
+      const tabs=win.calls.filter(call=>call.args.surface.kind==='tabs').at(-1).args.surface;
+      assert(tabs.items.find(item=>item.value==='profile').nativeProps.count===19,'页面业务数据没有正常更新');
+      assert(win.calls.filter(call=>call.args.surface.kind==='bottomNavigation').every(call=>call.args.surface.items.every(item=>!('nativeProps'in item)&&!('nativeView'in item))),'底栏仍携带页面工厂或业务数据');
     });
     await check('权限失败保留 Web 版本，卸载组件只移除自己的原生栏',async()=>{
       win.fail=true;win.state.title.value='更新标题';await until(()=>win.events.includes('error'));

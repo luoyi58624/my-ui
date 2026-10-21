@@ -298,7 +298,7 @@ onBeforeUnmount(() => {
       </main>
     </Tabs>
     <template v-if="!example" #navigation>
-      <BottomNavigation :model-value="active" :items="nativePages" @select="navigate" @error="console.error" />
+      <BottomNavigation :model-value="active" :items="pages" @select="navigate" @error="console.error" />
     </template>
   </Page>
 </template>
