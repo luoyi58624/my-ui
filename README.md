@@ -398,16 +398,19 @@ bun run dev:android      # 自动复用或启动 Vite，通过 USB 编译、安�
 
 开发命令默认连接 `127.0.0.1:5178`，由 Tauri 自动设置 USB 端口转发，无需手动运行 `adb reverse`。已运行的服务必须确认属于当前项目才会复用；启动失败不会关闭已有服务。未设置 `NDK_HOME` 时自动选择 SDK 中最新的稳定 NDK，显式设置时保留原值；额外设备参数与 `--host` 仍可传入。
 
-开发 APK 组装成功后、实际安装前会结束目标手机上的旧示例进程，避免系统在更新时恢复旧首页、开发工具又同时启动首页。只有 `dev:android` 启用此步骤，构建 APK 不操作设备；多设备时请用 `ANDROID_SERIAL` 明确目标，脚本不会猜测或关闭另一台设备的应用。
+开发 APK 组装成功后、实际安装前会结束目标手机上的旧示例进程，避免系统在更新时恢复旧首页、开发工具又同时启动首页。独立 APK 使用下方 `install:android` 执行同样的处理；构建 APK 不操作设备。多设备时请用 `ANDROID_SERIAL` 明确目标，脚本不会猜测或关闭另一台设备的应用。
 
 构建 APK 前需显式指定本机 NDK：
 
 ```powershell
 $env:NDK_HOME='D:\app\AndroidStudio\Android\SDK\ndk\28.2.13676358'
 bun run build:android    # 构建自包含 arm64 优化 APK
+bun run install:android ./example/src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk
 ```
 
-`build:android` 实际执行 `tauri android build --apk --target aarch64`，产物为 `example/src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk`，用 `adb install -r <apk>` 安装。本地示例的 release 构建使用调试证书，便于和开发包相互覆盖安装；正式分发需要配置自己的签名。调试原生桥接时，可在 `example/` 下执行 `bun run tauri android build --apk --debug --target aarch64`。
+`build:android` 实际执行 `tauri android build --apk --target aarch64`，产物为 `example/src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk`。`install:android` 在安装前关闭目标应用，覆盖安装并保留应用数据，成功后只通过桌面入口启动一次；追加 `--no-launch` 可只安装。直接覆盖运行中的 APK 后立即手动启动，会与这台手机的系统更新自动恢复发生竞争，导致首页被重建、应用退出。本地示例的 release 构建使用调试证书，便于和开发包相互覆盖安装；正式分发需要配置自己的签名。调试原生桥接时，可在 `example/` 下执行 `bun run tauri android build --apk --debug --target aarch64`。
+
+`node tests/android-install.device.mjs <debug-apk>` 实际覆盖安装前台、后台和子页中的应用，每次只启动一次，持续检查首次启动进程、首页和底栏，并保留日志与截图。不能用重新打开应用后的成功结果替代安装首启验证。
 
 **系统字重插件**：`tauri-plugin-android-system-font-weight` 源码已独立到 `D:/project/tauri/plugins/tauri-plugin-android-system-font-weight/`，由 `example/package.json` 的本地 `file:` 依赖安装，Cargo 引用 `example/node_modules/tauri-plugin-android-system-font-weight` 中的同一份源码。尚未创建或发布 GitHub 仓库；将来可将 package.json 中的来源替换为实际 `github:OWNER/REPOSITORY#COMMIT`，Cargo 路径保持不变。插件自己的说明包含接入方式。
 

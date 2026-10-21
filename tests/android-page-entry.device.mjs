@@ -42,8 +42,8 @@ try {
   const context = browser.contexts()[0], parent = context.pages().find(page => page.url().includes('tauri.localhost'))
   await until(async () => {
     let actual
-    try { actual = adb('shell', 'pidof', application) } catch { throw Error('初始化期间示例进程被其他操作关闭') }
-    assert.equal(actual, pid, '初始化期间示例进程被其他操作重启')
+    try { actual = adb('shell', 'pidof', application) } catch { throw Error('初始化期间应用进程已退出，请检查启动日志') }
+    assert.equal(actual, pid, '初始化期间应用进程发生重启，请检查启动日志')
     return await parent.locator('[data-native-layout="true"]').count() > 0
   }, '首页原生页面壳未就绪')
   const parentIdentity = await parent.evaluate(() => window.__entryIdentity = crypto.randomUUID())

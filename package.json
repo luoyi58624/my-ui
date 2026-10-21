@@ -14,6 +14,7 @@
     "build": "bun run check && bun run --cwd example build && bun scripts/copy-native.mjs",
     "build:desktop": "bun run --cwd example build:desktop",
     "build:android": "bun run --cwd example build:android",
+    "install:android": "node scripts/install-android.mjs",
     "preview": "bun run --cwd example preview",
     "check": "vue-tsc --noEmit && bun run check:core",
     "check:core": "tsc --project tsconfig.core.json",
