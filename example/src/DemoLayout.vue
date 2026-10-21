@@ -14,6 +14,7 @@ import { Button, CellGroup, Icon, ListRow } from '@my-ui/vue'
 import { BottomNavigation, Page, Tabs, type NavigationItem } from 'tauri-plugin-native-components/vue'
 import DemoAppBar from './DemoAppBar.vue'
 import DemoDocument from './demo/DemoDocument.vue'
+import ProfileHome from './demo/ProfileHome.vue'
 import { demoDescriptions } from './demo/descriptions'
 import { useNativeBarsSuspended } from './native-components'
 import { demoExamples, demoGroups, nativeDemoGroups } from './demo/catalog'
@@ -32,13 +33,15 @@ const pages: (NavigationItem & {
   { value: 'home', label: '首页', title: '组件示例', icon: 'home' },
   { value: 'native', label: '原生', title: '原生组件', icon: 'grid' },
   { value: 'messages', label: '消息', title: '消息', icon: 'message', demo: 2 },
-  { value: 'profile', label: '我的', title: '我的', icon: 'user', demo: 3 }
+  { value: 'profile', label: '我的', title: '我的', icon: 'user' }
 ]
 const counts = ref<Record<string, number>>({ messages: 0, profile: 0 })
 const nativePages = computed(() =>
   pages.map((page) => ({
     ...page,
-    ...(page.demo
+    ...(page.value === 'profile'
+      ? { nativeView: 'profile' }
+      : page.demo
       ? {
           nativeView: 'demo',
           nativeProps: { title: page.title, demo: page.demo, count: counts.value[page.value] }
@@ -256,6 +259,7 @@ onBeforeUnmount(() => {
               </section>
             </div>
           </div>
+          <ProfileHome v-else-if="page.value === 'profile'" @home="navigate('home')" />
           <div v-else class="demo-placeholder">
             <span class="demo-placeholder-icon"><Icon :name="page.icon!" /></span>
             <span class="demo-placeholder-label">DEMO {{ page.demo }}</span>

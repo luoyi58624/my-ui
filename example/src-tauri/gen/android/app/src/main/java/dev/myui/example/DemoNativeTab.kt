@@ -18,7 +18,11 @@ import org.json.JSONObject
 
 /** 为主导航与 Tabs 示例注册安卓页面视图，示例业务留在宿主中。 */
 object DemoNativeTabs {
-    fun register() { NativeTabViews.register("demo") { activity, action -> DemoNativeTab(activity, action) } }
+    /** 在 Activity 创建时注册示例页与个人中心，页面业务不进入通用插件。 */
+    fun register() {
+        NativeTabViews.register("demo") { activity, action -> DemoNativeTab(activity, action) }
+        NativeTabViews.register("profile") { activity, action -> NativeProfileTab(activity, action) }
+    }
 }
 
 /** 独立的原生页面实例，切换 Tab 时不重新创建子控件。 */

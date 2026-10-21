@@ -109,7 +109,7 @@
             (id) => !['quick-start', 'native-integration', 'showcase'].includes(id)
           )
           await check(
-            '首页与原生分别展示目录，消息和我的保留 Demo，首屏不加载组件示例',
+            '首页与原生分别展示目录，消息保留 Demo，我的展示个人中心',
             async () => {
               assert(page().dataset.demoPage === 'home', '首页未展示目录')
               assert(
@@ -130,15 +130,17 @@
                   !page().querySelector('.demo-placeholder'),
                 '原生目录不完整'
               )
-              for (let index = 2; index < 4; index++) {
-                await pick(index)
-                assert(
-                  page().querySelector('.demo-placeholder') &&
-                    page().textContent.includes('Demo 页面'),
-                  '不是 Demo 占位页'
-                )
-                assert(!page().querySelector('.my-card'), '其他 Tab 混入组件演示')
-              }
+              await pick(2)
+              assert(page().querySelector('.demo-placeholder') && page().textContent.includes('Demo 页面'), '消息占位页被修改')
+              await pick(3)
+              assert(page().querySelector('[data-profile-home]') && page().textContent.includes('个人资料'), '我的没有展示个人中心入口')
+              assert(!page().querySelector('.demo-placeholder'), '我的仍然是占位页')
+              assert(page().textContent.includes('Android 应用内体验'), '没有说明原生资料编辑的平台要求')
+              const profileEntry = [...page().querySelectorAll('button')].find(node => node.textContent.includes('个人资料'))
+              assert(profileEntry?.disabled || profileEntry?.getAttribute('aria-disabled') === 'true', '浏览器不应伪装为可打开 Android 页面')
+              const browseEntry = [...page().querySelectorAll('button')].find(node => node.textContent.includes('浏览组件'))
+              browseEntry.click()
+              await until(() => page().dataset.demoPage === 'home', '个人中心没有切回组件目录')
               await pick(0)
             }
           )
