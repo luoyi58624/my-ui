@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ImagePreview 图片预览定向回归</title>
+<link rel="stylesheet" href="/packages/core/my-ui.css"><script src="/packages/core/my-ui.js"></script>
+<style>main{max-width:900px;margin:auto;padding:24px}#fixture{margin:24px 0}pre{font:12px/1.6 monospace;white-space:pre-wrap;overflow-wrap:anywhere}</style>
+<main><h1>ImagePreview 图片预览</h1><button id="run" disabled>运行图片预览回归</button><div id="fixture"></div><pre id="result">尚未运行</pre></main>
+<script type="module">
+import { createApp, h, ref, nextTick } from 'vue'
+import { ImagePreview } from '/packages/vue/index.ts'
+
+const fixture = document.querySelector('#fixture'), result = document.querySelector('#result'), runButton = document.querySelector('#run')
+const pause = ms => new Promise(resolve => setTimeout(resolve, ms))
+const tick = async () => { await nextTick(); await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))); await nextTick() }
+const assert = (condition, message) => { if (!condition) throw Error(message) }
+const near = (actual, expected, message, tolerance = 1) => assert(Math.abs(actual - expected) <= tolerance, `${message}: ${actual}/${expected}`)
+const until = async (predicate, message = '等待预览状态超时') => { for (let i = 0; i < 140; i++) { if (predicate()) return; await pause(20) } throw Error(message) }
+const makeImage = (color, text) => {
+  const canvas = document.createElement('canvas'); canvas.width = canvas.height = 1200
+  const context = canvas.getContext('2d'); context.fillStyle = color; context.fillRect(0, 0, 1200, 1200)
+  context.fillStyle = '#fff'; context.fillRect(100, 100, 180, 180); context.fillRect(920, 920, 180, 180)
+  context.font = 'bold 200px sans-serif'; context.textAlign = 'center'; context.fillText(text, 600, 670)
+  return canvas.toDataURL('image/png')
+}
+const images = [makeImage('#176b87', '1'), makeImage('#a53c68', '2'), makeImage('#467b3b', '3')]
+const invalid = 'data:image/png;base64,AA=='
+const overlays = () => [...document.querySelectorAll('.my-image-preview-overlay')]
+const overlay = () => overlays().findLast(node => !node.inert)
+const viewport = () => overlay()?.querySelector('.my-image-preview-viewport')
+const active = () => overlay()?.querySelector('.my-image-preview-slide.my-active')
+const current = () => Number(active()?.dataset.index ?? -1)
+const scale = () => Number(viewport()?.dataset.scale ?? 1)
+const button = label => overlay()?.querySelector(`button[aria-label="${label}"]`)
+const count = () => overlay()?.querySelector('.my-image-preview-count')?.textContent.replace(/\s/g, '')
+const key = (value, target = document.activeElement) => target.dispatchEvent(new KeyboardEvent('keydown', { key: value, bubbles: true, cancelable: true }))
+let app, owned = [], touchController, touchEvents = []
+const add = (props = {}, name = 'ImagePreview', slots = {}) => {
+  const controller = MyUI.create(name, name === 'ImagePreview' ? { images, value: true, ...props } : props, { slots })
+  owned.push(controller); fixture.append(controller.element); return controller
+}
+const cleanup = () => { app?.unmount(); app = undefined; owned.splice(0).forEach(controller => controller.destroy()); touchController = undefined; fixture.replaceChildren() }
+const ready = async () => { await until(() => active()?.querySelector('.my-image')?.dataset.state === 'loaded', '当前图片未成功加载'); await tick() }
+const snapshot = () => {
+  const stage = viewport(), slide = active(), image = slide?.querySelector('img'), rect = image?.getBoundingClientRect(), area = stage?.getBoundingClientRect()
+  const contain = image?.naturalWidth ? Math.min(image.clientWidth / image.naturalWidth, image.clientHeight / image.naturalHeight) : 0
+  const renderedScale = image?.clientWidth ? rect.width / image.clientWidth : 1
+  const contentWidth = (image?.naturalWidth ?? 0) * contain * renderedScale, contentHeight = (image?.naturalHeight ?? 0) * contain * renderedScale
+  const transforms = []
+  for (let node = image; node && node !== stage; node = node.parentElement) {
+    const value = getComputedStyle(node).transform
+    if (value !== 'none') { const matrix = new DOMMatrixReadOnly(value); transforms.push({ scale: matrix.a, x: matrix.e, y: matrix.f }) }
+  }
+  return {
+    index: current(), scale: scale(), x: Number(stage?.dataset.x ?? 0), y: Number(stage?.dataset.y ?? 0),
+    count: count(), naturalWidth: image?.naturalWidth ?? 0, naturalHeight: image?.naturalHeight ?? 0,
+    image: rect && { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+    content: rect && { x: rect.x + (rect.width - contentWidth) / 2, y: rect.y + (rect.height - contentHeight) / 2, width: contentWidth, height: contentHeight },
+    viewport: area && { x: area.x, y: area.y, width: area.width, height: area.height },
+    transforms, events: [...touchEvents], opened: !!overlay(), pageScale: visualViewport?.scale ?? 1,
+  }
+}
+// 真触摸用例复用同一真实页面；页面按钮保持手动运行，不与 CDP 手势并发。
+window.__imagePreviewTest = {
+  images,
+  async create(props = {}) { cleanup(); touchEvents = []; touchController = add({ ...props, onIndexChange: index => touchEvents.push(index) }); await ready(); return snapshot() },
+  async update(props) { touchController.update(props); await tick(); return snapshot() },
+  destroy() { cleanup() }, snapshot,
+}
+
+runButton.onclick = async () => {
+  runButton.disabled = true; result.textContent = '运行中'
+  const reports = []
+  const check = async (name, action) => {
+    cleanup()
+    try { await action(); reports.push({ name, pass: true }) }
+    catch (error) { reports.push({ name, pass: false, error: String(error.stack || error) }) }
+    finally { cleanup(); await tick() }
+  }
+  await check('原生从指定图片打开，真实图片、标题与计数完整', async () => {
+    const title = '旅行照片'; add({ startIndex: 1, title, images: images.map((src, index) => ({ src, alt: `照片 ${index + 1}` })) }); await ready()
+    assert(current() === 1 && count() === '2/3', '起始索引或计数错误')
+    const panel = overlay().querySelector('[role="dialog"]'), image = active().querySelector('img')
+    assert(panel?.getAttribute('aria-modal') === 'true', '缺少模态语义')
+    const accessibleTitle = panel.getAttribute('aria-label') || document.getElementById(panel.getAttribute('aria-labelledby'))?.textContent
+    assert(accessibleTitle?.includes(title), '预览标题没有可访问关联')
+    assert(image.naturalWidth === 1200 && image.alt === '照片 2', '未加载真实图片或丢失替代文字')
+    assert(document.documentElement.style.overflow === 'hidden', '预览未锁定背景滚动')
+  })
+  await check('按钮与键盘切图首尾不循环，每次有效切换只通知一次', async () => {
+    const indices = []; add({ onIndexChange: index => indices.push(index) }); await ready()
+    button('上一张').click(); await tick(); assert(current() === 0 && indices.length === 0, '首张错误循环')
+    button('下一张').click(); await ready(); assert(current() === 1, '下一张按钮失效')
+    key('End'); await ready(); assert(current() === 2, 'End 未到末张')
+    key('ArrowRight'); button('下一张').click(); await tick(); assert(current() === 2, '末张错误循环')
+    key('Home'); await ready(); key('ArrowRight'); await ready(); key('ArrowLeft'); await ready()
+    assert(indices.join(',') === '1,2,0,1,0', '索引事件漏发或重复：' + indices)
+  })
+  await check('缩放按钮和键盘真正改变图片尺寸，最大倍数与还原生效', async () => {
+    add({ maxZoom: 2 }); await ready(); const before = active().querySelector('img').getBoundingClientRect()
+    for (let index = 0; index < 8; index++) button('放大图片').click()
+    await pause(280); const after = active().querySelector('img').getBoundingClientRect()
+    near(scale(), 2, '没有限制最大缩放', .02); assert(after.width > before.width * 1.8, '只有缩放数字变化，图片没有放大')
+    key('0'); await pause(280); near(scale(), 1, '0 未还原', .02)
+    key('+'); await pause(280); assert(scale() > 1, '+ 未放大')
+    key('-'); await pause(280); assert(scale() >= 1 && scale() < 2, '- 未缩小')
+    button('还原图片').click(); await pause(280); near(active().querySelector('img').getBoundingClientRect().width, before.width, '图片还原尺寸错误', 2)
+    for (let index = 0; index < 8; index++) button('缩小图片').click()
+    near(scale(), 1, '缩小低于原始比例', .02)
+  })
+  await check('滚轮与双击缩放，切图后恢复原始位置和比例', async () => {
+    add(); await ready(); const stage = viewport(), rect = stage.getBoundingClientRect()
+    stage.dispatchEvent(new WheelEvent('wheel', { deltaY: -300, clientX: rect.x + rect.width / 2, clientY: rect.y + rect.height / 2, bubbles: true, cancelable: true }))
+    await pause(280); assert(scale() > 1, '滚轮未缩放')
+    button('还原图片').click(); await pause(280)
+    stage.dispatchEvent(new MouseEvent('dblclick', { clientX: rect.x + rect.width / 2, clientY: rect.y + rect.height / 2, bubbles: true, cancelable: true }))
+    await pause(280); near(scale(), 2, '双击未放大两倍', .02)
+    stage.dispatchEvent(new MouseEvent('dblclick', { clientX: rect.x + rect.width / 2, clientY: rect.y + rect.height / 2, bubbles: true, cancelable: true }))
+    await pause(280); near(scale(), 1, '再次双击未还原', .02)
+    button('放大图片').click(); button('下一张').click(); await ready()
+    near(scale(), 1, '切图保留了旧缩放', .02); near(Number(viewport().dataset.x), 0, '切图保留横向偏移'); near(Number(viewport().dataset.y), 0, '切图保留纵向偏移')
+  })
+  await check('关闭后重开回到 startIndex，快速重开不被旧退出动画删除', async () => {
+    let leaves = 0; const c = add({ startIndex: 1, onAfterLeave: () => leaves++ }); await ready()
+    button('下一张').click(); await ready(); c.update({ value: false }); c.update({ value: true }); await pause(350); await ready()
+    assert(current() === 1 && overlays().length === 1, '重开索引或弹层数量错误'); assert(leaves === 0, '取消的退出仍发 after-leave')
+    c.exposed.close(); await until(() => !overlays().length); assert(leaves === 1, '实际退出未完成一次回调')
+  })
+  await check('动态图片与起始索引更新，越界、空列表仍可正常关闭', async () => {
+    const c = add({ startIndex: 99 }); await ready(); assert(current() >= 0 && current() < 3, '越界索引没有回退')
+    c.update({ startIndex: 1 }); await ready(); assert(current() === 1, '更新起始索引未生效')
+    c.update({ images: [images[0]], startIndex: 0 }); await ready(); assert(current() === 0 && count() === '1/1', '缩减数组后索引错误')
+    c.update({ images: [] }); await tick(); assert(overlay() && button('关闭图片预览'), '空列表无法关闭'); assert(!overlay().textContent.includes('NaN'), '空列表出现 NaN')
+    button('关闭图片预览').click(); await until(() => !overlays().length)
+  })
+  await check('图片加载失败可重试，换图后旧请求事件不会覆盖新图', async () => {
+    const c = add({ images: [{ src: invalid, alt: '失败照片' }, images[1]] })
+    await until(() => active()?.querySelector('.my-image')?.dataset.state === 'error')
+    const previous = active().querySelector('img'); c.exposed.retry()
+    await until(() => active().querySelector('img') !== previous && active().querySelector('.my-image').dataset.state === 'error')
+    button('下一张').click(); await ready(); previous.dispatchEvent(new Event('error')); previous.dispatchEvent(new Event('load')); await tick()
+    assert(active().querySelector('.my-image').dataset.state === 'loaded' && current() === 1, '旧请求覆盖了当前图片')
+    c.update({ images }); await ready(); assert(current() >= 0 && current() < images.length, '替换失败图片后无法恢复')
+  })
+  await check('从错误图重试按钮切图，焦点离开隐藏页并继续支持键盘', async () => {
+    add({ images: [invalid, images[1]] }); await until(() => active()?.querySelector('.my-image')?.dataset.state === 'error')
+    const retry = active().querySelector('.my-image-error button'); retry.focus(); assert(document.activeElement === retry, '未建立错误图按钮焦点')
+    key('ArrowRight'); await ready()
+    const focused = document.activeElement
+    assert(overlay().contains(focused) && !focused.closest('[inert],[hidden],[aria-hidden="true"]') && !focused.matches(':disabled'), '切图后焦点留在隐藏图片或丢到背景')
+    key('ArrowLeft'); await tick(); assert(current() === 0, '切图后键盘操作失联')
+  })
+  await check('切到末张后原按钮禁用，焦点仍在预览中并能返回上一张', async () => {
+    add({ startIndex: 1 }); await ready(); const next = button('下一张'); next.focus(); next.click(); await ready()
+    const focused = document.activeElement
+    assert(current() === 2 && next.disabled, '未到达末张禁用边界')
+    assert(overlay().contains(focused) && !focused.matches(':disabled') && !focused.closest('[inert]'), '按钮禁用后焦点丢失或留在不可操作按钮')
+    key('ArrowLeft'); await ready(); assert(current() === 1, '末张键盘导航无法继续')
+  })
+  await check('关闭事件、系统返回和焦点恢复完整，退出期间继续拦截返回', async () => {
+    const before = document.documentElement.style.overflow, trigger = document.createElement('button'); trigger.textContent = '打开照片'; fixture.append(trigger); trigger.focus()
+    const changes = []; let closes = 0, leaves = 0
+    add({ onChange: value => changes.push(value), onClose: () => closes++, onAfterLeave: () => leaves++ }); await ready()
+    assert(MyUI.layers.dismissTop(), '预览没有接入系统返回')
+    assert(MyUI.layers.dismissTop(), '退出期间返回穿透')
+    await until(() => !overlays().length)
+    assert(changes.join(',') === 'false' && closes === 1 && leaves === 1, '关闭事件重复或缺失')
+    assert(document.activeElement === trigger && document.documentElement.style.overflow === before, '焦点或滚动锁未恢复')
+    assert(!MyUI.layers.dismissTop(), '退出后仍占用返回栈')
+  })
+  await check('嵌套弹窗只关闭顶层，禁止 Escape 时仍可用关闭按钮', async () => {
+    const trigger = document.createElement('button'); trigger.textContent = '查看照片'
+    add({ value: true, title: '底层对话框', icon: false }, 'Dialog', { default: trigger }); await tick(); trigger.focus()
+    const c = add({ closeOnEscape: false }); await ready(); key('Escape'); assert(MyUI.layers.dismissTop(), '受限预览返回穿透'); await tick()
+    assert(overlay() && current() === 0, '关闭限制被绕过')
+    button('关闭图片预览').click(); await until(() => !overlays().length)
+    const dialog = document.querySelector('.my-overlay.my-show'); assert(dialog && !dialog.inert, '底层弹窗被关闭或未恢复交互')
+    assert(document.activeElement === trigger, '未恢复底层弹窗的打开按钮焦点'); assert(document.documentElement.style.overflow === 'hidden', '底层仍打开却解除了滚动锁')
+    c.destroy(); MyUI.layers.dismissTop()
+  })
+  await check('Vue 双向展开、索引事件、响应式图片和公开方法正常', async () => {
+    const open = ref(false), sources = ref(images), start = ref(1), previewRef = ref(); const indices = []; let closes = 0
+    app = createApp({ setup: () => () => h(ImagePreview, { ref: previewRef, modelValue: open.value, images: sources.value, startIndex: start.value, title: 'Vue 照片', 'onUpdate:modelValue': value => open.value = value, onIndexChange: value => indices.push(value), onClose: () => closes++ }) })
+    app.mount(fixture); await tick(); assert(!overlay(), '未打开时挂载弹层')
+    open.value = true; await ready(); assert(current() === 1, 'Vue 起始索引错误')
+    button('下一张').click(); await ready(); assert(indices.join(',') === '2', 'Vue 索引事件错误')
+    sources.value = [images[0]]; start.value = 0; await ready(); assert(count() === '1/1', 'Vue 图片列表未同步')
+    previewRef.value.close(); await tick(); assert(open.value === false && closes === 1, '公开关闭未同步 Vue 模型'); await until(() => !overlays().length)
+    open.value = true; await ready(); app.unmount(); app = undefined; await tick(); assert(!overlays().length && !MyUI.layers.dismissTop(), 'Vue 卸载遗留弹层或返回记录')
+  })
+  await check('销毁立即释放图片、弹层与返回记录，公开方法不重新挂载', async () => {
+    const before = document.documentElement.style.overflow; let events = 0
+    const c = add({ onClose: () => events++, onAfterLeave: () => events++ }); await ready(); const image = active().querySelector('img')
+    c.destroy(); image.dispatchEvent(new Event('error')); image.dispatchEvent(new Event('load')); c.exposed.retry(); c.exposed.close(); await pause(350)
+    assert(!overlays().length && !MyUI.layers.dismissTop() && document.documentElement.style.overflow === before, '卸载留下全局状态')
+    assert(events === 0, '销毁后仍触发业务关闭事件')
+  })
+  result.textContent = JSON.stringify({ pass: reports.every(report => report.pass), total: reports.length, reports }, null, 2)
+  runButton.disabled = false
+}
+runButton.disabled = false
+</script></html>

@@ -82,6 +82,7 @@ const pages: Record<string, { file: string }[]> = {
   card: [{ file: 'pages/home/card/index.vue' }],
   identity: [{ file: 'pages/home/identity/index.vue' }],
   image: [{ file: 'pages/home/image/index.vue' }],
+  'image-preview': [{ file: 'pages/home/image-preview/index.vue' }],
   shadows: [{ file: 'pages/home/shadows/index.vue' }],
   'app-bar': [{ file: 'pages/home/app-bar/index.vue' }],
   'selection-collapse': [{ file: 'pages/home/selection-collapse/index.vue' }],

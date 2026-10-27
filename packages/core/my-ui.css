@@ -36,7 +36,6 @@
   --danger: #b5283c;
   --primary: #2454c6;
   --primary-text: #ffffff;
-  --font: system-ui, sans-serif;
 }
 
 :root[data-theme="dark"] {
@@ -82,7 +81,6 @@ html {
 
 body {
   margin: 0;
-  font-family: var(--font);
   font-size: 15px;
   font-weight: var(--font-weight, 400);
   background: var(--background);
@@ -92,7 +90,8 @@ body {
 
 button,
 input,
-textarea {
+textarea,
+select {
   font: inherit;
 }
 
@@ -3267,7 +3266,6 @@ h3[data-my-drawer] {
   overflow: hidden;
   border-radius: inherit;
   color: var(--tooltip-color, light-dark(#fff, #000));
-  font-family: var(--font);
   font-size: 12px;
   font-weight: var(--font-weight, 400);
   line-height: 16px;
@@ -3446,6 +3444,156 @@ img[data-my-avatar] {
     margin: 0;
     padding: 0;
   }
+}
+
+/* ── ImagePreview ────────────────────────────────────── */
+
+.my-image-preview-overlay[data-my-image-preview] {
+  --image-radius: 0px;
+  --image-background: transparent;
+  --text: #f7f8fa;
+  --text-secondary: #bdc3cd;
+  --primary: #e2eaff;
+  --primary-text: #111318;
+  --hover: rgb(255 255 255 / .12);
+  --press: rgb(255 255 255 / .2);
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  color: var(--text);
+  background: var(--image-preview-background, #111318);
+  color-scheme: dark;
+  overscroll-behavior: contain;
+}
+.my-image-preview[data-my-image-preview] {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  outline: none;
+}
+.my-image-preview-header[data-my-image-preview] {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-height: 72px;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-right, 0px)) 12px max(24px, env(safe-area-inset-left, 0px));
+}
+.my-image-preview-title[data-my-image-preview] {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.my-image-preview-count[data-my-image-preview],
+.my-image-preview-zoom[data-my-image-preview] {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.my-image-preview-viewport[data-my-image-preview] {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.my-image-preview-slide[data-my-image-preview] {
+  position: absolute;
+  inset: 0;
+  transition: transform 220ms cubic-bezier(.2, .7, .2, 1);
+}
+.my-image-preview-slide > .my-image[data-my-image-preview] {
+  transform-origin: center;
+  transition: transform 180ms ease-out;
+}
+.my-image-preview-slide img[data-my-image-preview] { -webkit-user-drag: none; }
+.my-image-preview-viewport.my-dragging .my-image-preview-slide[data-my-image-preview],
+.my-image-preview-viewport.my-dragging .my-image[data-my-image-preview] { transition: none; }
+.my-image-preview-viewport.my-zoomed[data-my-image-preview] { cursor: grab; }
+.my-image-preview-viewport.my-zoomed.my-dragging[data-my-image-preview] { cursor: grabbing; }
+.my-image-preview-empty[data-my-image-preview] {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+.my-image-preview-button[data-my-image-preview] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / .1);
+  border-radius: 50%;
+  background: rgb(255 255 255 / .06);
+  color: var(--text);
+  touch-action: manipulation;
+  transition: background 140ms, opacity 140ms;
+}
+.my-image-preview-button[data-my-image-preview] svg { width: 20px; height: 20px; }
+.my-image-preview-button[data-my-image-preview]:disabled { opacity: .3; cursor: default; }
+.my-image-preview-button[data-my-image-preview]:not(:disabled):active { background: var(--press); }
+.my-image-preview-previous[data-my-image-preview],
+.my-image-preview-next[data-my-image-preview] {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgb(17 19 24 / .7);
+}
+.my-image-preview-previous[data-my-image-preview] { left: max(24px, env(safe-area-inset-left, 0px)); }
+.my-image-preview-next[data-my-image-preview] { right: max(24px, env(safe-area-inset-right, 0px)); }
+.my-image-preview-previous[data-my-image-preview] svg { transform: rotate(180deg); }
+.my-image-preview-footer[data-my-image-preview] {
+  margin: 0;
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  padding: 20px max(16px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+}
+.my-image-preview-caption[data-my-image-preview] {
+  max-width: 100%;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 20px;
+}
+.my-image-preview-caption[data-my-image-preview]:empty { display: none; }
+.my-image-preview-toolbar[data-my-image-preview] { display: flex; align-items: center; gap: 10px; }
+.my-image-preview-zoom[data-my-image-preview] { min-width: 46px; text-align: center; }
+.my-image-preview-motion-enter-active[data-my-image-preview],
+.my-image-preview-motion-leave-active[data-my-image-preview] { transition: opacity 180ms ease; }
+.my-image-preview-motion-enter-from[data-my-image-preview],
+.my-image-preview-motion-leave-to[data-my-image-preview] { opacity: 0; }
+@media (hover: hover) {
+  .my-image-preview-button[data-my-image-preview]:not(:disabled):hover { background: var(--hover); }
+}
+@media (max-width: 600px) {
+  .my-image-preview-header[data-my-image-preview] { min-height: 64px; gap: 12px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px)); }
+  .my-image-preview-footer[data-my-image-preview] { padding-top: 14px; padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px)); gap: 10px; }
+  .my-image-preview-previous[data-my-image-preview] { left: max(8px, env(safe-area-inset-left, 0px)); }
+  .my-image-preview-next[data-my-image-preview] { right: max(8px, env(safe-area-inset-right, 0px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .my-image-preview-overlay[data-my-image-preview],
+  .my-image-preview-overlay [data-my-image-preview] { transition: none; }
 }
 
 /* ── Badge ───────────────────────────────────────────── */

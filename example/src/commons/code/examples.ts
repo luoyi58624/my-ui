@@ -293,6 +293,11 @@ async function share() {
       import('../../pages/home/image/index.vue?raw').then((m) => m.default)
     )
   ],
+  'image-preview': [
+    vue('pages/home/image-preview/index.vue', () =>
+      import('../../pages/home/image-preview/index.vue?raw').then((m) => m.default)
+    )
+  ],
   'app-bar': [
     vue('pages/home/app-bar/index.vue', () =>
       import('../../pages/home/app-bar/index.vue?raw').then((m) => m.default)

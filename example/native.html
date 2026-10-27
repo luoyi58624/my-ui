@@ -171,6 +171,8 @@
       <p class="caption">原生懒加载、预留比例、失败重试，样式仍然只来自公共 CSS。</p>
       <div data-my="Image"
            data-options='{"src":"./public/images/lake.svg","alt":"山间湖泊与一叶小舟","ratio":"16 / 9","fit":"cover"}'></div>
+      <p><button id="preview-images" class="my-button" type="button">全屏浏览图片</button></p>
+      <div id="native-image-preview"></div>
     </section>
     <section class="demo-card">
       <h2>滚轮选择</h2>
@@ -243,6 +245,12 @@
     if (window.__TAURI__?.core?.invoke) void import('./src/commons/native-theme.ts');
     document.querySelector('#save').onclick = () => { document.querySelector('#notice').textContent = '修改已在当前页面保存'; };
     mount('#nickname', 'Input', {label: '显示名称', value: '小蓝同学', clearable: true, icon: 'user'});
+    const preview = mount('#native-image-preview', 'ImagePreview', {title: '收集一些好风景', images: [
+      {src: './public/images/lake.svg', alt: '山间湖泊与一叶小舟'},
+      {src: './public/images/coast.svg', alt: '午后的海岸与灯塔'},
+      {src: './public/images/dunes.svg', alt: '日落前的沙丘与小径'},
+    ]});
+    document.querySelector('#preview-images').onclick = () => preview.update({value: true, startIndex: 0});
     const cities = [{value: 'hangzhou', label: '杭州', description: '西湖与日常的好风景'}, {value: 'shanghai', label: '上海', description: '在城市中发现灵感'}, {value: 'chengdu', label: '成都', description: '慢一点，也自在一点'}];
     mount('#destination', 'Combobox', {label: '目的地', value: 'hangzhou', options: cities, clearable: true, onChange(value) {document.querySelector('#selected').textContent = '已选目的地：' + (cities.find(item => item.value === value)?.label ?? '未选择');}});
     const progress = mount('#progress', 'Progress', {label: '已播放与缓冲', value: 36, buffer: 72});

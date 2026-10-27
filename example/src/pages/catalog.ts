@@ -27,6 +27,7 @@ export const demoGroups: { title: string; items: DemoExample[] }[] = [
       { id: 'card', title: 'Card 卡片', icon: 'layer', anchors: ['surfaces'] },
       { id: 'identity', title: 'Avatar / Badge', icon: 'user', anchors: ['avatar-badge'] },
       { id: 'image', title: 'Image 图片', icon: 'image' },
+      { id: 'image-preview', title: 'ImagePreview 图片预览', icon: 'image' },
       { id: 'shadows', title: 'Shadow 阴影', icon: 'layer' }
     ]
   },

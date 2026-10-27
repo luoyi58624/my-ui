@@ -99,7 +99,7 @@ const actions = [
 
 保留原来的 Vue 组件名、v-model、事件、具名插槽与作用域插槽。适配层使用实际原生元素作为根节点，组件之间通过 DOM 上下文共享布局与分组状态。
 
-公共组件：Icon、Avatar、Image、Badge、Button、Tag、TagGroup、Input、Textarea、Form、FormField、Radio、RadioGroup、Checkbox、CheckboxGroup、Choices、Switch、Select、Combobox、Segmented、Slider、Picker、DatePicker、TimePicker、Calendar、Upload、AppBar、Notice、Steps、Progress、PullRefresh、Tabs、Navigation、Tabbar、Stepper、CellGroup、ListRow、Collapse、CollapseItem、Card、Tooltip、Divider、Loading、Skeleton、Empty、Floating、Menu、Popover、Dialog、Sheet、Drawer、Popup、Toast。
+公共组件：Icon、Avatar、Image、ImagePreview、Badge、Button、Tag、TagGroup、Input、Textarea、Form、FormField、Radio、RadioGroup、Checkbox、CheckboxGroup、Choices、Switch、Select、Combobox、Segmented、Slider、Picker、DatePicker、TimePicker、Calendar、Upload、AppBar、Notice、Steps、Progress、PullRefresh、Tabs、Navigation、Tabbar、Stepper、CellGroup、ListRow、Collapse、CollapseItem、Card、Tooltip、Divider、Loading、Skeleton、Empty、Floating、Menu、Popover、Dialog、Sheet、Drawer、Popup、Toast。
 
 ## PullRefresh 下拉刷新
 
@@ -227,6 +227,46 @@ Steps 的 `options` 使用 `{ label, description?, icon?, disabled? }`，`value`
 `fit` 支持 `cover`、`contain`、`fill`、`none`、`scale-down`。CSS 仅暴露 `--image-radius`、`--image-background`、`--image-position` 三个外观变量。`srcset`、`sizes`、`crossorigin`、`referrerpolicy` 等原生属性会传给实际 `img`，`class` 和 `style` 作用于容器。
 
 `load` / `error` 返回当前图片的原生事件。失败内容默认提供重试按钮，错误插槽可通过 `retry()` 重载当前地址，Vue 组件 ref 和原生实例的 `exposed.retry()` 也可调用。重试不追加缓存参数，旧请求事件及销毁后的事件不会触发回调。`alt=""` 表示装饰图。
+
+## ImagePreview 图片预览
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue'
+import { Button, ImagePreview, type ImagePreviewItem } from '@my-ui/vue'
+
+const open = ref(false)
+const images: ImagePreviewItem[] = [
+  { src: '/images/lake.svg', alt: '山间湖泊与一叶小舟' },
+  { src: '/images/coast.svg', alt: '午后的海岸与灯塔' },
+]
+</script>
+
+<template>
+  <Button @click="open = true">浏览图片</Button>
+  <ImagePreview v-model="open" :images="images" :start-index="0" title="旅行相册" />
+</template>
+```
+
+`images` 接受图片地址字符串或 `{ src, alt? }` 对象；`v-model` 控制全屏窗口。`startIndex` 从零开始，默认 `0`，打开中更新会切换到对应图片。`index-change` 返回当前索引，`close` 通知关闭操作，`after-leave` 在离场动画结束后触发。空列表显示可关闭的空状态；失败图片提供重试入口，Vue ref 的 `retry()` 也可重试当前图片，`close()` 可主动关闭。
+
+图片默认完整显示，原比例下左右拖动或使用前后按钮切换，首尾不循环。双击或双点切换两倍放大与还原，鼠标滚轮、双指和缩放按钮支持连续缩放；`maxZoom` 默认 `4`，放大后可拖动查看细节。键盘支持左右方向键、Home / End 切图，`+` / `-` 缩放，`0` 还原。窗口复用公共模态栈，锁定背景滚动并在关闭后恢复焦点；`closeOnEscape=false` 同时禁止 Escape 与系统返回关闭，关闭按钮和主动 `close()` 仍可用。
+
+```js
+const preview = MyUI.create('ImagePreview', {
+  value: true,
+  images: ['/images/lake.svg', { src: '/images/coast.svg', alt: '海岸与灯塔' }],
+  startIndex: 0,
+  onChange(open) { console.log('预览状态', open); },
+  onIndexChange(index) { console.log('当前图片', index); },
+});
+document.body.append(preview.element);
+// 页面卸载时调用 preview.destroy()；主动关闭使用 preview.exposed.close()。
+```
+
+完整 Vue 示例见 `example/src/pages/home/image-preview/index.vue`，原生入口见 `example/native.html`，图片均为本地资源，可离线浏览。关闭后释放预览图片，只在打开期间保留当前图和相邻图。
+
+`bun run test:browser image-preview` 检查原生与 Vue 同步、索引、缩放、错误重试、焦点、返回与卸载；`node --test tests/image-preview.test.mjs` 使用 Chromium 触摸序列检查横滑、双指缩放、捏合转单指平移、双点和取消边界。浏览器触摸回归不代替手机真机验收。
 
 ## Slider 刻度与拖动
 

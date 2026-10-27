@@ -16,6 +16,7 @@ export const homeDocs: Record<string, Component> = {
   card: defineAsyncComponent(() => import('./card/index.vue')),
   identity: defineAsyncComponent(() => import('./identity/index.vue')),
   image: defineAsyncComponent(() => import('./image/index.vue')),
+  'image-preview': defineAsyncComponent(() => import('./image-preview/index.vue')),
   shadows: defineAsyncComponent(() => import('./shadows/index.vue')),
   'app-bar': defineAsyncComponent(() => import('./app-bar/index.vue')),
   'selection-collapse': defineAsyncComponent(() => import('./selection-collapse/index.vue')),

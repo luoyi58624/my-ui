@@ -3805,6 +3805,277 @@
     destroy: overlayDestroy,
   });
 
+  // ── 图片预览：只保留当前图与相邻图，手势直接更新变换，不逐帧重绘组件 ─────
+  register("ImagePreview", {
+    defaults: { value: false, images: [], startIndex: 0, title: "图片预览", maxZoom: 4, closeOnEscape: true },
+    init(c) {
+      c.element.style.display = "contents";
+      c.overlay = el("div", "image-preview-overlay");
+      c.panel = el("div", "image-preview");
+      c.header = el("header", "image-preview-header");
+      c.heading = el("h3", "image-preview-title");
+      c.count = el("span", "image-preview-count");
+      c.viewport = el("div", "image-preview-viewport");
+      c.empty = el("div", "image-preview-empty", "暂无图片");
+      c.footer = el("footer", "image-preview-footer");
+      c.caption = el("p", "image-preview-caption");
+      c.toolbar = el("div", "image-preview-toolbar");
+      c.zoomLabel = el("span", "image-preview-zoom", "100%");
+      c.pages = new Map();
+      c.items = [];
+      c.index = 0;
+      c.scale = 1; c.x = c.y = c.offset = 0;
+      c.frame = 0;
+      c.points = new Map();
+      c.classTarget = c.attributeTarget = c.panel;
+      c.styleTarget = c.overlay;
+      attrs(c.panel, { role: "dialog", "aria-modal": true, "aria-labelledby": c.id + "-title", tabindex: -1 });
+      attr(c.heading, "id", c.id + "-title");
+      attrs(c.count, { "aria-live": "polite", "aria-atomic": true });
+      const button = (label, icon, action) => {
+        const node = el("button", "image-preview-button");
+        attrs(node, { type: "button", "aria-label": label, title: label });
+        const mark = svgIcon(icon === "plus" || icon === "minus" || icon === "refresh" ? "add" : icon);
+        if (icon === "minus") mark.innerHTML = '<path d="M5 12h14"/>';
+        if (icon === "refresh") mark.innerHTML = '<path d="M3 10a9 9 0 1 1 2.5 8M3 4v6h6"/>';
+        node.append(mark);
+        c.on(node, "click", action);
+        return node;
+      };
+      c.close = () => {
+        if (!c.opened) return;
+        c.p.value = false; c.paint(); c.emit("change", false); c.emit("close");
+      };
+      c.closeButton = button("关闭图片预览", "x", c.close);
+      c.previous = button("上一张", "chevron-right", () => c.go(c.index - 1));
+      c.previous.classList.add("my-image-preview-previous");
+      c.next = button("下一张", "chevron-right", () => c.go(c.index + 1));
+      c.next.classList.add("my-image-preview-next");
+      c.zoomOut = button("缩小图片", "minus", () => c.zoom(c.scale / 1.5));
+      c.zoomIn = button("放大图片", "plus", () => c.zoom(c.scale * 1.5));
+      c.resetButton = button("还原图片", "refresh", () => c.zoom(1));
+      c.header.append(c.heading, c.count, c.closeButton);
+      c.toolbar.append(c.zoomOut, c.zoomLabel, c.zoomIn, c.resetButton);
+      c.footer.append(c.caption, c.toolbar);
+      c.viewport.append(c.empty);
+      c.panel.append(c.header, c.viewport, c.previous, c.next, c.footer);
+      c.overlay.append(c.panel);
+      c.activeImage = () => c.pages.get(c.index)?.image;
+      c.ready = () => c.activeImage()?.element.dataset.state === "loaded";
+      c.limit = () => Math.max(1, Number.isFinite(c.p.maxZoom) ? c.p.maxZoom : 4);
+      c.bound = () => {
+        const image = c.activeImage()?.element.querySelector("img");
+        const width = c.viewport.clientWidth, height = c.viewport.clientHeight;
+        const fit = image?.naturalWidth ? Math.min(width / image.naturalWidth, height / image.naturalHeight) : 0;
+        const maxX = Math.max(0, (fit * (image?.naturalWidth || 0) * c.scale - width) / 2);
+        const maxY = Math.max(0, (fit * (image?.naturalHeight || 0) * c.scale - height) / 2);
+        c.x = clamp(c.x, -maxX, maxX); c.y = clamp(c.y, -maxY, maxY);
+      };
+      c.draw = () => {
+        cancelAnimationFrame(c.frame); c.frame = 0;
+        for (const [index, page] of c.pages) {
+          page.slide.style.transform = `translate3d(${(index - c.index) * c.viewport.clientWidth + c.offset}px,0,0)`;
+          page.image.element.style.transform = index === c.index ? `translate3d(${c.x}px,${c.y}px,0) scale(${c.scale})` : "";
+        }
+        attrs(c.viewport, { "data-scale": c.scale, "data-x": c.x, "data-y": c.y });
+        state(c.viewport, { zoomed: c.scale > 1 });
+        text(c.zoomLabel, Math.round(c.scale * 100) + "%");
+        c.zoomIn.disabled = !c.ready() || c.scale >= c.limit();
+        c.zoomOut.disabled = c.resetButton.disabled = !c.ready() || c.scale <= 1;
+      };
+      c.schedule = () => { if (!c.frame) c.frame = requestAnimationFrame(c.draw); };
+      c.cancel = () => {
+        const ids = [...c.points.keys()];
+        c.points.clear(); c.gesture = undefined; c.tap = undefined; c.offset = 0;
+        for (const id of ids) if (c.viewport.hasPointerCapture(id)) c.viewport.releasePointerCapture(id);
+        c.viewport.classList.remove("my-dragging");
+        c.draw();
+      };
+      c.zoom = (value, point) => {
+        if (!c.opened || !c.ready()) return;
+        c.cancel();
+        const next = clamp(value, 1, c.limit()), ratio = next / c.scale;
+        const rect = c.viewport.getBoundingClientRect();
+        const x = point ? point.x - rect.left - rect.width / 2 : 0;
+        const y = point ? point.y - rect.top - rect.height / 2 : 0;
+        c.x = x - (x - c.x) * ratio; c.y = y - (y - c.y) * ratio;
+        c.scale = next; c.bound(); c.draw();
+      };
+      c.go = (index) => {
+        if (!c.opened || !c.items.length) return;
+        const next = clamp(index, 0, c.items.length - 1);
+        if (next === c.index) { c.cancel(); return; }
+        c.cancel(); c.index = next; c.scale = 1; c.x = c.y = 0;
+        c.renderPages(); c.emit("index-change", next);
+      };
+      c.clearPages = () => {
+        for (const page of c.pages.values()) { page.image.destroy(); page.slide.remove(); }
+        c.pages.clear();
+      };
+      c.renderPages = () => {
+        const focused = document.activeElement;
+        const keepFocus = c.panel.contains(focused);
+        for (const [index, page] of c.pages) {
+          if (Math.abs(index - c.index) > 1 || !c.items[index] || page.src !== c.items[index].src) {
+            page.image.destroy(); page.slide.remove(); c.pages.delete(index);
+          }
+        }
+        for (let index = Math.max(0, c.index - 1); index <= Math.min(c.items.length - 1, c.index + 1); index++) {
+          const item = c.items[index];
+          let page = c.pages.get(index);
+          if (!page) {
+            const slide = el("div", "image-preview-slide");
+            attr(slide, "data-index", index);
+            const image = c.child("Image", { src: item.src, alt: item.alt, fit: "contain", loading: "eager", width: "100%", height: "100%",
+              _load: () => { if (c.opened && index === c.index) { c.bound(); c.draw(); } },
+              _error: () => { if (c.opened && index === c.index) { c.scale = 1; c.x = c.y = 0; c.draw(); } },
+            });
+            slide.append(image.element); c.viewport.append(slide);
+            page = { slide, image, src: item.src }; c.pages.set(index, page);
+            slide.style.transform = `translate3d(${(index - c.index) * c.viewport.clientWidth}px,0,0)`;
+          } else page.image.update({ alt: item.alt });
+          page.slide.inert = index !== c.index;
+          attr(page.slide, "aria-hidden", index !== c.index);
+          state(page.slide, { active: index === c.index });
+        }
+        c.empty.hidden = c.items.length > 0;
+        c.previous.hidden = c.next.hidden = c.items.length <= 1;
+        c.previous.disabled = c.index === 0;
+        c.next.disabled = c.index >= c.items.length - 1;
+        text(c.count, c.items.length ? `${c.index + 1} / ${c.items.length}` : "0 / 0");
+        text(c.caption, c.items[c.index]?.alt);
+        scope(c.overlay, c.name); c.bound(); c.draw();
+        // 旧页和首尾按钮可能变为不可交互，保留后续键盘操作的入口。
+        if (keepFocus && (!focused.isConnected || focused.closest("[inert],[hidden]") || focused.matches(":disabled")))
+          c.panel.focus({ preventScroll: true });
+      };
+      const interactive = () => c.opened && !c.overlay.inert;
+      const begin = () => {
+        const points = [...c.points.values()], first = points[0];
+        if (!first) { c.gesture = undefined; return; }
+        c.gesture = { x: first.x, y: first.y, panX: c.x, panY: c.y, scale: c.scale, moved: false, multi: points.length > 1 };
+        if (points.length > 1) {
+          const rect = c.viewport.getBoundingClientRect(), second = points[1];
+          Object.assign(c.gesture, { distance: Math.max(1, Math.hypot(second.x - first.x, second.y - first.y)),
+            midX: (first.x + second.x) / 2 - rect.left - rect.width / 2,
+            midY: (first.y + second.y) / 2 - rect.top - rect.height / 2, rect });
+          c.offset = 0; c.tap = undefined;
+        }
+      };
+      c.on(c.viewport, "pointerdown", event => {
+        if (!interactive() || event.button !== 0 || event.target.closest("button") || !c.items.length) return;
+        if (c.points.size >= 2) { c.cancel(); return; }
+        if (event.pointerType === "touch") c.lastTouch = performance.now();
+        c.points.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        c.viewport.setPointerCapture(event.pointerId);
+        c.viewport.classList.add("my-dragging"); begin();
+      });
+      c.on(c.viewport, "pointermove", event => {
+        if (!c.points.has(event.pointerId)) return;
+        if (!interactive()) { c.cancel(); return; }
+        c.points.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        const points = [...c.points.values()], g = c.gesture;
+        if (!g) return;
+        const dx = points[0].x - g.x, dy = points[0].y - g.y;
+        if (Math.hypot(dx, dy) > 6) g.moved = true;
+        if (points.length === 2 && c.ready()) {
+          const [a, b] = points;
+          c.scale = clamp(g.scale * Math.hypot(b.x - a.x, b.y - a.y) / g.distance, 1, c.limit());
+          c.x = (a.x + b.x) / 2 - g.rect.left - g.rect.width / 2 - (g.midX - g.panX) * c.scale / g.scale;
+          c.y = (a.y + b.y) / 2 - g.rect.top - g.rect.height / 2 - (g.midY - g.panY) * c.scale / g.scale;
+          c.bound();
+        } else if (c.scale > 1) {
+          c.x = g.panX + dx; c.y = g.panY + dy; c.bound();
+        } else if (!g.multi) {
+          if (!g.axis && g.moved) g.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+          if (g.axis === "x") c.offset = dx * ((c.index === 0 && dx > 0 || c.index === c.items.length - 1 && dx < 0) ? .25 : 1);
+        }
+        c.schedule();
+      });
+      c.on(c.viewport, "pointerup", event => {
+        if (!c.points.has(event.pointerId)) return;
+        const g = c.gesture, offset = c.offset;
+        c.points.delete(event.pointerId);
+        if (c.viewport.hasPointerCapture(event.pointerId)) c.viewport.releasePointerCapture(event.pointerId);
+        if (c.points.size) { begin(); c.gesture.multi = true; return; }
+        c.gesture = undefined; c.viewport.classList.remove("my-dragging");
+        c.offset = 0;
+        if (g && !g.multi && c.scale === 1 && Math.abs(offset) >= Math.min(80, c.viewport.clientWidth * .2)) c.go(c.index + (offset < 0 ? 1 : -1));
+        else if (g && !g.multi && !g.moved && event.pointerType === "touch") {
+          const point = { x: event.clientX, y: event.clientY }, now = performance.now();
+          if (c.tap && now - c.tap.time < 300 && Math.hypot(point.x - c.tap.x, point.y - c.tap.y) < 24) c.zoom(c.scale > 1 ? 1 : 2, point);
+          else c.tap = { ...point, time: now };
+        } else c.tap = undefined;
+        c.draw();
+      });
+      c.on(c.viewport, "pointercancel", c.cancel);
+      c.on(c.viewport, "lostpointercapture", event => { if (c.points.has(event.pointerId)) c.cancel(); });
+      c.on(c.viewport, "dblclick", event => {
+        // 触屏双点已在 pointerup 处理，忽略浏览器随后合成的鼠标双击。
+        if (performance.now() - (c.lastTouch ?? -Infinity) < 600 || event.target.closest("button")) return;
+        c.zoom(c.scale > 1 ? 1 : 2, { x: event.clientX, y: event.clientY });
+      });
+      c.on(c.viewport, "wheel", event => {
+        if (!interactive() || !c.ready()) return;
+        event.preventDefault();
+        c.zoom(c.scale * Math.exp(-clamp(event.deltaY, -200, 200) * .003), { x: event.clientX, y: event.clientY });
+      }, { passive: false });
+      c.on(c.viewport, "dragstart", event => event.preventDefault());
+      c.on(c.panel, "keydown", event => {
+        if (!interactive() || event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
+        const actions = { ArrowLeft: () => c.go(c.index - 1), ArrowRight: () => c.go(c.index + 1), Home: () => c.go(0), End: () => c.go(c.items.length - 1),
+          "+": () => c.zoom(c.scale * 1.5), "=": () => c.zoom(c.scale * 1.5), "-": () => c.zoom(c.scale / 1.5), "0": () => c.zoom(1) };
+        if (actions[event.key]) { event.preventDefault(); actions[event.key](); }
+      });
+      c.on(window, "blur", c.cancel);
+      c.on(document, "visibilitychange", () => { if (document.hidden) c.cancel(); });
+      c.resize = new ResizeObserver(() => { if (c.opened) { c.cancel(); c.bound(); c.draw(); } });
+      c.exposed.close = c.close;
+      c.exposed.retry = () => c.activeImage()?.exposed.retry();
+    },
+    paint(c) {
+      const items = (Array.isArray(c.p.images) ? c.p.images : []).map(item => typeof item === "string" ? { src: item, alt: "" } : { src: String(item?.src ?? ""), alt: String(item?.alt ?? "") });
+      const changed = items.length !== c.items.length || items.some((item, index) => item.src !== c.items[index]?.src || item.alt !== c.items[index]?.alt);
+      const opening = !!c.p.value && !c.opened;
+      const startChanged = !Object.is(c.start, c.p.startIndex);
+      const limitChanged = !Object.is(c.maxZoom, c.p.maxZoom);
+      const previousIndex = c.index;
+      const index = opening || startChanged ? (Number.isFinite(c.p.startIndex) ? Math.trunc(c.p.startIndex) : 0) : c.index;
+      c.items = items; c.start = c.p.startIndex; c.maxZoom = c.p.maxZoom;
+      c.index = clamp(index, 0, Math.max(0, items.length - 1));
+      text(c.heading, c.p.title || "图片预览");
+      if (changed || opening || startChanged || !c.p.value) { c.cancel(); c.scale = 1; c.x = c.y = 0; }
+      else if (limitChanged) c.cancel();
+      c.scale = Math.min(c.scale, c.limit());
+      if (!!c.p.value !== !!c.opened) {
+        c.opened = !!c.p.value; c.motion?.cancel();
+        if (c.opened) {
+          document.body.append(c.overlay); c.overlay.inert = false;
+          attr(c.overlay, "aria-hidden", false);
+          c.renderPages(); c.resize.observe(c.viewport);
+          c.release = acquireModal(c.overlay, () => { if (c.p.closeOnEscape !== false) c.close(); });
+          c.backLayer?.release();
+          c.backLayer = trackBackLayer(c.overlay, () => { if (c.p.closeOnEscape !== false) c.close(); });
+          c.motion = cssMotion(c.overlay, "image-preview-motion", true);
+        } else {
+          c.resize.disconnect(); c.backLayer?.closing();
+          c.release?.(); c.release = undefined;
+          c.overlay.inert = true; attr(c.overlay, "aria-hidden", true);
+          c.motion = cssMotion(c.overlay, "image-preview-motion", false, () => {
+            if (c.opened) return;
+            c.overlay.remove(); c.clearPages(); c.backLayer?.release(); c.backLayer = undefined;
+            c.emit("after-leave");
+          });
+        }
+      } else if (c.opened) c.renderPages();
+      scope(c.overlay, c.name);
+      if (!opening && c.opened && previousIndex !== c.index) c.emit("index-change", c.index);
+    },
+    destroy(c) {
+      c.cancel(); c.resize.disconnect(); c.clearPages(); overlayDestroy(c);
+    },
+  });
+
   // ── 菜单：同一控制器处理点击、右键、触屏长按与任意级联 ───────────────────
   const menuControllers = new Set();
   function menuInit(c) {

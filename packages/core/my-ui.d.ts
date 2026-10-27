@@ -1,3 +1,11 @@
+/** 图片预览项；字符串图片地址也可直接用于 images。 */
+export interface ImagePreviewItem {
+  /** 图片地址，交给浏览器加载。 */
+  src: string;
+  /** 图片替代文字，同时作为预览说明。 */
+  alt?: string;
+}
+
 /** 文件从选择到请求完成的状态，取消后仍可重试。 */
 export type UploadStatus = "ready" | "uploading" | "success" | "error" | "canceled";
 /** 上传列表记录；已有文件可只提供 id、name、url 和状态。 */
