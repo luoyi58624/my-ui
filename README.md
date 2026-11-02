@@ -19,6 +19,7 @@ example/                @my-ui/example：展示与使用示例
   index.html            Vue 入口
   native.html           不加载 Vue 的原生 HTML 示例
   card.html             直接引用公共 CSS/JS 的原生卡片示例
+  components.html       只加载 CSS 的 HTML + class 静态组件示例
   vite.config.ts        示例的开发与构建配置
   src-tauri/            桌面应用壳，直接加载同一个示例
     src/                Rust 启动入口
@@ -35,6 +36,27 @@ bun.lock                唯一依赖锁文件
 Vue 封装与示例是两个由 Bun 统一安装与关联的私有 workspace；`lib/` 直接保存浏览器可用的 CSS/JS。示例通过 `@my-ui/vue` 使用本地源码，修改 `lib/` 后实时更新。包配置中的 `private` 用于禁止 npm 发布，不影响公开 GitHub 仓库中的静态文件访问。
 
 ## 普通 HTML
+
+### 只使用 HTML 与 class
+
+`example/components.html` 展示 Button、Tag、Avatar、Badge、Card、Input、Textarea、Switch、Checkbox、Radio、Divider、Loading、Skeleton，整个页面只加载 `lib/my-ui.css`，没有脚本或 `data-my-*` 标记。可以直接本地打开；输入、勾选、单选和表单重置使用浏览器原生行为。样式也可用于 JavaScript 被禁用的环境。
+
+```html
+<link rel="stylesheet" href="./lib/my-ui.css">
+
+<button class="my-button my-primary" type="button">保存</button>
+<input class="my-switch" type="checkbox" checked aria-label="接收通知">
+<label class="my-choice-control">
+  <input type="checkbox">
+  <span class="my-choice-label">产品更新</span>
+</label>
+```
+
+组件结构和更多类名见该示例。原生控件选择器限定在组件容器内，不依赖 JS 添加标记。这些静态用法适用于当前 `lib/`，已发布的 `v1.0.0` 仍使用旧的作用域选择器；发布新版本前请引用本地文件。
+
+执行 `node --test tests/static-html.test.mjs`，可在禁用 JavaScript 的 Chrome 中定向检查窄屏、桌面、原生表单操作与样式隔离。
+
+### 需要 JavaScript 交互
 
 复制 `lib/` 到页面旁边，直接引用其中的 CSS/JS，类型声明可按需保留。可离线运行，不需要 Vue、包管理器或构建工具。项目中的 `example/native.html` 是完整示例，`example/card.html` 单独展示交互卡片，两者与 Vue 示例共用核心，没有第二套按压逻辑。构建后 `dist/card.html` 引用旁边的 `lib/my-ui.css`、`lib/my-ui.js`，可以直接打开。
 
@@ -372,7 +394,7 @@ Vue 从 `./my-ui/packages/vue` 导入 `popup`，`content` 返回 `h()` 构建的
 
 ## 改样式、主题和交互
 
-组件类名统一为 `my-` 前缀，例如 `.my-button`、`.my-input-box`、`.my-list-row`。所有组件规则只在 `lib/my-ui.css` 中维护，组件内部选择器带有隔离标记，避免影响宿主页面。变量保留简短的语义名，按需覆盖即可。
+组件类名统一为 `my-` 前缀，例如 `.my-button`、`.my-input-box`、`.my-list-row`。所有组件规则只在 `lib/my-ui.css` 中维护；上述静态组件通过类名和组件结构限定样式范围，其他组件仍使用内部隔离标记，避免影响宿主页面。变量保留简短的语义名，按需覆盖即可。
 
 ```css
 /* 单个输入框也可直接通过 style 覆写这些变量。 */

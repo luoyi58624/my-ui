@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>my-ui · 纯 HTML 组件示例</title>
+  <link rel="stylesheet" href="../lib/my-ui.css">
+  <style>
+    /* 页面只负责排布和代码展示，组件外观统一来自 lib/my-ui.css。 */
+    body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+    .demo-page { max-width: 1120px; margin: auto; padding: 48px 24px 64px; }
+    .demo-header { margin-bottom: 32px; }
+    .demo-eyebrow { margin: 0 0 12px; color: var(--primary); font-size: 12px; font-weight: 600; letter-spacing: 2px; }
+    .demo-header h1 { margin: 0 0 14px; font-size: clamp(28px, 4vw, 42px); letter-spacing: -1px; }
+    .demo-description { margin: 0; color: var(--text-secondary); line-height: 1.7; }
+    .demo-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+    .demo-panel { min-width: 0; }
+    .demo-panel h2 { margin: 0 0 8px; font-size: 19px; }
+    .demo-caption { margin: 0 0 22px; color: var(--text-secondary); font-size: 13px; line-height: 1.7; }
+    .demo-row { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .demo-stack { display: grid; gap: 18px; }
+    .demo-wide { grid-column: 1 / -1; }
+    .demo-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
+    .demo-field { display: grid; gap: 9px; min-width: 0; font-size: 14px; }
+    .demo-switch-label { display: inline-flex; align-items: center; gap: 12px; width: fit-content; cursor: pointer; }
+    .demo-group { display: grid; gap: 6px; min-width: 0; margin: 0; padding: 0; border: 0; }
+    .demo-group legend { margin-bottom: 6px; padding: 0; font-size: 14px; }
+    .demo-profile { display: flex; align-items: center; gap: 16px; }
+    .demo-profile p { margin: 5px 0 0; color: var(--text-secondary); font-size: 13px; line-height: 1.6; }
+    .demo-paragraph { margin: 0; line-height: 1.8; color: var(--text-secondary); }
+    .demo-code { min-width: 0; margin-top: 22px; font-size: 12px; }
+    .demo-code summary { width: fit-content; cursor: pointer; color: var(--text-secondary); }
+    .demo-code pre { max-width: 100%; margin: 12px 0 0; padding: 14px; overflow-x: auto; border-radius: 12px; background: var(--fill); line-height: 1.7; }
+    .demo-code code { font-family: ui-monospace, Consolas, monospace; }
+    @media (max-width: 680px) {
+      .demo-page { padding: 28px 16px 40px; }
+      .demo-grid, .demo-columns { grid-template-columns: minmax(0, 1fr); }
+      .demo-wide { grid-column: auto; }
+    }
+  </style>
+</head>
+<body>
+  <main class="demo-page">
+    <header class="demo-header">
+      <p class="demo-eyebrow">MY UI / HTML + CLASS</p>
+      <h1>纯 HTML 组件示例</h1>
+      <p class="demo-description">只引入一份 CSS，用标签和 class 组合组件。输入、勾选、单选和表单重置都由浏览器原生完成。</p>
+    </header>
+
+    <div class="demo-grid">
+      <!-- 按钮直接写类名，disabled 使用原生属性。 -->
+      <section class="my-card demo-panel" aria-labelledby="buttons-title">
+        <h2 id="buttons-title">按钮 Button</h2>
+        <p class="demo-caption">主按钮、描边、文字和禁用状态；按下反馈由 CSS 提供。</p>
+        <div class="demo-row">
+          <button class="my-button my-primary" type="button">保存</button>
+          <button class="my-button my-outline" type="button">取消</button>
+          <button class="my-button my-text-only" type="button">了解更多</button>
+          <button class="my-button my-primary" type="button" disabled>不可操作</button>
+        </div>
+        <details class="demo-code">
+          <summary>查看 HTML</summary>
+          <pre><code>&lt;button class="my-button my-primary" type="button"&gt;保存&lt;/button&gt;
+&lt;button class="my-button my-outline" type="button"&gt;取消&lt;/button&gt;
+&lt;button class="my-button my-primary" type="button" disabled&gt;不可操作&lt;/button&gt;</code></pre>
+        </details>
+      </section>
+
+      <section class="my-card demo-panel" aria-labelledby="tags-title">
+        <h2 id="tags-title">标签 Tag</h2>
+        <p class="demo-caption">用颜色类名表达不同的内容状态。</p>
+        <div class="demo-row">
+          <span class="my-tag"><span class="my-tag-content">默认</span></span>
+          <span class="my-tag my-green"><span class="my-tag-content">已完成</span></span>
+          <span class="my-tag my-orange"><span class="my-tag-content">处理中</span></span>
+          <span class="my-tag my-red"><span class="my-tag-content">需关注</span></span>
+          <span class="my-tag my-gray"><span class="my-tag-content">已归档</span></span>
+        </div>
+        <details class="demo-code">
+          <summary>查看 HTML</summary>
+          <pre><code>&lt;span class="my-tag my-green"&gt;
+  &lt;span class="my-tag-content"&gt;已完成&lt;/span&gt;
+&lt;/span&gt;</code></pre>
+        </details>
+      </section>
+
+      <section class="my-card demo-panel" aria-labelledby="avatars-title">
+        <h2 id="avatars-title">头像 Avatar 与徽标 Badge</h2>
+        <p class="demo-caption">文字头像、圆角头像、未读数量和状态圆点。</p>
+        <div class="demo-row">
+          <span class="my-avatar my-circle" role="img" aria-label="小蓝的头像">蓝</span>
+          <span class="my-avatar my-square" role="img" aria-label="大肥鱼的头像">鱼</span>
+          <span class="my-badge">
+            <span class="my-avatar my-circle" role="img" aria-label="消息头像">信</span>
+            <span class="my-badge-indicator" aria-label="8 条未读消息">8</span>
+          </span>
+          <span class="my-badge">
+            <span class="my-avatar my-circle" role="img" aria-label="通知头像">通</span>
+            <span class="my-badge-indicator my-dot" aria-label="有新通知"></span>
+          </span>
+        </div>
+        <details class="demo-code">
+          <summary>查看 HTML</summary>
+          <pre><code>&lt;span class="my-badge"&gt;
+  &lt;span class="my-avatar my-circle"&gt;信&lt;/span&gt;
+  &lt;span class="my-badge-indicator"&gt;8&lt;/span&gt;
+&lt;/span&gt;</code></pre>
+        </details>
+      </section>
+
+      <article class="my-card demo-panel" aria-labelledby="card-title">
+        <header class="my-surface-head">
+          <div>
+            <h3 id="card-title">内容卡片 Card</h3>
+            <p>标题、说明与任意 HTML 内容自由组合。</p>
+          </div>
+          <span class="my-sample-id">CARD</span>
+        </header>
+        <div class="demo-profile">
+          <span class="my-avatar my-circle" aria-hidden="true">蓝</span>
+          <div>
+            <strong>小蓝的工作空间</strong>
+            <p>今天也从一件简单的小事开始。</p>
+          </div>
+        </div>
+        <div class="my-divider" role="separator"></div>
+        <p class="demo-paragraph">卡片只负责容器外观，内部直接使用标题、段落、图片和其他组件。</p>
+      </article>
+
+      <!-- 表单状态使用 checked、disabled 和原生 reset，无需额外脚本。 -->
+      <section class="my-card demo-panel demo-wide" aria-labelledby="form-title">
+        <h2 id="form-title">原生表单控件</h2>
+        <p class="demo-caption">试着输入文字、切换开关和勾选选项，再点击「恢复默认」。</p>
+        <form class="demo-stack">
+          <div class="demo-columns">
+            <div class="demo-stack">
+              <label class="demo-field" for="nickname">姓名
+                <span class="my-input-box"><input id="nickname" name="nickname" value="小蓝" placeholder="请输入姓名" autocomplete="name"></span>
+              </label>
+              <label class="demo-field" for="email">邮箱
+                <span class="my-input-box"><input id="email" type="email" name="email" placeholder="name@example.com" autocomplete="email"></span>
+              </label>
+              <label class="demo-field" for="readonly-name">禁用输入框
+                <span class="my-input-box"><input id="readonly-name" value="当前不可修改" disabled></span>
+              </label>
+              <label class="demo-field" for="note">备注
+                <textarea id="note" class="my-textarea" name="note" rows="3" placeholder="写下你的想法">用 HTML 和 class 组合页面。</textarea>
+              </label>
+            </div>
+
+            <div class="demo-stack">
+              <label class="demo-switch-label" for="notifications">
+                <input id="notifications" class="my-switch" type="checkbox" role="switch" name="notifications" checked>
+                接收消息通知
+              </label>
+              <fieldset class="demo-group">
+                <legend>订阅内容 Checkbox</legend>
+                <label class="my-choice-control">
+                  <input type="checkbox" name="topics" value="news" checked>
+                  <span class="my-choice-copy"><span class="my-choice-label">产品更新</span><span class="my-choice-description">了解新功能和改进。</span></span>
+                </label>
+                <label class="my-choice-control">
+                  <input type="checkbox" name="topics" value="tips">
+                  <span class="my-choice-copy"><span class="my-choice-label">使用技巧</span></span>
+                </label>
+                <label class="my-choice-control">
+                  <input type="checkbox" disabled>
+                  <span class="my-choice-copy"><span class="my-choice-label">暂未开放</span></span>
+                </label>
+              </fieldset>
+              <fieldset class="demo-group">
+                <legend>通知频率 Radio</legend>
+                <label class="my-choice-control">
+                  <input type="radio" name="frequency" value="daily" checked>
+                  <span class="my-choice-copy"><span class="my-choice-label">每天汇总</span></span>
+                </label>
+                <label class="my-choice-control">
+                  <input type="radio" name="frequency" value="weekly">
+                  <span class="my-choice-copy"><span class="my-choice-label">每周汇总</span></span>
+                </label>
+              </fieldset>
+            </div>
+          </div>
+          <div class="my-divider" role="separator"></div>
+          <div class="demo-row"><button class="my-button my-outline" type="reset">恢复默认</button></div>
+        </form>
+        <details class="demo-code">
+          <summary>查看 HTML</summary>
+          <pre><code>&lt;span class="my-input-box"&gt;
+  &lt;input name="nickname" placeholder="请输入姓名"&gt;
+&lt;/span&gt;
+&lt;textarea class="my-textarea" rows="3"&gt;&lt;/textarea&gt;
+&lt;input class="my-switch" type="checkbox" checked&gt;
+&lt;label class="my-choice-control"&gt;
+  &lt;input type="checkbox"&gt;
+  &lt;span class="my-choice-label"&gt;产品更新&lt;/span&gt;
+&lt;/label&gt;</code></pre>
+        </details>
+      </section>
+
+      <section class="my-card demo-panel demo-wide" aria-labelledby="loading-title">
+        <h2 id="loading-title">分隔线、加载与骨架屏</h2>
+        <p class="demo-caption">Divider、Loading 和 Skeleton 的外观及动画都由 CSS 提供。</p>
+        <div class="my-divider my-labeled" role="separator" aria-label="加载状态"><span class="my-divider-label">加载状态</span></div>
+        <div class="demo-columns">
+          <div class="my-loading" role="status">
+            <svg class="my-spinner" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle></svg>
+            <span class="my-loading-text">正在加载…</span>
+          </div>
+          <div class="my-skeleton" role="status">
+            <div class="my-skeleton-visual" aria-hidden="true">
+              <span class="my-avatar"></span>
+              <div class="my-skeleton-copy"><div class="my-title"></div><div class="my-line"></div><div class="my-line"></div></div>
+            </div>
+            <span class="my-sr-only">正在加载内容</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

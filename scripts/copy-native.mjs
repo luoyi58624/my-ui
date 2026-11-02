@@ -6,7 +6,7 @@ mkdirSync(new URL('lib/', output), { recursive: true })
 for (const file of ['my-ui.css', 'my-ui.js', 'my-ui.d.ts']) {
   copyFileSync(new URL('../lib/' + file, import.meta.url), new URL('lib/' + file, output))
 }
-for (const page of ['native.html', 'card.html']) {
+for (const page of ['native.html', 'card.html', 'components.html']) {
   const html = readFileSync(new URL('../example/' + page, import.meta.url), 'utf8')
     .replaceAll('../lib/', './lib/')
     .replaceAll('./public/', './')
