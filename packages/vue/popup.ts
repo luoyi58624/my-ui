@@ -14,7 +14,7 @@ import type {
   PopupContent,
   PopupHandle,
   SheetOptions,
-} from "./components/popupTypes";
+} from "./popupTypes";
 
 let appContext: AppContext | null = null;
 

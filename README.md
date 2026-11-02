@@ -15,7 +15,10 @@ packages/
   vue/                  @my-ui/vue：Vue 3 薄封装与可选 Pinia 共享状态
     index.ts            组件的公共入口
     adapter.ts          props、v-model、事件、插槽和生命周期适配
-    components/         组件封装及类型，无组件样式
+    components.ts       集中声明组件的运行时属性、默认值和事件
+    types.ts            组件属性、事件、插槽与公共数据类型
+    popup.ts            Vue 内容与原生弹层的对接
+    popupTypes.ts       命令式弹层选项与结果类型
   react/                @my-ui/react：React 19 薄封装，与 Vue 组件入口对齐
     index.ts            组件、类型与弹层 API 的公共入口
     adapter.tsx         属性、值回调、Portal 内容和生命周期适配
@@ -156,6 +159,8 @@ const actions = [
 ```
 
 保留原来的 Vue 组件名、v-model、事件、具名插槽与作用域插槽。适配层使用实际原生元素作为根节点，组件之间通过 DOM 上下文共享布局与分组状态。
+
+Vue 封装统一由 TypeScript 声明：`components.ts` 集中维护运行时属性、默认值和事件，`types.ts` 保存完整的类型提示与注释，`adapter.ts` 负责创建组件。新增普通组件不需要再创建 `.vue` 包装文件；在业务 `.vue` 页面中仍然直接导入并使用 `<Button>`、`<Input v-model="name">` 等组件，ref 操作与泛型值推导继续可用。
 
 公共组件：Icon、Avatar、Image、ImagePreview、Badge、Button、Tag、TagGroup、Input、Textarea、Form、FormField、Radio、RadioGroup、Checkbox、CheckboxGroup、Choices、Switch、Select、Combobox、Segmented、Slider、Picker、DatePicker、TimePicker、Calendar、Upload、AppBar、Notice、Steps、Progress、PullRefresh、Tabs、Navigation、Tabbar、Stepper、CellGroup、ListRow、Collapse、CollapseItem、Card、Tooltip、Divider、Loading、Skeleton、Empty、Floating、Menu、Popover、Dialog、Sheet、Drawer、Popup、Toast。
 

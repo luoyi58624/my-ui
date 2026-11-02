@@ -4,11 +4,23 @@
     "module": "ESNext",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "moduleResolution": "bundler",
+    "jsx": "react-jsx",
     "strict": true,
     "skipLibCheck": true,
     "isolatedModules": true,
     "noEmit": true,
     "types": ["vite/client"]
   },
-  "include": ["packages/vue/**/*.ts", "packages/vue/**/*.vue", "example/src/**/*.ts", "example/src/**/*.vue", "example/vite.config.ts"]
+  "include": [
+    "packages/vue/**/*.ts",
+    "packages/react/**/*.ts",
+    "packages/react/**/*.tsx",
+    "example/src/**/*.ts",
+    "example/src/**/*.vue",
+    "example/react.tsx",
+    "example/vite.config.ts",
+    "tests/react.fixture.tsx",
+    "tests/react-types.tsx",
+    "tests/vue-types.vue"
+  ]
 }

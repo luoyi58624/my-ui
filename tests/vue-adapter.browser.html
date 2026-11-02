@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vue 集中封装回归</title>
+<style>body{font-family:system-ui;margin:24px}#fixture{max-width:600px;margin:20px 0}pre{white-space:pre-wrap;font:12px/1.6 monospace}</style>
+<main><h1>Vue 集中封装</h1><button id="run">运行定向回归</button><div id="fixture"></div><pre>尚未运行</pre></main>
+<script type="module">
+import { createApp, defineComponent, h, inject, nextTick, ref } from 'vue'
+import * as UI from '/packages/vue/index.ts'
+
+const fixture = document.querySelector('#fixture'), reports = []
+const assert = (value, message) => { if (!value) throw Error(message) }
+const tick = async () => { await nextTick(); await nextTick(); await new Promise(requestAnimationFrame) }
+let app
+const cleanup = async () => { app?.unmount(); app = undefined; fixture.replaceChildren(); await tick() }
+async function mount(component) { await cleanup(); app = createApp(component); app.mount(fixture); await tick() }
+async function check(name, run) {
+  try { await cleanup(); await run(); reports.push({ name, passed: true }) }
+  catch (error) { reports.push({ name, passed: false, error: String(error) }) }
+  finally { await cleanup() }
+}
+document.querySelector('#run').onclick = async () => {
+  reports.length = 0
+  document.querySelector('pre').textContent = '运行中'
+  await check('54 个公共组件均可创建和卸载，不需要独立 SFC 文件', async () => {
+    const components = Object.entries(UI).filter(([name]) => /^[A-Z]/.test(name))
+    assert(components.length === 54, '公共组件入口改变')
+    for (const [name, Component] of components) {
+      const props = {}
+      for (const [key, entry] of Object.entries(Component.props)) {
+        if (!entry?.required) continue
+        const type = Array.isArray(entry.type) ? entry.type[0] : entry.type
+        props[key] = type === Boolean ? false : type === Array ? [] : type === Number ? 0 : type === String ? '示例' : null
+      }
+      if (name === 'Icon') props.name = 'sun'
+      if (name === 'Slider') props.modelValue = 30
+      if (name === 'TagGroup' || name === 'Collapse') props.modelValue = 'a'
+      await mount({ render: () => h(Component, props) })
+      assert(fixture.querySelector('[data-my-component="' + name + '"]'), name + ' 未创建原生控制器')
+      await cleanup()
+      assert(!fixture.childNodes.length, name + ' 卸载后留下节点')
+    }
+  })
+  await check('布尔转换、undefined 默认值与集合工厂仍由 Vue 处理', async () => {
+    await mount({ render: () => [h(UI.Button, { disabled: '' }, () => '禁用'), h(UI.Tag, null, () => '标签'), h(UI.Notice, { title: '通知' }), h(UI.Checkbox, { label: '半选', indeterminate: '' })] })
+    assert(fixture.querySelector('button').disabled, '空字符串布尔属性未转换')
+    assert(fixture.querySelector('.my-tag').tagName === 'SPAN', '省略 modelValue 错误地转换成 false')
+    assert(!fixture.querySelector('.my-notice').hidden, '默认展开状态丢失')
+    assert(fixture.querySelector('.my-choice-control input').indeterminate, '半选布尔属性未转换')
+  })
+  await check('值绑定、命名插槽和原生事件各触发一次', async () => {
+    let clicks = 0, changes = 0
+    await mount({ setup() {
+      const value = ref('初始')
+      return () => h(UI.Input, { modelValue: value.value, 'onUpdate:modelValue': next => { value.value = next; changes++ }, label: '姓名' }, { suffix: () => h(UI.Button, { onClick: () => clicks++ }, () => value.value) })
+    } })
+    const input = fixture.querySelector('input')
+    input.value = '更新'; input.dispatchEvent(new InputEvent('input', { bubbles: true })); await tick()
+    fixture.querySelector('button').click(); await tick()
+    assert(changes === 1 && clicks === 1 && fixture.textContent.includes('更新'), '事件重复或作用域内容失效')
+    assert(fixture.querySelector('input') === input, '更新重建了输入节点')
+  })
+  await check('ref 继续提供聚焦、选择文字和 Toast 操作', async () => {
+    const input = ref(), toast = ref()
+    await mount({ render: () => [h(UI.Input, { ref: input, modelValue: '小蓝', label: '姓名' }), h(UI.Toast, { ref: toast })] })
+    input.value.focus(); input.value.select(); toast.value.show('完成')
+    assert(document.activeElement === fixture.querySelector('input') && document.activeElement.selectionEnd === 2, '输入 ref 能力丢失')
+    assert(document.querySelector('.my-toast')?.textContent.includes('完成'), 'Toast ref 能力丢失')
+  })
+  await check('作用域插槽继续提供表单关联信息，Popup 保留应用上下文', async () => {
+    await mount({ render: () => [h(UI.FormField, { label: '原生输入', hint: '说明' }, { default: ({ control }) => h('input', control) }), h(UI.Popup)] })
+    app.provide('adapter-context', '应用内容')
+    const input = fixture.querySelector('input')
+    assert(input.id && input.getAttribute('aria-labelledby') && input.getAttribute('aria-describedby'), '表单插槽关联失效')
+    const Content = defineComponent({ setup() { const value = inject('adapter-context'); return () => h('p', { id: 'popup-context' }, value) } })
+    const handle = UI.popup.showSheet({ title: '上下文', content: () => h(Content) })
+    await tick()
+    assert(document.querySelector('#popup-context')?.textContent === '应用内容', 'Popup 的应用上下文丢失')
+    handle.close('done'); assert(await handle.closed === 'done', '弹层结果改变')
+  })
+  document.querySelector('pre').textContent = JSON.stringify({ reports }, null, 2)
+}
+</script></html>

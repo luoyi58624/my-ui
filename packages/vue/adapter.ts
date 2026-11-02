@@ -1,4 +1,5 @@
 import {
+  defineComponent,
   h,
   onBeforeUnmount,
   onUpdated,
@@ -7,11 +8,14 @@ import {
   useAttrs,
   useSlots,
   watch,
-  type Component,
+  type ComponentObjectPropsOptions,
+  type RenderFunction,
   type VNode,
 } from "vue";
 import "../../lib/my-ui.js";
 import type { NativeController } from "../../lib/my-ui";
+import type { NativeComponent } from "./types";
+import { installPopupContext } from "./popup";
 
 const api = globalThis.MyUI;
 const tags: Record<string, string> = {
@@ -133,7 +137,7 @@ export function useNative(name: string, props: object, emit: unknown) {
     /** 移除指定文件，同时中止它的请求。 */
     remove: (id: string) => controller?.exposed.remove?.(id),
   };
-  const render: Component = () => {
+  const render: RenderFunction = () => {
     revision.value;
     const children: VNode[] = [];
     for (const outlet of controller?.outlets.values() ?? []) {
@@ -160,4 +164,28 @@ export function useNative(name: string, props: object, emit: unknown) {
     return h(tag, { ref: (element: any) => attach(element) }, children);
   };
   return { render, exposed };
+}
+
+/** 原有组件通过 ref 提供的原生操作，具体能力由对应控制器实现。 */
+export type NativeExposed = ReturnType<typeof useNative>["exposed"];
+
+/** 集中创建 Vue 组件，属性的默认值与布尔转换继续由 Vue 处理。 */
+export function createComponent<
+  P,
+  E extends { [K in keyof E]: any[] } = {},
+  H = NativeExposed,
+  S extends Record<string, any> = Record<string, (scope: Record<string, any>) => any>,
+>(name: string, props: ComponentObjectPropsOptions, emits: (keyof E & string)[]): NativeComponent<P, E, H, S> {
+  return defineComponent({
+    name,
+    inheritAttrs: false,
+    props,
+    emits,
+    setup(properties, { emit, expose }) {
+      if (name === "Popup") installPopupContext();
+      const bridge = useNative(name, properties, emit);
+      expose(name === "PullRefresh" ? { refresh: bridge.exposed.refresh } : bridge.exposed);
+      return bridge.render;
+    },
+  }) as unknown as NativeComponent<P, E, H, S>;
 }
