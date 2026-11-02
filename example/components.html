@@ -53,16 +53,16 @@
         <h2 id="buttons-title">按钮 Button</h2>
         <p class="demo-caption">主按钮、描边、文字和禁用状态；按下反馈由 CSS 提供。</p>
         <div class="demo-row">
-          <button class="my-button my-primary" type="button">保存</button>
+          <button class="my-button" type="button">保存</button>
           <button class="my-button my-outline" type="button">取消</button>
           <button class="my-button my-text-only" type="button">了解更多</button>
-          <button class="my-button my-primary" type="button" disabled>不可操作</button>
+          <button class="my-button" type="button" disabled>不可操作</button>
         </div>
         <details class="demo-code">
           <summary>查看 HTML</summary>
-          <pre><code>&lt;button class="my-button my-primary" type="button"&gt;保存&lt;/button&gt;
+          <pre><code>&lt;button class="my-button" type="button"&gt;保存&lt;/button&gt;
 &lt;button class="my-button my-outline" type="button"&gt;取消&lt;/button&gt;
-&lt;button class="my-button my-primary" type="button" disabled&gt;不可操作&lt;/button&gt;</code></pre>
+&lt;button class="my-button" type="button" disabled&gt;不可操作&lt;/button&gt;</code></pre>
         </details>
       </section>
 
@@ -70,17 +70,15 @@
         <h2 id="tags-title">标签 Tag</h2>
         <p class="demo-caption">用颜色类名表达不同的内容状态。</p>
         <div class="demo-row">
-          <span class="my-tag"><span class="my-tag-content">默认</span></span>
-          <span class="my-tag my-green"><span class="my-tag-content">已完成</span></span>
-          <span class="my-tag my-orange"><span class="my-tag-content">处理中</span></span>
-          <span class="my-tag my-red"><span class="my-tag-content">需关注</span></span>
-          <span class="my-tag my-gray"><span class="my-tag-content">已归档</span></span>
+          <span class="my-tag">默认</span>
+          <span class="my-tag my-green">已完成</span>
+          <span class="my-tag my-orange">处理中</span>
+          <span class="my-tag my-red">需关注</span>
+          <span class="my-tag my-gray">已归档</span>
         </div>
         <details class="demo-code">
           <summary>查看 HTML</summary>
-          <pre><code>&lt;span class="my-tag my-green"&gt;
-  &lt;span class="my-tag-content"&gt;已完成&lt;/span&gt;
-&lt;/span&gt;</code></pre>
+          <pre><code>&lt;span class="my-tag my-green"&gt;已完成&lt;/span&gt;</code></pre>
         </details>
       </section>
 
@@ -135,13 +133,13 @@
           <div class="demo-columns">
             <div class="demo-stack">
               <label class="demo-field" for="nickname">姓名
-                <span class="my-input-box"><input id="nickname" name="nickname" value="小蓝" placeholder="请输入姓名" autocomplete="name"></span>
+                <input class="my-input" id="nickname" name="nickname" value="小蓝" placeholder="请输入姓名" autocomplete="name">
               </label>
               <label class="demo-field" for="email">邮箱
-                <span class="my-input-box"><input id="email" type="email" name="email" placeholder="name@example.com" autocomplete="email"></span>
+                <input class="my-input" id="email" type="email" name="email" placeholder="name@example.com" autocomplete="email">
               </label>
               <label class="demo-field" for="readonly-name">禁用输入框
-                <span class="my-input-box"><input id="readonly-name" value="当前不可修改" disabled></span>
+                <input class="my-input" id="readonly-name" value="当前不可修改" disabled>
               </label>
               <label class="demo-field" for="note">备注
                 <textarea id="note" class="my-textarea" name="note" rows="3" placeholder="写下你的想法">用 HTML 和 class 组合页面。</textarea>
@@ -161,22 +159,22 @@
                 </label>
                 <label class="my-choice-control">
                   <input type="checkbox" name="topics" value="tips">
-                  <span class="my-choice-copy"><span class="my-choice-label">使用技巧</span></span>
+                  使用技巧
                 </label>
                 <label class="my-choice-control">
                   <input type="checkbox" disabled>
-                  <span class="my-choice-copy"><span class="my-choice-label">暂未开放</span></span>
+                  暂未开放
                 </label>
               </fieldset>
               <fieldset class="demo-group">
                 <legend>通知频率 Radio</legend>
                 <label class="my-choice-control">
                   <input type="radio" name="frequency" value="daily" checked>
-                  <span class="my-choice-copy"><span class="my-choice-label">每天汇总</span></span>
+                  每天汇总
                 </label>
                 <label class="my-choice-control">
                   <input type="radio" name="frequency" value="weekly">
-                  <span class="my-choice-copy"><span class="my-choice-label">每周汇总</span></span>
+                  每周汇总
                 </label>
               </fieldset>
             </div>
@@ -186,14 +184,12 @@
         </form>
         <details class="demo-code">
           <summary>查看 HTML</summary>
-          <pre><code>&lt;span class="my-input-box"&gt;
-  &lt;input name="nickname" placeholder="请输入姓名"&gt;
-&lt;/span&gt;
+          <pre><code>&lt;input class="my-input" name="nickname" placeholder="请输入姓名"&gt;
 &lt;textarea class="my-textarea" rows="3"&gt;&lt;/textarea&gt;
 &lt;input class="my-switch" type="checkbox" checked&gt;
 &lt;label class="my-choice-control"&gt;
   &lt;input type="checkbox"&gt;
-  &lt;span class="my-choice-label"&gt;产品更新&lt;/span&gt;
+  产品更新
 &lt;/label&gt;</code></pre>
         </details>
       </section>

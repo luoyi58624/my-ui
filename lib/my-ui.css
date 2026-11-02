@@ -166,8 +166,8 @@ svg[data-my-icon] {
 
 /* 直接书写组件类名即可获得外观与原生状态样式，无需 JS 添加作用域标记。 */
 
-.my-button.my-button,
-.my-icon-button.my-button,
+.my-button,
+.my-icon-button,
 .my-round-arrow,
 .my-underlink {
   position: relative;
@@ -202,7 +202,11 @@ button.my-button:disabled {
   cursor: not-allowed;
   opacity: 0.68;
 }
-.my-button.my-button {
+.my-button {
+  /* 主按钮为默认外观，静态页面只需一个类名。 */
+  background: var(--primary);
+  color: var(--primary-text);
+  box-shadow: none;
   border: 1px solid transparent;
   display: inline-flex;
   align-items: center;
@@ -220,14 +224,9 @@ button.my-button:disabled {
   border-radius: 13px;
   gap: 7px;
 }
-.my-button.my-button svg {
+.my-button svg {
   width: 16px;
   height: 16px;
-}
-.my-button.my-primary {
-  background: var(--primary);
-  color: var(--primary-text);
-  box-shadow: none;
 }
 .my-button.my-outline {
   border-color: var(--border);
@@ -249,7 +248,7 @@ button.my-button:disabled {
   background: var(--fill);
   color: var(--text-secondary);
 }
-.my-icon-button.my-button {
+.my-icon-button {
   display: inline-grid;
   place-items: center;
   color: var(--text-secondary);
@@ -267,7 +266,7 @@ button.my-button:disabled {
   background: var(--fill);
   color: var(--primary);
 }
-.my-icon-button.my-button svg {
+.my-icon-button svg {
   width: 19px;
   height: 19px;
 }
@@ -328,7 +327,7 @@ button.my-button:disabled {
   width: 14px;
   height: 14px;
 }
-.my-button.my-button:not(.my-text-only):not(:disabled) {
+.my-button:not(.my-text-only):not(:disabled) {
   transform: scale(1);
   transform-origin: center;
   touch-action: manipulation;
@@ -338,7 +337,7 @@ button.my-button:disabled {
     border-color 0.15s ease,
     color 0.15s ease;
 }
-.my-icon-button.my-button:not(.my-bare-icon) {
+.my-icon-button:not(.my-bare-icon) {
   transform: scale(1);
   transform-origin: center;
   touch-action: manipulation;
@@ -348,12 +347,12 @@ button.my-button:disabled {
     border-color 0.15s ease,
     color 0.15s ease;
 }
-.my-button.my-button:not(.my-text-only):not(:disabled):not(
+.my-button:not(.my-text-only):not(:disabled):not(
     .my-is-loading
   ):is(:active:not([data-my-press-input]), [data-my-pressed]) {
   transform: scale(0.95);
 }
-.my-icon-button.my-button:not(.my-bare-icon):not(.my-is-loading):not(
+.my-icon-button:not(.my-bare-icon):not(.my-is-loading):not(
     :disabled
   ):is(:active:not([data-my-press-input]), [data-my-pressed]) {
   transform: scale(0.95);
@@ -363,7 +362,7 @@ button.my-button:disabled {
   transform: scale(0.95);
   background-color: var(--press);
 }
-.my-button.my-primary:not(.my-is-loading):not(
+.my-button:not(:where(.my-outline, .my-text-only, .my-icon-button, .my-round-arrow, .my-underlink)):not(.my-is-loading):not(
     :disabled
   ):is(:active:not([data-my-press-input]), [data-my-pressed]) {
   background-color: color-mix(in srgb, var(--primary) 86%, #000);
@@ -397,7 +396,7 @@ button.my-button[data-my-pressed]:not(:disabled):not(.my-is-loading) {
   transition-duration: 60ms, 0s, 0s, 0s;
 }
 @media (hover: hover) and (pointer: fine) {
-  .my-button.my-primary:not(.my-is-loading):not(
+  .my-button:not(:where(.my-outline, .my-text-only, .my-icon-button, .my-round-arrow, .my-underlink)):not(.my-is-loading):not(
       :disabled
     ):not([data-my-press-input]):hover:not(:active):not([data-my-pressed]) {
     background-color: color-mix(in srgb, var(--primary) 94%, #000);
@@ -410,7 +409,7 @@ button.my-button[data-my-pressed]:not(:disabled):not(.my-is-loading) {
   .my-round-arrow:not(.my-is-loading):not(:disabled):not([data-my-press-input]):hover:not(:active):not([data-my-pressed]) {
     background-color: var(--hover);
   }
-  .my-icon-button.my-button:not(.my-bare-icon):not(.my-is-loading):not(
+  .my-icon-button:not(.my-bare-icon):not(.my-is-loading):not(
       :disabled
     ):not([data-my-press-input]):hover:not(:active):not([data-my-pressed]) {
     background-color: var(--hover);
@@ -430,12 +429,12 @@ button.my-button[data-my-pressed]:not(:disabled):not(.my-is-loading) {
   }
 }
 @media (max-width: 1100px) {
-  .my-button.my-button {
+  .my-button {
     padding: 0 17px;
   }
 }
 @media (max-width: 400px) {
-  .my-button.my-button {
+  .my-button {
     padding: 0 13px;
     font-size: 15px;
     min-height: 44px;
@@ -444,18 +443,21 @@ button.my-button[data-my-pressed]:not(:disabled):not(.my-is-loading) {
 
 /* ── Tag ───────────────────────────────────────────── */
 
-/* 外层始终保留完整点击区域，缩放只影响不接收指针的内层。 */
+/* 静态标签直接放文字；动态标签的内层保留按压缩放，外层维持完整点击区域。 */
 .my-tag {
   --tag-color: var(--primary);
   display: inline-flex;
   align-items: stretch;
-  padding: 0;
-  border: 0;
-  background: transparent;
   border-radius: 999px;
   font: inherit;
   vertical-align: middle;
 }
+.my-tag:has(> .my-tag-content) {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.my-tag:not(:has(> .my-tag-content)),
 .my-tag-content {
   box-sizing: border-box;
   display: inline-flex;
@@ -466,20 +468,22 @@ button.my-button[data-my-pressed]:not(:disabled):not(.my-is-loading) {
   padding: 0 12px;
   border: 1px solid
     color-mix(in srgb, var(--tag-color) 18%, var(--card-background));
-  border-radius: inherit;
   color: var(--tag-color);
   background: color-mix(in srgb, var(--tag-color) 10%, var(--card-background));
   font-size: 13px;
   font-weight: var(--font-weight-action, 500);
   line-height: 20px;
   white-space: nowrap;
-  pointer-events: none;
   transition:
     transform 0.16s ease,
     background-color 0.16s ease,
     color 0.16s ease;
 }
-.my-tag-content svg {
+.my-tag-content {
+  border-radius: inherit;
+  pointer-events: none;
+}
+.my-tag svg {
   width: 16px;
   height: 16px;
 }
@@ -495,7 +499,7 @@ button.my-button[data-my-pressed]:not(:disabled):not(.my-is-loading) {
 .my-tag.my-gray {
   --tag-color: var(--text-secondary);
 }
-.my-tag.my-tag.my-is-selectable {
+.my-tag.my-is-selectable {
   border-radius: 11px;
   cursor: pointer;
   touch-action: manipulation;
@@ -882,7 +886,8 @@ legend[data-my-choice-group] {
 /* ── Input ───────────────────────────────────────────── */
 
 /* 八个外观变量分别控制底色、文字、边框整体/颜色、焦点色、高度、圆角和内边距。 */
-.my-input-box {
+.my-input-box,
+input.my-input {
   box-sizing: border-box;
   width: 100%;
   display: flex;
@@ -901,10 +906,17 @@ legend[data-my-choice-group] {
     border-color 0.16s ease,
     background-color 0.16s ease;
 }
-.my-input-box:focus-within:not(.my-is-disabled) {
+/* 单个原生输入框无需容器；有前后缀或操作按钮时才组合 input-box。 */
+input.my-input {
+  color: var(--input-color, var(--text));
+  outline: 0;
+}
+.my-input-box:focus-within:not(.my-is-disabled),
+input.my-input:focus:not(:disabled) {
   border-color: var(--input-focus-color, var(--primary));
 }
-.my-input-box.my-is-invalid {
+.my-input-box.my-is-invalid,
+input.my-input.my-is-invalid {
   border-color: var(--danger);
 }
 .my-input-box svg {
@@ -929,7 +941,8 @@ legend[data-my-choice-group] {
   color: var(--input-color, var(--text));
   font-size: inherit;
 }
-.my-input-box > input::placeholder {
+.my-input-box > input::placeholder,
+input.my-input::placeholder {
   color: var(--text-secondary);
 }
 .my-input-box > input::-ms-reveal,
@@ -998,7 +1011,8 @@ legend[data-my-choice-group] {
   background-color: var(--press);
 }
 .my-input-box.my-is-disabled,
-.my-input-box:has(> input:disabled) {
+.my-input-box:has(> input:disabled),
+input.my-input:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }

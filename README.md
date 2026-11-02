@@ -2,6 +2,10 @@
 
 可以直接复制、本地修改的组件源码。原生 HTML 与 Vue 共用同一套样式、交互、定位与动画；不发布 npm 包。组件只提供 CSS 默认明暗样式，展示页的配色预设和主题编辑器独立于组件库。
 
+使用方式以简洁的 HTML + class 为先：基础外观、默认状态和原生控件交互由 CSS 与 HTML 完成，不要求引入 JavaScript 或执行挂载。简单组件尽量使用一个标签、一个基础类名；只有前后缀、复杂内容等确有需要时才增加结构。`disabled`、`checked`、`readonly`、`name` 等沿用 HTML 原生属性。
+
+`lib/my-ui.js` 按需处理动态内容、状态更新和浮层定位等行为；Vue 与未来的 React 适配层复用同一套 CSS 和核心行为，只适配属性、值绑定、事件、插槽及生命周期。React 目录目前仍是预留目录。
+
 ```text
 lib/                    原生组件的唯一源码，也供 jsDelivr 直接引用
   my-ui.css             所有组件样式，按组件分节
@@ -44,11 +48,13 @@ Vue 封装与示例是两个由 Bun 统一安装与关联的私有 workspace；`
 ```html
 <link rel="stylesheet" href="./lib/my-ui.css">
 
-<button class="my-button my-primary" type="button">保存</button>
+<button class="my-button" type="button">保存</button>
+<input class="my-input" placeholder="请输入姓名" aria-label="姓名">
+<span class="my-tag my-green">已完成</span>
 <input class="my-switch" type="checkbox" checked aria-label="接收通知">
 <label class="my-choice-control">
   <input type="checkbox">
-  <span class="my-choice-label">产品更新</span>
+  产品更新
 </label>
 ```
 

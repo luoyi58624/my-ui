@@ -36,14 +36,17 @@ test('HTML + class 静态组件', { timeout: 60_000 }, async suite => {
 
         const style = await page.evaluate(() => {
           const button = document.querySelector('.my-button')
-          const tag = document.querySelector('.my-tag-content')
+          const tag = document.querySelector('.my-tag')
           const avatar = document.querySelector('.my-avatar')
           const badge = document.querySelector('.my-badge-indicator')
           const card = document.querySelector('.my-card')
           return {
             buttonHeight: button.getBoundingClientRect().height,
             buttonRadius: parseFloat(getComputedStyle(button).borderRadius),
+            buttonBackground: getComputedStyle(button).backgroundColor,
             tagHeight: tag.getBoundingClientRect().height,
+            tagBackground: getComputedStyle(tag).backgroundColor,
+            inputHeight: document.querySelector('input.my-input').getBoundingClientRect().height,
             avatarWidth: avatar.getBoundingClientRect().width,
             badgePosition: getComputedStyle(badge).position,
             cardBackground: getComputedStyle(card).backgroundColor,
@@ -52,7 +55,10 @@ test('HTML + class 静态组件', { timeout: 60_000 }, async suite => {
           }
         })
         assert.ok(style.buttonHeight >= 44 && style.buttonRadius > 0)
+        assert.notEqual(style.buttonBackground, 'rgba(0, 0, 0, 0)')
         assert.ok(style.tagHeight >= 24 && style.avatarWidth >= 32)
+        assert.notEqual(style.tagBackground, 'rgba(0, 0, 0, 0)')
+        assert.ok(style.inputHeight >= 44)
         assert.equal(style.badgePosition, 'absolute')
         assert.notEqual(style.cardBackground, 'rgba(0, 0, 0, 0)')
         assert.notEqual(style.spinnerAnimation, 'none')
@@ -78,7 +84,7 @@ test('HTML + class 静态组件', { timeout: 60_000 }, async suite => {
         assert.equal(await weekly.isChecked(), true)
         assert.equal(await page.getByRole('checkbox', { name: '暂未开放' }).isDisabled(), true)
         assert.equal(await page.getByRole('button', { name: '不可操作' }).isDisabled(), true)
-        assert.ok(await page.locator('.my-input-box:has(input:disabled)').evaluate(node =>
+        assert.ok(await page.getByRole('textbox', { name: '禁用输入框', exact: true }).evaluate(node =>
           parseFloat(getComputedStyle(node).opacity) < 1))
 
         await page.getByRole('button', { name: '恢复默认' }).click()
