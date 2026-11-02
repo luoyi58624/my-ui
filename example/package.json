@@ -15,6 +15,7 @@
     "preview": "vite preview --host 127.0.0.1 --port 4178 --strictPort"
   },
   "dependencies": {
+    "@my-ui/react": "workspace:*",
     "@my-ui/vue": "workspace:*",
     "@tauri-apps/plugin-store": "2.5.0",
     "@wdns/vue-code-block": "2.4.1",

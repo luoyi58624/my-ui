@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import react from '@vitejs/plugin-react'
 
 const exampleRoot = decodeURIComponent(new URL('.', import.meta.url).pathname).replace(/^\/(\w:)/, '$1')
 const projectRoot = decodeURIComponent(new URL('..', import.meta.url).pathname).replace(/^\/(\w:)/, '$1')
@@ -24,7 +25,7 @@ export default defineConfig(({ mode }) => ({
       // 使用库自带的常用语言集合，避免代码示例加载全部语法。
       { find: /^highlight\.js$/, replacement: 'highlight.js/lib/common' },
     ],
-    dedupe: ['vue', 'vue-router'],
+    dedupe: ['vue', 'vue-router', 'react', 'react-dom'],
   },
   // 本地插件直接分发 Vue 源码，避免开发预构建缓存旧组件出口。
   optimizeDeps: { exclude: ['tauri-plugin-native-components'] },
@@ -39,12 +40,13 @@ export default defineConfig(({ mode }) => ({
     outDir: projectRoot + 'dist',
     emptyOutDir: true,
     rolldownOptions: {
-      input: { main: exampleRoot + 'index.html', nativePage: exampleRoot + 'native-page.html', nativeTheme: exampleRoot + 'src/commons/native-theme.ts' },
+      input: { main: exampleRoot + 'index.html', react: exampleRoot + 'react.html', nativePage: exampleRoot + 'native-page.html', nativeTheme: exampleRoot + 'src/commons/native-theme.ts' },
       output: { entryFileNames: chunk => chunk.name === 'nativeTheme' ? 'native-theme.js' : 'assets/[name]-[hash].js' },
     },
   },
   plugins: [
     vue(),
+    react({ include: /\.[jt]sx$/ }),
     {
       name: 'my-ui-dev-server-identity',
       configureServer(server) {

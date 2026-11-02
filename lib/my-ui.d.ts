@@ -1,3 +1,89 @@
+/** 本地图标名称，图形只在 lib/my-ui.js 中维护。 */
+export type IconName = 'sun' | 'eye' | 'eye-off' | 'arrow-right' | 'chevron-right' | 'chevrons-up-down' | 'check' | 'bell' | 'cloud' | 'spark' | 'search' | 'x' | 'heart' | 'share' | 'add' | 'moon' | 'shield' | 'wifi' | 'sliders' | 'clock' | 'briefcase' | 'grid' | 'home' | 'user' | 'message' | 'layer' | 'inbox' | 'image' | 'trash' | 'copy' | 'file' | 'info' | 'alert-circle' | 'alert-triangle'
+
+/** 浮动窗口的首选方向，空间不足时自动翻转。 */
+export type FloatingPlacement = 'top' | 'bottom' | 'left' | 'right' | `${'top' | 'bottom' | 'left' | 'right'}-${'start' | 'end'}`
+
+/** 按压位置使用视口坐标，可携带触发元素以保留主题和弹窗上下文。 */
+export interface PointerAnchor {
+  /** 按压点的 clientX。 */
+  x: number
+  /** 按压点的 clientY。 */
+  y: number
+  /** 提供焦点、局部主题与模态容器的触发元素。 */
+  contextElement?: HTMLElement
+}
+
+/** 窗口可以跟随一个元素，也可以从实际按压点展开。 */
+export type FloatingAnchor = HTMLElement | PointerAnchor
+
+/** 空列以 null 占位，其余值保持原来的字符串或数值类型。 */
+export type PickerValue = string | number | null
+
+/** 一项滚轮选项；children 表示下一列的级联内容。 */
+export interface PickerOption {
+  /** 当前项的唯一值，同列内不重复。 */
+  value: string | number
+  /** 显示的纯文字。 */
+  label: string
+  /** 禁止选中，滚动与键盘会自动跳过。 */
+  disabled?: boolean
+  /** 当前项对应的下一列选项。 */
+  children?: readonly PickerOption[]
+}
+
+/** 自定义刻度的位置和可选文字；位置使用 min / max 相同单位。 */
+export interface SliderMark {
+  /** 刻度对应的数值。 */
+  value: number
+  /** 刻度下方的文字，省略时仅显示圆点。 */
+  label?: string | number
+}
+
+/** 表单标签与控件的三种排列方式。 */
+export type FormLayout = 'vertical' | 'horizontal' | 'inline'
+
+
+/** 表单项提供的原生控件属性，通过属性展开关联标签与说明。 */
+export interface FieldControl {
+  /** 与可见标签关联的控件标识。 */
+  id: string
+  /** 控件是否必填。 */
+  required: boolean
+  /** 原生控件或分组使用的可见标签标识。 */
+  'aria-labelledby': string
+  /** 当前是否存在校验错误。 */
+  'aria-invalid': true | undefined
+  /** 错误或说明元素的标识。 */
+  'aria-describedby': string | undefined
+}
+
+/** 选择、分段与导航组件共用的选项。 */
+export interface Option {
+  /** 选项的唯一值。 */
+  value: string
+  /** 面向用户的选项名称。 */
+  label: string
+  /** 选项的补充说明。 */
+  description?: string
+  /** 可选的内置图标。 */
+  icon?: IconName
+  /** 禁止选择此项。 */
+  disabled?: boolean
+}
+
+/** 步骤选项，以数组索引标识当前位置，不需要额外的 value。 */
+export type StepOption = Omit<Option, 'value'>
+
+/** 菜单选项；添加 children 即为子菜单，只有叶子项触发选择。 */
+export interface MenuOption extends Option {
+  /** 子菜单选项；同一菜单树中的 value 应保持唯一。 */
+  children?: MenuOption[]
+}
+
+/** 列表与菜单的选择模式。 */
+export type ListMode = 'normal' | 'single' | 'multiple'
+
 /** 图片预览项；字符串图片地址也可直接用于 images。 */
 export interface ImagePreviewItem {
   /** 图片地址，交给浏览器加载。 */
@@ -112,7 +198,7 @@ export interface NativePressOptions {
   /** 从触摸按下起算的最短反馈毫秒数，抬起时只补剩余时间；核心默认 0。 */
   delayTouchUp?: number;
 }
-/** 原生创建选项，Vue 适配层复用同一个元素与插槽出口。 */
+/** 原生创建选项，框架适配层复用同一个元素与插槽出口。 */
 export interface NativeCreateOptions {
   /** 宿主或原生输入元素的属性与事件。 */
   attributes?: Record<string, any>;

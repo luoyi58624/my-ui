@@ -1,0 +1,13 @@
+{
+  "name": "@my-ui/react",
+  "private": true,
+  "type": "module",
+  "description": "my-ui 的 React 19 薄封装，共用原生核心与样式",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}

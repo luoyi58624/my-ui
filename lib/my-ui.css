@@ -2313,7 +2313,8 @@ button[data-my-stepper]:disabled {
   background: var(--card-background);
   overflow: hidden;
 }
-.my-collapse[data-my-collapse] > .my-collapse-item + .my-collapse-item {
+.my-collapse[data-my-collapse] > .my-collapse-item + .my-collapse-item,
+.my-collapse[data-my-collapse] > .my-slot > .my-collapse-item + .my-collapse-item {
   border-top: 1px solid var(--border);
 }
 
@@ -4214,13 +4215,22 @@ button.my-step-body[data-my-steps]:disabled { cursor: default; opacity: .4; }
 }
 
 /* ── 组合布局：插槽占位不增加留白，首尾间距和分割线仍由列表负责 ── */
-.my-row-slot:first-child > .my-list-row {
+.my-slot {
+  display: contents;
+}
+.my-row-slot:first-child > .my-list-row,
+.my-row-slot:first-child > .my-slot > .my-list-row,
+.my-group-body[data-my-cell-group] > .my-slot > .my-list-row:first-child {
   padding-top: calc(var(--list-padding-block, 14px) + 2px);
 }
-.my-row-slot:last-child > .my-list-row {
+.my-row-slot:last-child > .my-list-row,
+.my-row-slot:last-child > .my-slot > .my-list-row,
+.my-group-body[data-my-cell-group] > .my-slot > .my-list-row:last-child {
   padding-bottom: calc(var(--list-padding-block, 14px) + 2px);
 }
 .my-row-slot + .my-row-slot > .my-list-row::before,
+.my-row-slot + .my-row-slot > .my-slot > .my-list-row::before,
+.my-group-body[data-my-cell-group] > .my-slot > .my-list-row + .my-list-row::before,
 .my-list-stack .my-choice-control + .my-choice-control::before {
   content: "";
   position: absolute;
@@ -4249,7 +4259,8 @@ button.my-step-body[data-my-steps]:disabled { cursor: default; opacity: .4; }
   padding: 0;
   flex-shrink: 0;
 }
-.my-badge:has(> span > .my-avatar.my-circle) > .my-badge-indicator {
+.my-badge:has(> span > .my-avatar.my-circle) > .my-badge-indicator,
+.my-badge:has(> span > .my-slot > .my-avatar.my-circle) > .my-badge-indicator {
   top: 14.65%;
   right: 14.65%;
 }

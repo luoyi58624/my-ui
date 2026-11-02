@@ -1,10 +1,10 @@
 # my-ui
 
-可以直接复制、本地修改的组件源码。原生 HTML 与 Vue 共用同一套样式、交互、定位与动画；不发布 npm 包。组件只提供 CSS 默认明暗样式，展示页的配色预设和主题编辑器独立于组件库。
+可以直接复制、本地修改的组件源码。原生 HTML、Vue 与 React 共用同一套样式、交互、定位与动画；不发布 npm 包。组件只提供 CSS 默认明暗样式，展示页的配色预设和主题编辑器独立于组件库。
 
 使用方式以简洁的 HTML + class 为先：基础外观、默认状态和原生控件交互由 CSS 与 HTML 完成，不要求引入 JavaScript 或执行挂载。简单组件尽量使用一个标签、一个基础类名；只有前后缀、复杂内容等确有需要时才增加结构。`disabled`、`checked`、`readonly`、`name` 等沿用 HTML 原生属性。
 
-`lib/my-ui.js` 按需处理动态内容、状态更新和浮层定位等行为；Vue 与未来的 React 适配层复用同一套 CSS 和核心行为，只适配属性、值绑定、事件、插槽及生命周期。React 目录目前仍是预留目录。
+`lib/my-ui.js` 按需处理动态内容、状态更新和浮层定位等行为；Vue 与 React 适配层复用同一套 CSS 和核心行为，只适配属性、值绑定、事件、插槽及生命周期。
 
 ```text
 lib/                    原生组件的唯一源码，也供 jsDelivr 直接引用
@@ -16,7 +16,10 @@ packages/
     index.ts            组件的公共入口
     adapter.ts          props、v-model、事件、插槽和生命周期适配
     components/         组件封装及类型，无组件样式
-  react/                React 适配层预留目录，尚未实现
+  react/                @my-ui/react：React 19 薄封装，与 Vue 组件入口对齐
+    index.ts            组件、类型与弹层 API 的公共入口
+    adapter.tsx         属性、值回调、Portal 内容和生命周期适配
+    components.ts       组件声明，不包含独立样式或交互实现
 example/                @my-ui/example：展示与使用示例
   src/                  Vue 示例页面、演示业务和示例专用 theme/
   public/               示例静态资源
@@ -24,6 +27,8 @@ example/                @my-ui/example：展示与使用示例
   native.html           不加载 Vue 的原生 HTML 示例
   card.html             直接引用公共 CSS/JS 的原生卡片示例
   components.html       只加载 CSS 的 HTML + class 静态组件示例
+  react.html            React 组件示例入口
+  react.tsx             value/onChange、JSX 内容、ref 与弹层示例
   vite.config.ts        示例的开发与构建配置
   src-tauri/            桌面应用壳，直接加载同一个示例
     src/                Rust 启动入口
@@ -37,7 +42,7 @@ package.json            Bun workspace 与统一命令
 bun.lock                唯一依赖锁文件
 ```
 
-Vue 封装与示例是两个由 Bun 统一安装与关联的私有 workspace；`lib/` 直接保存浏览器可用的 CSS/JS。示例通过 `@my-ui/vue` 使用本地源码，修改 `lib/` 后实时更新。包配置中的 `private` 用于禁止 npm 发布，不影响公开 GitHub 仓库中的静态文件访问。
+Vue、React 封装与示例是三个由 Bun 统一安装与关联的私有 workspace；`lib/` 直接保存浏览器可用的 CSS/JS。示例通过 `@my-ui/vue`、`@my-ui/react` 使用本地源码，修改 `lib/` 后实时更新。包配置中的 `private` 用于禁止 npm 发布，不影响公开 GitHub 仓库中的静态文件访问。
 
 ## 普通 HTML
 
@@ -153,6 +158,35 @@ const actions = [
 保留原来的 Vue 组件名、v-model、事件、具名插槽与作用域插槽。适配层使用实际原生元素作为根节点，组件之间通过 DOM 上下文共享布局与分组状态。
 
 公共组件：Icon、Avatar、Image、ImagePreview、Badge、Button、Tag、TagGroup、Input、Textarea、Form、FormField、Radio、RadioGroup、Checkbox、CheckboxGroup、Choices、Switch、Select、Combobox、Segmented、Slider、Picker、DatePicker、TimePicker、Calendar、Upload、AppBar、Notice、Steps、Progress、PullRefresh、Tabs、Navigation、Tabbar、Stepper、CellGroup、ListRow、Collapse、CollapseItem、Card、Tooltip、Divider、Loading、Skeleton、Empty、Floating、Menu、Popover、Dialog、Sheet、Drawer、Popup、Toast。
+
+## React
+
+React 扩展需要 React 19 与 React DOM 19，组件入口与 Vue 保持一致。复制 `lib/` 与 `packages/react/` 到自己的 `my-ui/` 目录并保留层级，再从 `./my-ui/packages/react` 导入；仓库内直接使用 `@my-ui/react`。入口自动引入公共 CSS 和原生核心。
+
+```tsx
+import { useState } from 'react'
+import { Button, Input, Switch } from './my-ui/packages/react'
+
+export function Profile() {
+  const [name, setName] = useState('小蓝')
+  const [enabled, setEnabled] = useState(true)
+  return <>
+    <Input label="姓名" value={name} onChange={setName} clearable />
+    <Switch label="接收通知" value={enabled} onChange={setEnabled} />
+    <Button onClick={() => console.log(name, enabled)}>保存</Button>
+  </>
+}
+```
+
+值组件统一用 `value` 与 `onChange(value)`，包括开关和复选框；不把回调结果包装成 DOM 事件。省略 `value` 时由核心管理内部值，可用 `defaultValue` 指定初始状态。Radio 用 `optionValue` 表示本项，组内 Checkbox 同样用 `optionValue`，ListRow 的尾部文字使用 `valueText`。`readOnly`、`maxLength`、`autoComplete` 等原生属性保留 React 的命名习惯。
+
+默认内容直接写 JSX；命名内容使用 `slots={{ hint: <span>说明</span> }}`，作用域内容可写成 `children` 函数，例如 `<Tabs ...>{({ value }) => <p>{value}</p>}</Tabs>`。内容通过 Portal 留在原来的 React 树中，保留 Context、子组件状态与事件；宿主结构和交互由原生核心管理。`className`、`style`、`aria-*` 等属性沿用原生适配规则，`onClick`、`onFocus` 等事件回调接收真实 DOM 事件。
+
+需要命令操作时使用 ref，例如 `useRef<InputHandle>(null)` 后调用 `input.current?.focus()`，或使用 `ToastHandle.show()`、`PullRefreshHandle.refresh()`、`UploadHandle.addFiles()` 等对应操作。React 适配层会在卸载时清理控制器，并支持 StrictMode 的重复挂载检查。
+
+`popup.showAlert()` 返回确认结果；`popup.showSheet()`、`showDrawer()` 的 `content` 返回 JSX，选择结果由 `closed` Promise 返回。需要沿用应用 Context 时，在 Provider 内挂载一次 `<Popup />`；没有宿主时也可展示独立 JSX 内容。面板内的动态状态放在内容组件或 Context 中管理。
+
+执行 `bun run dev` 后打开 `/react.html` 查看独立示例；`bun run build` 会生成 `dist/react.html`。通过 `bun run check:react` 检查 React 类型，`bun run test:browser react` 运行适配层的定向浏览器检查。
 
 ## PullRefresh 下拉刷新
 

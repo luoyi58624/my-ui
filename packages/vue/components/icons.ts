@@ -1,2 +1,2 @@
-/** 本地图标名称，图形只在 lib/my-ui.js 中维护。 */
-export type IconName = 'sun' | 'eye' | 'eye-off' | 'arrow-right' | 'chevron-right' | 'chevrons-up-down' | 'check' | 'bell' | 'cloud' | 'spark' | 'search' | 'x' | 'heart' | 'share' | 'add' | 'moon' | 'shield' | 'wifi' | 'sliders' | 'clock' | 'briefcase' | 'grid' | 'home' | 'user' | 'message' | 'layer' | 'inbox' | 'image' | 'trash' | 'copy' | 'file' | 'info' | 'alert-circle' | 'alert-triangle'
+/** 复用原生核心的公共数据类型，不引入框架运行时依赖。 */
+export type { IconName } from '../../../lib/my-ui'

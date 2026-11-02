@@ -1,2 +1,2 @@
-/** 表单标签与控件的三种排列方式。 */
-export type FormLayout = 'vertical' | 'horizontal' | 'inline'
+/** 复用原生核心的公共数据类型，不引入框架运行时依赖。 */
+export type { FormLayout } from '../../../lib/my-ui'

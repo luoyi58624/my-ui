@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>my-ui · React 组件示例</title>
+  <style>
+    /* 页面只定义布局，组件样式由 React 入口引入同一份公共 CSS。 */
+    body { font-family: system-ui, sans-serif; }
+    .react-demo { max-width: 720px; margin: auto; padding: 40px 20px 60px; display: grid; gap: 24px; }
+    .react-demo h1 { margin: 8px 0 12px; font-size: 32px; }
+    .react-demo header p { margin: 0; color: var(--text-secondary); line-height: 1.7; }
+    .react-demo .react-eyebrow { color: var(--primary); font-size: 12px; letter-spacing: 2px; }
+    .react-form { display: grid; gap: 22px; }
+    .react-row { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .react-preview { margin: 0; padding: 20px 0 0; line-height: 1.7; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module" src="./react.tsx"></script>
+</body>
+</html>
