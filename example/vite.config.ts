@@ -12,6 +12,7 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: [
       { find: '/packages', replacement: projectRoot + 'packages' },
+      { find: '/lib', replacement: projectRoot + 'lib' },
       // 浏览器测试以仓库为根目录，真实 HTML 入口仍需加载示例的绝对模块地址。
       ...(mode === 'test' ? [
         { find: '/src', replacement: exampleRoot + 'src' },
@@ -59,7 +60,7 @@ export default defineConfig(({ mode }) => ({
       name: 'my-ui-core-reload',
       handleHotUpdate(context) {
         // 核心是同页单例；编辑 JS 后完整刷新，避免遗留旧控制器与监听。
-        if (/[\\/]packages[\\/]core[\\/]my-ui\.js$/.test(context.file)) {
+        if (/[\\/]lib[\\/]my-ui\.js$/.test(context.file)) {
           context.server.ws.send({ type: 'full-reload' })
           return []
         }

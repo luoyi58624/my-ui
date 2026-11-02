@@ -6,8 +6,8 @@ import {
   render,
   type AppContext,
 } from "vue";
-import "../core/my-ui.js";
-import type { NativePopupOptions } from "../core/my-ui";
+import "../../lib/my-ui.js";
+import type { NativePopupOptions } from "../../lib/my-ui";
 import type {
   AlertOptions,
   DrawerOptions,

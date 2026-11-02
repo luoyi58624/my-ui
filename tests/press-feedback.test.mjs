@@ -5,7 +5,7 @@ import { runInNewContext } from 'node:vm'
 import ts from 'typescript'
 
 // 使用真实核心函数和可控时钟，定向验证取消与延迟边界，不向组件库暴露测试接口。
-const source = ts.createSourceFile('my-ui.js', readFileSync(new URL('../packages/core/my-ui.js', import.meta.url), 'utf8'), ts.ScriptTarget.Latest, true)
+const source = ts.createSourceFile('my-ui.js', readFileSync(new URL('../lib/my-ui.js', import.meta.url), 'utf8'), ts.ScriptTarget.Latest, true)
 let implementation
 function find(node) {
   if (ts.isFunctionDeclaration(node) && node.name?.text === 'bindPressFeedback') implementation = node.getText(source)

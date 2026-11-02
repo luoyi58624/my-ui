@@ -1,13 +1,13 @@
-import '../core/my-ui.css'
+import '../../lib/my-ui.css'
 
-import '../core/my-ui.js'
+import '../../lib/my-ui.js'
 
-/** my-ui 的 Vue 薄封装；样式和交互统一维护在 packages/core/my-ui.css 与 packages/core/my-ui.js。 */
+/** my-ui 的 Vue 薄封装；样式和交互统一维护在 lib/my-ui.css 与 lib/my-ui.js。 */
 export { default as Icon } from './components/Icon.vue'
 export { default as Avatar } from './components/Avatar.vue'
 export { default as Image } from './components/Image.vue'
 export { default as ImagePreview } from './components/ImagePreview.vue'
-export type { ImagePreviewItem } from '../core/my-ui'
+export type { ImagePreviewItem } from '../../lib/my-ui'
 export { default as Badge } from './components/Badge.vue'
 export { default as Button } from './components/Button.vue'
 export { default as Tag } from './components/Tag.vue'
@@ -38,7 +38,7 @@ export { default as Upload } from './components/Upload.vue'
 export { default as AppBar } from './components/AppBar.vue'
 export { default as Notice } from './components/Notice.vue'
 export { default as Steps } from './components/Steps.vue'
-export type { UploadFile, UploadStatus, UploadRequest, UploadRequestContext, UploadRejection } from '../core/my-ui'
+export type { UploadFile, UploadStatus, UploadRequest, UploadRequestContext, UploadRejection } from '../../lib/my-ui'
 export type { PickerOption, PickerValue } from './components/pickerTypes'
 export type { SliderMark } from './components/sliderTypes'
 export { default as Choices } from './components/Choices.vue'

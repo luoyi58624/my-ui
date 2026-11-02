@@ -1,4 +1,4 @@
-import '../packages/core/my-ui.js'
+import '../lib/my-ui.js'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
@@ -39,7 +39,7 @@ test('独立明暗主题保存各自主色和风格，解析不修改输入配�
 })
 
 test('静态明暗阴影与主题默认数据同步，首屏回退不会改变容器层级', () => {
-  const css = readFileSync(new URL('../packages/core/my-ui.css', import.meta.url), 'utf8')
+  const css = readFileSync(new URL('../lib/my-ui.css', import.meta.url), 'utf8')
   const blocks = { light: css.match(/:root\s*\{([^}]+)\}/)?.[1], dark: css.match(/:root\[data-theme="dark"\]\s*\{([^}]+)\}/)?.[1] }
   const normalize = value => value.replace(/\s+/g, ' ').replace(/(?:\d*\.\d+)/g, number => String(Number(number)))
   for (const mode of ['light', 'dark']) for (const [field, property] of [['smallShadow', 'small-shadow'], ['shadow', 'shadow'], ['popupShadow', 'popup-shadow'], ['modalShadow', 'modal-shadow']]) {

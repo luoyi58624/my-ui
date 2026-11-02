@@ -78,7 +78,7 @@
         const html = await (await fetch('/example/index.html')).text(),
           frame = document.createElement('iframe')
         frame.srcdoc = html
-          .replace('</head>', '<link rel="stylesheet" href="/packages/core/my-ui.css"></head>')
+          .replace('</head>', '<link rel="stylesheet" href="/lib/my-ui.css"></head>')
           .replace(
             '<script type="module" src="/src/main.ts"></scr' + 'ipt>',
             '<script>requestAnimationFrame(()=>{window.firstThemeFrame={mode:document.documentElement.dataset.theme,background:getComputedStyle(document.documentElement).backgroundColor}})</scr' +

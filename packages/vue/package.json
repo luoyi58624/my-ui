@@ -8,7 +8,6 @@
     "./state": "./state/index.ts",
     "./state/tauri": "./state/tauri.ts"
   },
-  "dependencies": { "@my-ui/core": "workspace:*" },
   "peerDependencies": {
     "vue": "^3.5.0",
     "pinia": "^3.0.4 || ^4.0.0",

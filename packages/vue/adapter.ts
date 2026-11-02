@@ -10,8 +10,8 @@ import {
   type Component,
   type VNode,
 } from "vue";
-import "../core/my-ui.js";
-import type { NativeController } from "../core/my-ui";
+import "../../lib/my-ui.js";
+import type { NativeController } from "../../lib/my-ui";
 
 const api = globalThis.MyUI;
 const tags: Record<string, string> = {

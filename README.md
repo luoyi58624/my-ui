@@ -3,15 +3,16 @@
 可以直接复制、本地修改的组件源码。原生 HTML 与 Vue 共用同一套样式、交互、定位与动画；不发布 npm 包。组件只提供 CSS 默认明暗样式，展示页的配色预设和主题编辑器独立于组件库。
 
 ```text
+lib/                    原生组件的唯一源码，也供 jsDelivr 直接引用
+  my-ui.css             所有组件样式，按组件分节
+  my-ui.js              所有 DOM 交互、定位与动画
+  my-ui.d.ts            原生 API 类型，仅供编辑器提示
 packages/
-  core/                 @my-ui/core：原生组件，无框架依赖，无需编译
-    my-ui.css           所有组件样式，按组件分节
-    my-ui.js            所有 DOM 交互、定位与动画
-    my-ui.d.ts          原生 API 类型
   vue/                  @my-ui/vue：Vue 3 薄封装与可选 Pinia 共享状态
     index.ts            组件的公共入口
     adapter.ts          props、v-model、事件、插槽和生命周期适配
     components/         组件封装及类型，无组件样式
+  react/                React 适配层预留目录，尚未实现
 example/                @my-ui/example：展示与使用示例
   src/                  Vue 示例页面、演示业务和示例专用 theme/
   public/               示例静态资源
@@ -31,15 +32,15 @@ package.json            Bun workspace 与统一命令
 bun.lock                唯一依赖锁文件
 ```
 
-仓库只划分原生核心、Vue 封装、示例三个私有 workspace，由 Bun 统一安装与关联。示例通过 `@my-ui/vue` 直接使用本地源码，修改组件后实时更新；所有包均为 `private`，无需发布 npm。
+Vue 封装与示例是两个由 Bun 统一安装与关联的私有 workspace；`lib/` 直接保存浏览器可用的 CSS/JS。示例通过 `@my-ui/vue` 使用本地源码，修改 `lib/` 后实时更新。包配置中的 `private` 用于禁止 npm 发布，不影响公开 GitHub 仓库中的静态文件访问。
 
 ## 普通 HTML
 
-复制 `packages/core/my-ui.css` 与 `packages/core/my-ui.js`，直接引用。可离线运行，不需要 Vue、包管理器或构建工具。项目中的 `example/native.html` 是完整示例，`example/card.html` 单独展示交互卡片，两者与 Vue 示例共用核心，没有第二套按压逻辑。构建后 `dist/card.html` 引用旁边的 `lib/my-ui.css`、`lib/my-ui.js`，可以直接打开。
+复制 `lib/` 到页面旁边，直接引用其中的 CSS/JS，类型声明可按需保留。可离线运行，不需要 Vue、包管理器或构建工具。项目中的 `example/native.html` 是完整示例，`example/card.html` 单独展示交互卡片，两者与 Vue 示例共用核心，没有第二套按压逻辑。构建后 `dist/card.html` 引用旁边的 `lib/my-ui.css`、`lib/my-ui.js`，可以直接打开。
 
 ```html
-<link rel="stylesheet" href="./my-ui.css">
-<script src="./my-ui.js" defer></script>
+<link rel="stylesheet" href="./lib/my-ui.css">
+<script src="./lib/my-ui.js" defer></script>
 
 <button class="my-button" type="button">保存</button>
 <input data-my="Switch" data-options='{"value":true,"label":"自动保存"}'>
@@ -70,14 +71,38 @@ bun.lock                唯一依赖锁文件
 - 插槽放在 `options.slots`，支持节点、文本、组件实例或返回这些内容的函数。文本不会当 HTML 解析。
 - 原生独立 Radio 使用 `optionValue` 表示本项、`value` 表示当前选项；组内推荐直接提供 `options`。独立 Checkbox 的 `value` 为布尔值，组内标识使用 `optionValue`。
 
+## 在线引用与版本发布
+
+公开仓库中的 `lib/` 可以通过免费的 [jsDelivr 公共 CDN](https://www.jsdelivr.com/?docs=gh) 直接引用，不需要发布 npm、注册 CDN 账户或开启 GitHub Pages。私有仓库无法通过此方式提供资源。
+
+正式页面固定到已推送的版本标签，CSS 与 JS 使用同一版本：
+
+```html
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/luoyi58624/my-ui@v1.0.0/lib/my-ui.css">
+<script src="https://cdn.jsdelivr.net/gh/luoyi58624/my-ui@v1.0.0/lib/my-ui.js" defer></script>
+```
+
+需要跟随开发分支时，把两处 `@v1.0.0` 都改成 `@main`。分支链接受 CDN 缓存影响，推送后可能不会立即更新；正式页面也可以固定到同一个提交 SHA。不要使用带 `/blob/` 的 GitHub 文件浏览页面地址。
+
+`lib/` 就是唯一源码，直接在这里修改，无需另外同步一份发布副本。`bun run check:lib` 单独检查原生 JS；`bun run build` 检查类型、构建示例，并将同一套文件复制到 `dist/lib/`。仅使用在线组件库时，GitHub 中提交 `lib/` 即可，无需上传 `dist/`。
+
+后续发布时，先执行 `bun run build` 和本次改动涉及的定向测试，提交改动，再创建新的版本标签并明确推送分支与标签：
+
+```powershell
+git tag v1.0.1
+git push origin main v1.0.1
+```
+
+每次发布使用新标签，旧标签保持不变；页面将两个链接一起升级到新版本。jsDelivr 只提供组件资源分发，页面本身仍放在你自己的项目或网站中。
+
 ## Vue
 
-复制 `packages/core/` 和 `packages/vue/` 到自己的 `my-ui/` 目录，保留 `core/`、`vue/` 的同级关系。Vue 只需使用已有的 Vue 3 依赖；入口自动引入公共 CSS 与原生 JS，无需再次添加 script。在本仓库的示例中，直接从 `@my-ui/vue` 导入。
+复制 `lib/` 与 `packages/vue/` 到自己的 `my-ui/` 目录，保留 `my-ui/lib/`、`my-ui/packages/vue/` 的层级。Vue 只需使用已有的 Vue 3 依赖；入口自动引入公共 CSS 与原生 JS，无需再次添加 script。在本仓库的示例中，直接从 `@my-ui/vue` 导入。
 
 ```vue
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Button, Input, Menu } from './my-ui/vue'
+import { Button, Input, Menu } from './my-ui/packages/vue'
 
 const name = ref('小蓝同学')
 const actions = [
@@ -168,7 +193,7 @@ Card 的 `interactive` 默认关闭；开启后整张卡片缩小并平滑改变
 没有 `request` 时只选择和管理文件，不会假装上传成功。传入 `request(file, { signal, onProgress })` 后默认自动上传：Promise 兑现表示成功、拒绝表示失败。应用自行决定服务器、请求方式与返回结果，支持用 Fetch、XHR 或已有上传服务实现；取消时组件中止 `signal`，请求函数应响应信号并清理资源。
 
 ```ts
-import type { UploadRequest } from './my-ui/vue'
+import type { UploadRequest } from './my-ui/packages/vue'
 const upload: UploadRequest = async (file, { signal }) => {
   const body = new FormData()
   body.append('file', file)
@@ -343,11 +368,11 @@ const panel = MyUI.popup.showSheet({
 const selected = await panel.closed;
 ```
 
-Vue 从 `./my-ui/vue` 导入 `popup`，`content` 返回 `h()` 构建的 Vue 内容。需要应用的 provide/inject 上下文时在根部放一个 `<Popup />`；原生 API 无需宿主。`showDrawer` 复用同样的内容与结果接口，支持四个方向。`closeAll()` 可在原生应用卸载时释放所有 API 窗口。
+Vue 从 `./my-ui/packages/vue` 导入 `popup`，`content` 返回 `h()` 构建的 Vue 内容。需要应用的 provide/inject 上下文时在根部放一个 `<Popup />`；原生 API 无需宿主。`showDrawer` 复用同样的内容与结果接口，支持四个方向。`closeAll()` 可在原生应用卸载时释放所有 API 窗口。
 
 ## 改样式、主题和交互
 
-组件类名统一为 `my-` 前缀，例如 `.my-button`、`.my-input-box`、`.my-list-row`。所有组件规则只在 `packages/core/my-ui.css` 中维护，组件内部选择器带有隔离标记，避免影响宿主页面。变量保留简短的语义名，按需覆盖即可。
+组件类名统一为 `my-` 前缀，例如 `.my-button`、`.my-input-box`、`.my-list-row`。所有组件规则只在 `lib/my-ui.css` 中维护，组件内部选择器带有隔离标记，避免影响宿主页面。变量保留简短的语义名，按需覆盖即可。
 
 ```css
 /* 单个输入框也可直接通过 style 覆写这些变量。 */
@@ -363,7 +388,7 @@ Vue 从 `./my-ui/vue` 导入 `popup`，`content` 返回 `h()` 构建的 Vue 内�
 
 明暗样式通过 `document.documentElement.dataset.theme = 'dark'` 切换，浅色使用 `'light'`。颜色、阴影、字重和背景模糊都可直接覆写 CSS 变量，组件 JS 不会应用配色或覆盖这些值。
 
-展示页的 14 组主色、3 组层级风格、系统外观监听与主题编辑逻辑位于 `example/src/commons/theme/index.js`，由 `example/src/components/ThemeSettings.vue` 使用；它们不属于 `MyUI` 或 Vue 组件入口。用户只复制 `packages/core/` 和 `packages/vue/` 时，不会带入这套示例配置。
+展示页的 14 组主色、3 组层级风格、系统外观监听与主题编辑逻辑位于 `example/src/commons/theme/index.js`，由 `example/src/components/ThemeSettings.vue` 使用；它们不属于 `MyUI` 或 Vue 组件入口。用户只复制 `lib/` 和 `packages/vue/` 时，不会带入这套示例配置。
 
 ## Vue 全局共享状态
 
@@ -441,7 +466,7 @@ Android 的预测性返回会先让上页进入 `onStart` 并可见，手势提�
 
 `tests/demo-layout.browser.html` 使用真实示例入口检查全部目录跳转、详情返回与前进、滚动和输入保留、旧链接、弹层返回、键盘、320px 窄屏与桌面布局。
 
-`bun run check` 检查 Vue 封装、示例和原生 JavaScript 核心；`bun run check:core` 可单独检查核心。核心通过 JSDoc 和 `checkJs` 检查，仍然可以直接复制使用，无需编译。`bun run preview` 在 4178 端口预览 `dist/`。构建后的 `dist/native.html` 与 `dist/lib/` 可直接离线使用，`dist/lib/` 同时保留原生类型声明。
+`bun run check` 检查 Vue 封装、示例和原生 JavaScript 核心；`bun run check:lib` 可单独检查核心。核心通过 JSDoc 和 `checkJs` 检查，仍然可以直接复制使用，无需编译。`bun run preview` 在 4178 端口预览 `dist/`。构建后的 `dist/native.html` 与 `dist/lib/` 可直接离线使用，`dist/lib/` 同时保留原生类型声明。
 
 浏览器回归使用 Node.js、Playwright 和本机 Chrome，自动启动并关闭独立测试服务，必须指定模块，不默认运行全量：
 

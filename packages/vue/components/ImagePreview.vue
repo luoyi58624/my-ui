@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useNative } from '../adapter'
-import type { ImagePreviewItem } from '../../core/my-ui'
+import type { ImagePreviewItem } from '../../../lib/my-ui'
 
 defineOptions({ inheritAttrs: false })
 const props = withDefaults(defineProps<{

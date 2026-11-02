@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useNative } from '../adapter'
-import type { UploadFile, UploadRequest, UploadRejection } from '../../core/my-ui'
+import type { UploadFile, UploadRequest, UploadRejection } from '../../../lib/my-ui'
 
 defineOptions({ inheritAttrs: false })
 const props = withDefaults(defineProps<{

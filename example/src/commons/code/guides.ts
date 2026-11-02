@@ -29,7 +29,7 @@ export const guides: Record<GuideKind, Guide> = {
         id: 'setup',
         title: '01 · 引入 my-ui',
         paragraphs: [
-          'my-ui 以可复制、可修改的源码提供，目前不发布 npm 包。在已有的 Vue 3 + Vite 项目中，把 packages/core 和 packages/vue 一起复制到 src/my-ui，保留两个目录的相邻关系。',
+          'my-ui 以可复制、可修改的源码提供，目前不发布 npm 包。在已有的 Vue 3 + Vite 项目中，把 lib 和 packages/vue 一起复制到 src/my-ui，保留 lib 与 packages/vue 的目录层级。',
           '直接导入需要的组件即可，不需要 app.use 全局注册。Vue 入口会自动引入公共 CSS 和交互代码。当前仓库的示例使用 workspace 名称 @my-ui/vue；复制到自己的项目后，改成对应的本地路径。'
         ],
         files: [
@@ -38,8 +38,9 @@ export const guides: Record<GuideKind, Guide> = {
             'text',
             `src/
   my-ui/
-    core/       ← 完整复制 packages/core
-    vue/        ← 完整复制 packages/vue
+    lib/        ← 完整复制 lib
+    packages/
+      vue/      ← 完整复制 packages/vue
   App.vue
   main.ts`
           ),
@@ -65,7 +66,7 @@ createApp(App).mount('#app')`
             'vue',
             `<script setup lang="ts">
 import { ref } from 'vue'
-import { Button, Card, Input } from './my-ui/vue'
+import { Button, Card, Input } from './my-ui/packages/vue'
 
 const name = ref('小蓝')
 const greeting = ref('')
@@ -108,7 +109,7 @@ function greet() {
             'vue',
             `<script setup lang="ts">
 import { ref } from 'vue'
-import { Input, Select, Switch, type Option } from './my-ui/vue'
+import { Input, Select, Switch, type Option } from './my-ui/packages/vue'
 
 const nickname = ref('小蓝')
 const city = ref('hangzhou')
@@ -143,7 +144,7 @@ const cities: Option[] = [
             'vue',
             `<script setup lang="ts">
 import { ref } from 'vue'
-import { Button, Popup, Toast, popup } from './my-ui/vue'
+import { Button, Popup, Toast, popup } from './my-ui/packages/vue'
 
 const toast = ref<InstanceType<typeof Toast>>()
 async function save() {
@@ -204,7 +205,7 @@ html[data-theme='dark'] {
         id: 'html',
         title: '06 · 直接在 HTML 中使用',
         paragraphs: [
-          '不使用 Vue 时，复制 core 中的 my-ui.css 与 my-ui.js，直接引入。首屏 data-my 声明会自动初始化；动态插入内容后调用 MyUI.init(container)。命令式挂载返回实例，可用 update 更新、destroy 清理。'
+          '不使用 Vue 时，复制 lib 到页面旁边，直接引入其中的 my-ui.css 与 my-ui.js。首屏 data-my 声明会自动初始化；动态插入内容后调用 MyUI.init(container)。命令式挂载返回实例，可用 update 更新、destroy 清理。'
         ],
         files: [
           file(
@@ -216,8 +217,8 @@ html[data-theme='dark'] {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>my-ui 入门</title>
-    <link rel="stylesheet" href="./my-ui.css" />
-    <script src="./my-ui.js" defer></script>
+    <link rel="stylesheet" href="./lib/my-ui.css" />
+    <script src="./lib/my-ui.js" defer></script>
   </head>
   <body>
     <button class="my-button" type="button">保存</button>
@@ -265,7 +266,7 @@ html[data-theme='dark'] {
       ], link: { label: '体验 Web 下拉刷新', path: '/example/pull-refresh' } },
       { id: 'platform', title: '04 · 保留需要的系统能力', paragraphs: [
         'Android 宿主处理系统安全区域、键盘避让和返回按钮；返回先关闭最上层弹窗，再返回 Web 路由或关闭当前 Activity。主题同步系统栏外观，字重继续读取 Android 系统设置。',
-        '浏览器与桌面继续使用同一套 Web 页面。原生 HTML 也可直接使用 core 中的 CSS 和 JavaScript。'
+        '浏览器与桌面继续使用同一套 Web 页面。原生 HTML 也可直接使用 lib 中的 CSS 和 JavaScript。'
       ], link: { label: '打开纯 HTML 示例', path: '/html' } },
       { id: 'state', title: '05 · 跨页状态与持久化', paragraphs: [
         '保留跨窗口 Pinia 状态同步和本地持久化。Android 的多个 WebView 能共享备注与计数，重新启动后也可恢复。'

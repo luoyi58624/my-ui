@@ -1,4 +1,4 @@
-import '../packages/core/my-ui.js'
+import '../lib/my-ui.js'
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
