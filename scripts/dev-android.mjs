@@ -27,7 +27,7 @@ export function androidArguments(args) {
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const cwd = fileURLToPath(new URL('../example', import.meta.url))
+  const cwd = fileURLToPath(new URL('../examples/tauri', import.meta.url))
   const env = androidEnvironment()
   // 仅开发安装需要结束目标设备上的旧实例，普通 APK 构建不操作设备。
   env.MY_UI_ANDROID_DEV = '1'

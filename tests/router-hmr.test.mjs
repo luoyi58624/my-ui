@@ -13,7 +13,7 @@ test('开发热更新后，目录、Tab 和返回仍由同一个路由驱动', {
   let server, browser
   try {
     server = await createServer({
-      configFile: fileURLToPath(new URL('../example/vite.config.ts', import.meta.url)),
+      configFile: fileURLToPath(new URL('../examples/vue/vite.config.ts', import.meta.url)),
       cacheDir,
       mode: 'development',
       logLevel: 'error',

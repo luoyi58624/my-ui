@@ -33,10 +33,10 @@
     if (params.has('frame')) {
       document.body.innerHTML = '<div id="app"></div>'
       const base = document.createElement('base')
-      base.href = '/example/'
+      base.href = '/examples/vue/'
       document.head.append(base)
       // 使用正式入口验证目录、真实组件、持久状态与弹层返回。
-      await import('/example/src/main.ts').catch((error) => {
+      await import('/examples/vue/src/main.ts').catch((error) => {
         document.body.textContent = error.stack
         throw error
       })

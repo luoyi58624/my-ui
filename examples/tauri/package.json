@@ -1,0 +1,21 @@
+{
+  "name": "@my-ui/examples-tauri",
+  "private": true,
+  "type": "module",
+  "description": "my-ui 示例的桌面与 Android 原生壳，复用 examples/vue 的前端产物",
+  "scripts": {
+    "dev": "tauri dev",
+    "dev:android": "node ../../scripts/dev-android.mjs",
+    "build": "tauri build --no-bundle",
+    "build:android": "tauri android build --apk --target aarch64",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/plugin-store": "2.5.0",
+    "tauri-plugin-android-system-font-weight": "file:../../../../tauri/plugins/tauri-plugin-android-system-font-weight",
+    "tauri-plugin-native-components": "file:../../../../tauri/plugins/tauri-plugin-native-components"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.3"
+  }
+}

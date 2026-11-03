@@ -26,10 +26,10 @@ let failed = false
 const cacheDir = mkdtempSync(join(tmpdir(), 'my-ui-browser-'))
 try {
   server = await createServer({
-    configFile: fileURLToPath(new URL('../example/vite.config.ts', import.meta.url)),
+    configFile: fileURLToPath(new URL('../examples/vue/vite.config.ts', import.meta.url)),
     // 多个开发服务共用预构建目录会混入不同的 Vue 实例，测试缓存按进程隔离。
     cacheDir,
-    optimizeDeps: { entries: ['example/index.html', ...modules.map(name => `tests/${name}.browser.html`)] },
+    optimizeDeps: { entries: ['examples/vue/index.html', ...modules.map(name => `tests/${name}.browser.html`)] },
     mode: 'test', logLevel: 'error', server: { host: '127.0.0.1', port: 0, open: false, hmr: false, watch: null },
   })
   await server.listen()

@@ -1,0 +1,22 @@
+{
+  "name": "@my-ui/examples-react",
+  "private": true,
+  "type": "module",
+  "description": "my-ui 的 React 组件示例站点，共用同一份 CSS 与核心交互",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5181 --strictPort",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4181 --strictPort"
+  },
+  "dependencies": {
+    "@my-ui/react": "workspace:*",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.2.1",
+    "vite": "8.3.4"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "name": "@my-ui/examples-vue",
+  "private": true,
+  "type": "module",
+  "description": "my-ui 的 Vue 展示页：Web、桌面与 Android 共用同一份前端",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5178 --strictPort",
+    "dev:test": "vite --mode test --host 127.0.0.1 --port 5179 --strictPort",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4178 --strictPort"
+  },
+  "dependencies": {
+    "@my-ui/vue": "workspace:*",
+    "@tauri-apps/plugin-store": "2.5.0",
+    "@wdns/vue-code-block": "2.4.1",
+    "highlight.js": "11.12.0",
+    "pinia": "4.1.0",
+    "tauri-plugin-native-components": "file:../../../../tauri/plugins/tauri-plugin-native-components",
+    "vue": "3.5.43",
+    "vue-router": "4.6.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "6.2.1",
+    "@vitejs/plugin-vue": "6.0.10",
+    "vite": "8.3.4"
+  }
+}

@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f5f7fb" />
+    <meta
+      name="description"
+      content="my-ui 纯 HTML 示例站点：不依赖 Vue 与任何构建工具，双击即可打开的组件演示与文档。"
+    />
+    <title>my-ui · 组件示例</title>
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+    <script src="assets/js/theme-init.js"></script>
+    <link rel="stylesheet" href="../../lib/my-ui.css" />
+    <link rel="stylesheet" href="assets/css/site.css" />
+    <script src="../../lib/my-ui.js" defer></script>
+    <script src="assets/js/catalog.js" defer></script>
+    <script src="assets/js/theme.js" defer></script>
+    <script src="assets/js/code-view.js" defer></script>
+    <script src="assets/js/scrollspy.js" defer></script>
+    <script src="assets/js/settings-data.js" defer></script>
+    <script src="assets/js/shell.js" defer></script>
+    <script src="assets/js/theme-panel.js" defer></script>
+  </head>
+  <body data-shell="tabs" data-tab="home" data-base="">
+    <div class="demo-app">
+      <!-- 首页：组件目录 -->
+      <section data-tab-panel="home" data-tab-title="组件示例" data-tab-settings>
+        <div class="demo-catalog" data-catalog="home"></div>
+      </section>
+
+      <!-- 应用：应用布局与平台入口 -->
+      <section data-tab-panel="native" data-tab-title="应用与平台">
+        <div class="demo-catalog" data-catalog="native"></div>
+      </section>
+
+      <!-- 消息：预留 Demo 页面 -->
+      <section data-tab-panel="messages" data-tab-title="消息">
+        <div class="demo-placeholder" data-messages></div>
+      </section>
+
+      <!-- 设置：设置首页（无顶部导航，整页滚动） -->
+      <section data-tab-panel="settings" data-tab-title="设置" data-tab-bare>
+        <div data-settings-home></div>
+      </section>
+    </div>
+
+    <script>
+      ;(window.__myuiPage = window.__myuiPage || []).push(function () {
+        // 两个目录共用同一套渲染逻辑，数据来自 assets/js/catalog.js。
+        MyUISite.renderCatalog(document.querySelector('[data-catalog="home"]'), {
+          title: '组件目录',
+          groups: MYUI_SITE.demoGroups
+        })
+        MyUISite.renderCatalog(document.querySelector('[data-catalog="native"]'), {
+          title: '应用与平台',
+          groups: MYUI_SITE.nativeDemoGroups
+        })
+
+        // 消息占位页：保留点击次数，切换栏目后仍然可见。
+        var host = document.querySelector('[data-messages]')
+        var count = 0
+        var iconWrap = document.createElement('span')
+        iconWrap.className = 'demo-placeholder-icon'
+        iconWrap.append(MyUI.create('Icon', { name: 'message' }).element)
+        var label = document.createElement('span')
+        label.className = 'demo-placeholder-label'
+        label.textContent = 'DEMO 2'
+        var heading = document.createElement('h2')
+        heading.textContent = '消息'
+        var text = document.createElement('p')
+        text.textContent = '这是预留的 Demo 页面。'
+        var counter = MyUI.create('Button', {
+          variant: 'outline',
+          onClick: function () {
+            count += 1
+            counter.update({ label: '点一下 · ' + count })
+          }
+        })
+        counter.update({ label: '点一下 · 0' })
+        var home = MyUI.create('Button', {
+          variant: 'outline',
+          label: '浏览组件',
+          onClick: function () {
+            location.hash = '#home'
+          }
+        })
+        host.append(iconWrap, label, heading, text, counter.element, home.element)
+
+        // 设置页数据与 settings.html 共用同一份渲染函数。
+        MYUI_SETTINGS.render(document.querySelector('[data-settings-home]'))
+      })
+    </script>
+  </body>
+</html>

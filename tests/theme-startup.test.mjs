@@ -2,9 +2,9 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { readFileSync } from 'node:fs'
 import { runInNewContext } from 'node:vm'
-import { applyTheme, createTheme } from '../example/src/commons/theme/index.js'
+import { applyTheme, createTheme } from '../examples/vue/src/commons/theme/index.js'
 
-const bootstrap = readFileSync(new URL('../example/public/theme-init.js', import.meta.url), 'utf8')
+const bootstrap = readFileSync(new URL('../examples/vue/public/theme-init.js', import.meta.url), 'utf8')
 function start({ settings, cached, inherited, systemDark = false, storageBlocked = false } = {}) {
   const values = new Map(), root = { dataset: {}, style: { setProperty: (key, value) => values.set(key, value), getPropertyValue: key => values.get(key) || '' } }
   const storage = new Map([['my-ui:theme', settings && JSON.stringify(settings)], ['my-ui:theme-render', cached && JSON.stringify(cached)]])

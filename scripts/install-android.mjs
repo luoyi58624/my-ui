@@ -4,7 +4,7 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { prepareAndroidInstall } from './prepare-android-install.mjs'
 
-const application = JSON.parse(readFileSync(new URL('../example/src-tauri/tauri.conf.json', import.meta.url), 'utf8')).identifier
+const application = JSON.parse(readFileSync(new URL('../examples/tauri/tauri.conf.json', import.meta.url), 'utf8')).identifier
 const runAdb = args => execFileSync('adb', args, { encoding: 'utf8', windowsHide: true }).trim()
 
 /** 保留应用数据，先结束目标设备的旧实例，再覆盖安装 APK 并通过桌面入口启动一次。 */

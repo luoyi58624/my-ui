@@ -24,7 +24,7 @@ async function withRuntime(run: (context: any) => Promise<void>) {
   console.warn = (...args) => { warnings.push(args) }
   try {
     // Bun 会合并仅查询参数不同的文件模块，独立源码 URL 用于隔离每项测试的缓存。
-    const source = readFileSync(new URL('../example/src/commons/font-weight.ts', import.meta.url), 'utf8')
+    const source = readFileSync(new URL('../examples/vue/src/commons/font-weight.ts', import.meta.url), 'utf8')
     const js = new Bun.Transpiler({ loader: 'ts' }).transformSync(source) + '\n// instance ' + ++instance
     const api = await import('data:text/javascript;base64,' + Buffer.from(js).toString('base64'))
     await run({ ...api, calls, storage, warnings, bridge, respond: (next: () => unknown) => { response = next } })
@@ -154,7 +154,7 @@ test('普通网页不调用原生插件，恢复使用示例默认字重', async
 }))
 
 test('Tauri 默认权限声明必须是集合，Android 主窗口实际引用该集合', () => {
-  const root = new URL('../example/src-tauri/', import.meta.url)
+  const root = new URL('../examples/tauri/', import.meta.url)
   const cargo = Bun.TOML.parse(readFileSync(new URL('Cargo.toml', root), 'utf8'))
   const plugin = new URL(cargo.dependencies['tauri-plugin-android-system-font-weight'].path + '/', root)
   const permission = Bun.TOML.parse(readFileSync(new URL('permissions/default.toml', plugin), 'utf8'))

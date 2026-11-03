@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="my-ui 完整交互示例：基础组件、交互控制、内容容器、状态反馈与完整场景装配在同一个长页里，纯 HTML + 原生 JS，不依赖 Vue 与构建。"
+    />
+    <title>完整交互示例 · my-ui</title>
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+    <!-- 首帧恢复主题：必须在样式表之前执行，避免闪烁。 -->
+    <script src="assets/js/theme-init.js"></script>
+    <link rel="stylesheet" href="../../lib/my-ui.css" />
+    <link rel="stylesheet" href="assets/css/showcase.css" />
+    <script src="../../lib/my-ui.js" defer></script>
+    <script src="assets/js/theme.js" defer></script>
+    <script src="assets/js/showcase.js" defer></script>
+  </head>
+  <body>
+    <div class="showcase-app">
+      <!-- 1. 顶部导航：单页站点没有返回目标，只保留标题（明暗切换在 masthead 右侧）。 -->
+      <div class="showcase-appbar" id="showcase-appbar"></div>
+
+      <div class="showcase-layout" id="showcase-layout" aria-label="完整交互示例">
+        <!-- 2. 固定 masthead + 5 个分区导航 -->
+        <header class="masthead" id="showcase-masthead">
+          <div class="shell masthead-shell">
+            <nav class="site-nav" aria-label="页面导航">
+              <a href="#showcase-actions" data-section="actions">基础组件</a>
+              <a href="#showcase-controls" data-section="controls">交互控制</a>
+              <a href="#showcase-surfaces" data-section="surfaces">内容容器</a>
+              <a href="#showcase-feedback" data-section="feedback">状态反馈</a>
+              <a href="#showcase-scenarios" data-section="scenarios">完整示例</a>
+              <a href="#showcase-scenarios" data-scroll-scenarios>原生 HTML ↗</a>
+            </nav>
+            <span class="nav-theme" id="showcase-theme"></span>
+          </div>
+        </header>
+
+        <div class="shell">
+          <main id="showcase-top">
+            <!-- 3. hero -->
+            <section class="hero">
+              <div class="hero-copy">
+                <div class="eyebrow"><i class="dash"></i> MOBILE COMPONENT SYSTEM</div>
+                <h1>自然留白，<br /><span>轻盈交互。</span></h1>
+                <p>用克制的色彩、舒适的留白与柔和卡片，<br />原生 HTML 与 Vue 共用一套组件体验。</p>
+                <div class="hero-cta">
+                  <button class="cta-btn" type="button" data-scroll-actions>
+                    探索组件
+                    <span data-cta-icon></span>
+                  </button>
+                  <a class="hero-note" href="#showcase-scenarios" data-scroll-scenarios
+                    >原生 HTML 示例 ↗</a
+                  >
+                </div>
+              </div>
+              <div class="art" aria-hidden="true">
+                <div class="art-halo"></div>
+                <div class="sample-window">
+                  <div class="sample-top">
+                    <div class="sample-appicon"><span data-sample-icon></span></div>
+                    <div class="sample-dots"><i></i><i></i><i></i></div>
+                  </div>
+                  <div class="sample-title">自在，从容。</div>
+                  <div class="sample-caption">清晰而自然的视觉秩序</div>
+                  <div class="sample-progress"><i></i></div>
+                </div>
+                <div class="float-chip first">
+                  <div class="round green" data-chip-check></div>
+                  <span><strong>已完成</strong><small>每一步都轻松</small></span>
+                </div>
+                <div class="float-chip second">
+                  <div class="round" data-chip-spark></div>
+                  <span><strong>专注细节</strong><small>简洁，却不简单</small></span>
+                </div>
+              </div>
+            </section>
+
+            <!-- 4. 01 基础组件 · docs: button | tag -->
+            <section id="showcase-actions">
+              <div class="section-title">
+                <div>
+                  <div class="number">01 / 基础组件</div>
+                  <h2>按钮与标签</h2>
+                </div>
+                <div class="subtitle">清晰的操作层级，自然的按压反馈。</div>
+              </div>
+              <div class="pair">
+                <div class="showcase-example">
+                  <article class="showcase-block">
+                    <h3 class="showcase-label">Button 按钮</h3>
+                    <div class="showcase-row" data-demo-button></div>
+                    <p class="showcase-note" data-button-note>点击任意按钮，感受按压反馈。</p>
+                  </article>
+                </div>
+                <div class="showcase-example">
+                  <article class="showcase-block">
+                    <h3 class="showcase-label">Tag 标签</h3>
+                    <div class="showcase-row" data-demo-tags></div>
+                    <div data-demo-tag-group></div>
+                  </article>
+                </div>
+              </div>
+            </section>
+
+            <!-- 5. 02 交互控制 · docs: input | switch / slider | selection / 5 个整行 -->
+            <section id="showcase-controls" class="section-gap">
+              <div class="section-title">
+                <div>
+                  <div class="number">02 / 交互控制</div>
+                  <h2>输入与选择</h2>
+                </div>
+                <div class="subtitle">为手指设计的控件尺寸，状态变化一目了然。</div>
+              </div>
+              <div class="pair equal">
+                <div class="showcase-example">
+                  <article class="showcase-block">
+                    <h3 class="showcase-label">Input / Select</h3>
+                    <div data-demo-input></div>
+                    <div data-demo-select></div>
+                  </article>
+                </div>
+                <div class="showcase-example">
+                  <article class="showcase-block">
+                    <h3 class="showcase-label">Switch 开关</h3>
+                    <div data-demo-switch></div>
+                    <p class="showcase-note" data-switch-note>开关状态由 value 与 onChange 维护。</p>
+                  </article>
+                </div>
+              </div>
+              <div class="pair equal secondary-pair">
+                <div class="showcase-example">
+                  <article class="showcase-block">
+                    <h3 class="showcase-label">Segmented / Slider</h3>
+                    <div data-demo-segmented></div>
+                    <div data-demo-slider></div>
+                  </article>
+                </div>
+                <div class="showcase-example">
+                  <article class="showcase-block">
+                    <h3 class="showcase-label">Choices / Stepper</h3>
+                    <div data-demo-choices></div>
+                    <div data-demo-stepper></div>
+                  </article>
+                </div>
+              </div>
+              <!-- selection-collapse：单选/复选组 + 折叠面板，同一文档整行排开 -->
+              <div class="secondary-pair">
+                <div class="showcase-example">
+                  <article class="showcase-block">
+                    <h3 class="showcase-label">Radio / Checkbox</h3>
+                    <div data-demo-radio></div>
+                    <div data-demo-checkbox></div>
+                  </article>
+                </div>
+                <div class="showcase-example">
+                  <article class="showcase-block">
+                    <h3 class="showcase-label">Collapse 折叠</h3>
+                    <div data-demo-collapse></div>
+                  </article>
+                </div>
+              </div>
+              <div class="secondary-pair">
+                <div class="showcase-example">
+                  <article class="showcase-block">
+                    <h3 class="showcase-label">Combobox 搜索选择</h3>
+                    <div data-demo-combobox></div>
+                    <p class="showcase-note" data-combobox-note>
+                      输入关键字，从结果中选择一位协作者。
+                    </p>
+                  </article>
+                </div>
+              </div>
+              <div class="secondary-pair">
+                <div class="showcase-example">
+                  <article class="showcase-block">
+                    <h3 class="showcase-label">Picker 滚轮选择</h3>
+                    <div data-demo-picker></div>
+                  </article>
+                </div>
+              </div>
+              <div class="secondary-pair">
+                <div class="showcase-example">
+                  <article class="showcase-block">
+                    <h3 class="showcase-label">Date / Time</h3>
+                    <div data-demo-date></div>
+                    <div data-demo-time></div>
+                  </article>
+                </div>
+              </div>
+              <div class="secondary-pair">
+                <div class="showcase-example">
+                  <article class="showcase-block">
+                    <h3 class="showcase-label">Upload 上传</h3>
+                    <div data-demo-upload></div>
+                  </article>
+                </div>
+              </div>
+            </section>
+
+            <!-- 6. 03 内容容器 · docs: card 整行 + 6 个整行 -->
+            <section id="showcase-surfaces" class="section-gap">
+              <div class="section-title">
+                <div>
+                  <div class="number">03 / 内容容器</div>
+                  <h2>卡片与导航</h2>
+                </div>
+                <div class="subtitle">柔和的层次和留白，突出内容本身。</div>
+              </div>
+              <div class="showcase-example">
+                <article class="showcase-block">
+                  <h3 class="showcase-label">Card 卡片</h3>
+                  <div class="card-grid" data-demo-card></div>
+                  <p class="showcase-note" data-card-note>
+                    交互卡片可用键盘激活；图文卡片突出内容本身。
+                  </p>
+                </article>
+              </div>
+              <div class="secondary-pair">
+                <div class="showcase-example">
+                  <article class="showcase-block">
+                    <h3 class="showcase-label">Shadow 阴影</h3>
+                    <div
+                      class="shadow-levels"
+                      data-demo-shadows
+                      aria-label="五种阴影层级对比"
+                    ></div>
+                  </article>
+                </div>
+              </div>
+              <div class="secondary-pair">
+                <div class="showcase-example">
+                  <article class="showcase-block">
+                    <h3 class="showcase-label">Avatar / Badge</h3>
+                    <div data-demo-identity></div>
+                  </article>
+                </div>
+              </div>
+              <div class="secondary-pair">
+                <div class="showcase-example">
+                  <article class="showcase-block">
+                    <h3 class="showcase-label">Image 图片</h3>
+                    <div class="image-grid" data-demo-image></div>
+                  </article>
+                </div>
+              </div>
+              <div class="secondary-pair">
+                <div class="showcase-example">
+                  <article class="showcase-block">
+                    <h3 class="showcase-label">AppBar 顶部导航</h3>
+                    <div class="app-bar-preview" data-demo-appbar></div>
+                  </article>
+                </div>
+              </div>
+              <div class="secondary-pair">
+                <div class="showcase-example">
+                  <article class="showcase-block">
+                    <h3 class="showcase-label">Navigation 导航选项</h3>
+                    <div data-demo-navigation></div>
+                    <p class="showcase-note" data-navigation-note>当前栏目：首页</p>
+                  </article>
+                </div>
+              </div>
+              <div class="secondary-pair">
+                <div class="showcase-example">
+                  <article class="showcase-block">
+                    <h3 class="showcase-label">List 列表</h3>
+                    <div data-demo-list></div>
+                  </article>
+                </div>
+              </div>
+            </section>
+
+            <!-- 7. 04 状态反馈 · docs: native-navigation 整行 + 6 个整行 -->
+            <section id="showcase-feedback" class="section-gap">
+              <div class="section-title">
+                <div>
+                  <div class="number">04 / 状态反馈</div>
+                  <h2>提示与弹层</h2>
+                </div>
+                <div class="subtitle">提示、确认对话框和移动端操作面板。</div>
+              </div>
+              <div class="showcase-example">
+                <article class="showcase-block">
+                  <h3 class="showcase-label">应用与平台 · 共享备注</h3>
+                  <div data-demo-native-nav></div>
+                  <div class="showcase-row" data-native-actions></div>
+                  <p class="showcase-note" data-native-note>
+                    写入 localStorage，刷新页面后仍然保留。
+                  </p>
+                </article>
+              </div>
+              <div class="secondary-pair">
+                <div class="showcase-example">
+                  <article class="showcase-block">
+                    <h3 class="showcase-label">Toast / Dialog / Sheet</h3>
+                    <div class="showcase-row" data-demo-feedback></div>
+                    <p class="showcase-note" data-feedback-note>弹层覆盖整页，关闭后回到这里。</p>
+                  </article>
+                </div>
+              </div>
+              <div class="secondary-pair">
+                <div class="showcase-example">
+                  <article class="showcase-block">
+                    <h3 class="showcase-label">Tooltip / Divider / Progress</h3>
+                    <div data-demo-primitives></div>
+                  </article>
+                </div>
+              </div>
+              <div class="secondary-pair">
+                <div class="showcase-example">
+                  <article class="showcase-block">
+                    <h3 class="showcase-label">Notice / Steps</h3>
+                    <div data-demo-notice></div>
+                    <div data-demo-steps></div>
+                  </article>
+                </div>
+              </div>
+              <div class="secondary-pair">
+                <div class="showcase-example">
+                  <article class="showcase-block">
+                    <h3 class="showcase-label">Popup / Drawer</h3>
+                    <div class="showcase-row" data-demo-popup></div>
+                    <p class="showcase-note" data-popup-note>
+                      命令式弹层共享同一套手势与返回行为。
+                    </p>
+                  </article>
+                </div>
+              </div>
+              <div class="secondary-pair">
+                <div class="showcase-example">
+                  <article class="showcase-block">
+                    <h3 class="showcase-label">Touch 触摸滑动</h3>
+                    <div data-demo-touch></div>
+                  </article>
+                </div>
+              </div>
+              <div class="secondary-pair">
+                <div class="showcase-example">
+                  <article class="showcase-block">
+                    <h3 class="showcase-label">Menu 菜单</h3>
+                    <div class="showcase-row" data-demo-menu></div>
+                    <p class="showcase-note" data-menu-note>菜单浮在内容之上，选择一个动作。</p>
+                  </article>
+                </div>
+              </div>
+            </section>
+
+            <!-- 8. 05 完整示例 · docs: scenarios | native-html，Vue 版这一区没有 section-title -->
+            <section id="showcase-scenarios" class="section-gap">
+              <div class="showcase-example">
+                <article class="showcase-block">
+                  <h3 class="showcase-label">表单与内容场景</h3>
+                  <form class="scene-form" data-demo-scenario novalidate>
+                    <div data-scenario-name></div>
+                    <div data-scenario-intro></div>
+                    <div data-scenario-plan></div>
+                    <div data-scenario-switch></div>
+                    <div class="showcase-row" data-scenario-actions></div>
+                    <p class="showcase-note" data-scenario-status>
+                      填写昵称，选择方案后提交。
+                    </p>
+                  </form>
+                </article>
+              </div>
+              <div class="secondary-pair">
+                <div class="showcase-example">
+                  <article class="showcase-block">
+                    <h3 class="showcase-label">加载与空状态</h3>
+                    <div data-demo-states></div>
+                  </article>
+                </div>
+              </div>
+              <div class="secondary-pair">
+                <div class="showcase-example">
+                  <article class="showcase-block">
+                    <h3 class="showcase-label">原生 HTML 示例</h3>
+                    <div class="scene-links" data-demo-native-html></div>
+                  </article>
+                </div>
+              </div>
+            </section>
+          </main>
+
+          <!-- 9. footer -->
+          <footer>
+            <span><strong>my-ui</strong> · 从简约出发，让体验更自在。</span>
+            <span>LOCAL SOURCE · YOUR COMPONENTS</span>
+            <button class="to-top" type="button" data-scroll-top>回到顶部 ↑</button>
+          </footer>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

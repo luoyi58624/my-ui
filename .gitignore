@@ -1,5 +1,6 @@
 # 依赖与构建产物
 node_modules/
+# 各示例项目自己的产物（examples/*/dist），以及历史根目录产物
 dist/
 coverage/
 .vite/

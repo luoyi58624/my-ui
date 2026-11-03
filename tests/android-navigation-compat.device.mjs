@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 // 在不支持 Tauri 多窗口的设备上验证真实路由、原生返回与保活，不清除应用数据。
-const application = JSON.parse(readFileSync(new URL('../example/src-tauri/tauri.conf.json', import.meta.url))).identifier
+const application = JSON.parse(readFileSync(new URL('../examples/tauri/tauri.conf.json', import.meta.url))).identifier
 const serial = process.env.ANDROID_SERIAL || execFileSync('adb', ['get-serialno'], { encoding: 'utf8', windowsHide: true }).trim()
 assert(serial && serial !== 'unknown', '请连接设备或指定 ANDROID_SERIAL')
 assert(process.argv.slice(2).every(value => value === '--record'), '用法：node tests/android-navigation-compat.device.mjs [--record]')

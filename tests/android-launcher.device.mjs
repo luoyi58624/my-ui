@@ -6,7 +6,7 @@ import { join } from 'node:path'
 
 // 覆盖开发工具的显式启动与桌面启动器交替进入同一任务，手机需解锁并使用手势导航。
 const application = JSON.parse(
-  readFileSync(new URL('../example/src-tauri/tauri.conf.json', import.meta.url))
+  readFileSync(new URL('../examples/tauri/tauri.conf.json', import.meta.url))
 ).identifier
 const serial =
   process.env.ANDROID_SERIAL ||

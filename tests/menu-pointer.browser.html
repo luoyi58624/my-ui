@@ -14,7 +14,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
 <script type="module">
 import { createApp, h, nextTick, ref } from 'vue'
 import { Button, Menu } from '/packages/vue/index.ts'
-import { applyTheme } from '/example/src/commons/theme/index.js'
+import { applyTheme } from '/examples/vue/src/commons/theme/index.js'
 
 applyTheme({ mode: 'light' })
 const frame = () => new Promise(resolve => requestAnimationFrame(resolve))

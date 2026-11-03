@@ -19,22 +19,53 @@
         "vue-tsc": "3.3.13",
       },
     },
-    "example": {
-      "name": "@my-ui/example",
+    "examples/html": {
+      "name": "@my-ui/examples-html",
+      "devDependencies": {
+        "vite": "8.3.4",
+      },
+    },
+    "examples/react": {
+      "name": "@my-ui/examples-react",
       "dependencies": {
         "@my-ui/react": "workspace:*",
+        "react": "19.3.1",
+        "react-dom": "19.3.1",
+      },
+      "devDependencies": {
+        "@types/react": "19.3.0",
+        "@types/react-dom": "19.3.0",
+        "@vitejs/plugin-react": "6.2.1",
+        "vite": "8.3.4",
+      },
+    },
+    "examples/tauri": {
+      "name": "@my-ui/examples-tauri",
+      "dependencies": {
+        "@tauri-apps/plugin-store": "2.5.0",
+        "tauri-plugin-android-system-font-weight": "file:../../../../tauri/plugins/tauri-plugin-android-system-font-weight",
+        "tauri-plugin-native-components": "file:../../../../tauri/plugins/tauri-plugin-native-components",
+      },
+      "devDependencies": {
+        "@tauri-apps/cli": "2.12.3",
+      },
+    },
+    "examples/vue": {
+      "name": "@my-ui/examples-vue",
+      "dependencies": {
         "@my-ui/vue": "workspace:*",
         "@tauri-apps/plugin-store": "2.5.0",
         "@wdns/vue-code-block": "2.4.1",
         "highlight.js": "11.12.0",
         "pinia": "4.1.0",
-        "tauri-plugin-android-system-font-weight": "file:../../../tauri/plugins/tauri-plugin-android-system-font-weight",
-        "tauri-plugin-native-components": "file:../../../tauri/plugins/tauri-plugin-native-components",
+        "tauri-plugin-native-components": "file:../../../../tauri/plugins/tauri-plugin-native-components",
         "vue": "3.5.43",
         "vue-router": "4.6.4",
       },
       "devDependencies": {
-        "@tauri-apps/cli": "2.12.3",
+        "@vitejs/plugin-react": "6.2.1",
+        "@vitejs/plugin-vue": "6.0.10",
+        "vite": "8.3.4",
       },
     },
     "packages/react": {
@@ -68,7 +99,13 @@
 
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.6.0", "", {}, "sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw=="],
 
-    "@my-ui/example": ["@my-ui/example@workspace:example"],
+    "@my-ui/examples-html": ["@my-ui/examples-html@workspace:examples/html"],
+
+    "@my-ui/examples-react": ["@my-ui/examples-react@workspace:examples/react"],
+
+    "@my-ui/examples-tauri": ["@my-ui/examples-tauri@workspace:examples/tauri"],
+
+    "@my-ui/examples-vue": ["@my-ui/examples-vue@workspace:examples/vue"],
 
     "@my-ui/react": ["@my-ui/react@workspace:packages/react"],
 
@@ -280,9 +317,11 @@
 
     "vue-tsc": ["vue-tsc@3.3.13", "", { "dependencies": { "@volar/typescript": "2.4.28", "@vue/language-core": "3.3.13" }, "peerDependencies": { "typescript": ">=5.0.0" }, "bin": { "vue-tsc": "bin/vue-tsc.js" } }, "sha512-jE4/bXdOMSHVxEGgQCqNllJy+9N3Gx6tfSAsg0yhFK/MAN6eXqISihupnDEKSCt12VVnjN2gI3AqLYcqoh5x/A=="],
 
-    "@my-ui/example/tauri-plugin-android-system-font-weight": ["tauri-plugin-android-system-font-weight@file:../../tauri/plugins/tauri-plugin-android-system-font-weight", {}],
+    "@my-ui/examples-tauri/tauri-plugin-android-system-font-weight": ["tauri-plugin-android-system-font-weight@file:../../tauri/plugins/tauri-plugin-android-system-font-weight", {}],
 
-    "@my-ui/example/tauri-plugin-native-components": ["tauri-plugin-native-components@file:../../tauri/plugins/tauri-plugin-native-components", { "dependencies": { "@tauri-apps/api": "^2.12.4" }, "devDependencies": { "vue": "3.5.43", "vue-router": "4.6.4" }, "peerDependencies": { "vue-router": "^4.6.0" }, "optionalPeers": ["vue-router"] }],
+    "@my-ui/examples-tauri/tauri-plugin-native-components": ["tauri-plugin-native-components@file:../../tauri/plugins/tauri-plugin-native-components", { "dependencies": { "@tauri-apps/api": "^2.12.4" }, "devDependencies": { "vue": "3.5.43", "vue-router": "4.6.4" }, "peerDependencies": { "vue-router": "^4.6.0" }, "optionalPeers": ["vue-router"] }],
+
+    "@my-ui/examples-vue/tauri-plugin-native-components": ["tauri-plugin-native-components@file:../../tauri/plugins/tauri-plugin-native-components", { "dependencies": { "@tauri-apps/api": "^2.12.4" }, "devDependencies": { "vue": "3.5.43", "vue-router": "4.6.4" }, "peerDependencies": { "vue-router": "^4.6.0" }, "optionalPeers": ["vue-router"] }],
 
     "@wdns/vue-code-block/vue": ["vue@3.5.44", "", { "dependencies": { "@vue/compiler-dom": "3.5.44", "@vue/compiler-sfc": "3.5.44", "@vue/runtime-dom": "3.5.44", "@vue/server-renderer": "3.5.44", "@vue/shared": "3.5.44" }, "peerDependencies": { "typescript": "*" }, "optionalPeers": ["typescript"] }, "sha512-dvvmaOCG7lAMkJTPqPwWeGMsPS6DIsFsfZDUgBp9V6mHf9b3+/wyVwYR4Es+WV6uJC0FKRxp81Obcq0ZwUcGFQ=="],
 

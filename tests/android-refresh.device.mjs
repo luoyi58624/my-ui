@@ -7,7 +7,7 @@ import { chromium } from 'playwright'
 
 // Android 真实触摸覆盖连续滚到顶部和下拉交接，页面由当前 Web PullRefresh 渲染。
 assert(process.argv.slice(2).every(argument => argument === '--record'), '用法：node tests/android-refresh.device.mjs [--record]')
-const application = JSON.parse(readFileSync(new URL('../example/src-tauri/tauri.conf.json', import.meta.url))).identifier
+const application = JSON.parse(readFileSync(new URL('../examples/tauri/tauri.conf.json', import.meta.url))).identifier
 const serial = process.env.ANDROID_SERIAL || execFileSync('adb', ['get-serialno'], { encoding: 'utf8', windowsHide: true }).trim()
 assert(serial && serial !== 'unknown', '请连接设备或指定 ANDROID_SERIAL')
 const args = ['-s', serial]

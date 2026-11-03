@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 // 只操作本示例与其返回桌面的过程；手机需保持解锁、竖屏并使用手势导航。
-const application = JSON.parse(readFileSync(new URL('../example/src-tauri/tauri.conf.json', import.meta.url))).identifier
+const application = JSON.parse(readFileSync(new URL('../examples/tauri/tauri.conf.json', import.meta.url))).identifier
 const serial = process.env.ANDROID_SERIAL || execFileSync('adb', ['get-serialno'], { encoding: 'utf8', windowsHide: true }).trim()
 assert(serial && serial !== 'unknown', '请连接一台已授权 USB 调试的手机，或指定 ANDROID_SERIAL')
 assert(process.argv.slice(2).every(argument => argument === '--record'), '用法：node tests/android-back.device.mjs [--record]')

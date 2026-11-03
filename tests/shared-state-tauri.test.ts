@@ -90,9 +90,9 @@ test('失败的原生加载不会永久缓存拒绝，下一次操作能够重�
 }))
 
 test('首页和原生子页均拥有 Store 权限，原生应用已注册对应插件', () => {
-  const capability = JSON.parse(readFileSync(new URL('../example/src-tauri/capabilities/default.json', import.meta.url), 'utf8'))
+  const capability = JSON.parse(readFileSync(new URL('../examples/tauri/capabilities/default.json', import.meta.url), 'utf8'))
   assert.ok(capability.windows.includes('main') && capability.windows.includes('native-page-*'))
   assert.ok(capability.permissions.includes('store:default'))
-  const source = readFileSync(new URL('../example/src-tauri/src/lib.rs', import.meta.url), 'utf8')
+  const source = readFileSync(new URL('../examples/tauri/src/lib.rs', import.meta.url), 'utf8')
   assert.match(source, /\.plugin\(tauri_plugin_store::Builder::default\(\)\.build\(\)\)/)
 })

@@ -11,5 +11,5 @@
     "noEmit": true,
     "types": ["vite/client", "react", "react-dom"]
   },
-  "include": ["packages/react/**/*.ts", "packages/react/**/*.tsx", "example/react.tsx", "tests/react.fixture.tsx", "tests/react-types.tsx"]
+  "include": ["packages/react/**/*.ts", "packages/react/**/*.tsx", "examples/react/react.tsx", "tests/react.fixture.tsx", "tests/react-types.tsx"]
 }

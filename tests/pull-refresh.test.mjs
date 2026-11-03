@@ -12,9 +12,9 @@ test('Web 下拉刷新：触摸边界、浏览器滚动和示例接入', { timeo
   let server, browser, context
   try {
     server = await createServer({
-      configFile: fileURLToPath(new URL('../example/vite.config.ts', import.meta.url)),
+      configFile: fileURLToPath(new URL('../examples/vue/vite.config.ts', import.meta.url)),
       cacheDir, mode: 'test', logLevel: 'error',
-      optimizeDeps: { entries: ['example/index.html', 'tests/pull-refresh.fixture.html'] },
+      optimizeDeps: { entries: ['examples/vue/index.html', 'tests/pull-refresh.fixture.html'] },
       server: { host: '127.0.0.1', port: 0, open: false, hmr: false, watch: null },
     })
     await server.listen()
@@ -320,7 +320,7 @@ test('Web 下拉刷新：触摸边界、浏览器滚动和示例接入', { timeo
       assert.equal((await snapshot()).clicks, 1)
     })
     await t.test('示例目录、刷新反馈及可复制代码可用', { skip: process.env.MY_UI_PULL_REFRESH_FIXTURE_ONLY === '1' }, async () => {
-      await page.goto(new URL('example/index.html#/home', server.resolvedUrls.local[0]).href)
+      await page.goto(new URL('examples/vue/index.html#/home', server.resolvedUrls.local[0]).href)
       await page.locator('[data-demo-link="pull-refresh"]').click()
       await page.waitForURL((url) => url.hash === '#/example/pull-refresh')
       await page.locator('.my-pull-refresh').waitFor()
@@ -355,7 +355,7 @@ test('Web 下拉刷新：触摸边界、浏览器滚动和示例接入', { timeo
       const code = await page.locator('.doc-example .demo-code-files code').textContent()
       assert.ok(code.includes('@refresh="refreshInbox"'))
       assert.ok(!code.includes('../../../components/DemoExample.vue'), '复制代码保留了文档容器依赖')
-      await page.goto(new URL('example/index.html#/code/pull-refresh', server.resolvedUrls.local[0]).href)
+      await page.goto(new URL('examples/vue/index.html#/code/pull-refresh', server.resolvedUrls.local[0]).href)
       await page.waitForFunction(() => document.querySelector('.code-page code')?.textContent.includes('PullRefresh'))
     })
     assert.deepEqual(errors, [], '浏览器运行错误')

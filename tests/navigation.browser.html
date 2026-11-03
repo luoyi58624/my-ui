@@ -4,7 +4,7 @@
 <script type="module">
 if(new URLSearchParams(location.search).has('frame')){
   document.body.innerHTML='<div id="app"></div>';
-  await import('/example/src/main.ts').catch(error=>{document.body.textContent=error.stack;throw error});
+  await import('/examples/vue/src/main.ts').catch(error=>{document.body.textContent=error.stack;throw error});
 }else{
   const reports=[],calls=[],pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));let frame,doc,win,multipleWindows=true,respond=()=>Promise.resolve();
   const assert=(value,message)=>{if(!value)throw Error(message)};

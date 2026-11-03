@@ -2,7 +2,7 @@ import '../lib/my-ui.js'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { createTheme, defaultThemeOptions, themeColors, themeStyles, contrastRatio, applyTheme } from '../example/src/commons/theme/index.js'
+import { createTheme, defaultThemeOptions, themeColors, themeStyles, contrastRatio, applyTheme } from '../examples/vue/src/commons/theme/index.js'
 
 test('示例主题独立于组件核心，MyUI 不再暴露示例主题 API', () => {
   for (const name of ['createTheme', 'applyTheme', 'themeColors', 'themeStyles', 'defaultThemeOptions', 'contrastRatio']) assert.equal(name in MyUI, false, name + ' 仍泄漏到组件入口')

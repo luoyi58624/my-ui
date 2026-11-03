@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
-const nativeRoot = new URL('../example/src-tauri/', import.meta.url)
+const nativeRoot = new URL('../examples/tauri/', import.meta.url)
 
 test('首页与所有子页都拥有共享状态权限，Android 同时授权导航和系统字重', () => {
   for (const file of ['default.json', 'mobile.json']) {
@@ -19,16 +19,16 @@ test('首页与所有子页都拥有共享状态权限，Android 同时授权导
 
 test('合并后仅保留原生组件与系统字重插件，安装路径保持一致', () => {
   const root = new URL('../', import.meta.url)
-  const pkg = JSON.parse(readFileSync(new URL('example/package.json', root), 'utf8'))
+  const pkg = JSON.parse(readFileSync(new URL('examples/tauri/package.json', root), 'utf8'))
   const cargo = readFileSync(new URL('Cargo.toml', nativeRoot), 'utf8')
   assert.equal(pkg.dependencies['tauri-plugin-native-router'], undefined)
   assert.ok(!cargo.includes('tauri-plugin-native-router'))
   for (const suffix of ['android-system-font-weight', 'native-components']) {
     const name = 'tauri-plugin-' + suffix
     assert.ok(pkg.dependencies[name].endsWith('/' + name))
-    assert.ok(cargo.includes(`${name} = { path = "../node_modules/${name}" }`))
+    assert.ok(cargo.includes(`${name} = { path = "./node_modules/${name}" }`))
     const installed = JSON.parse(
-      readFileSync(new URL(`../node_modules/${name}/package.json`, nativeRoot), 'utf8')
+      readFileSync(new URL(`node_modules/${name}/package.json`, nativeRoot), 'utf8')
     )
     assert.equal(installed.name, name)
   }

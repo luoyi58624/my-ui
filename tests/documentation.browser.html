@@ -29,9 +29,9 @@
     if (new URLSearchParams(location.search).has('frame')) {
       document.body.innerHTML = '<div id="app"></div>'
       const base = document.createElement('base')
-      base.href = '/example/'
+      base.href = '/examples/vue/'
       document.head.append(base)
-      await import('/example/src/main.ts')
+      await import('/examples/vue/src/main.ts')
     } else {
       const reports = [],
         pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -67,8 +67,8 @@
           await until(() => frame.contentDocument?.querySelector('[data-example="button-basic"]'))
           doc = frame.contentDocument
           win = frame.contentWindow
-          const { demoExamples } = await import('/example/src/pages/catalog.ts')
-          const { previewGroups } = await import('/example/src/commons/code/source.ts')
+          const { demoExamples } = await import('/examples/vue/src/pages/catalog.ts')
+          const { previewGroups } = await import('/examples/vue/src/commons/code/source.ts')
           const pages = demoExamples.filter((item) => !item.path)
           let exampleCount = 0,
             sourceCount = 0

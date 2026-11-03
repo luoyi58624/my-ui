@@ -3,8 +3,8 @@
 <style>main{max-width:900px;margin:60px auto;padding:24px}.fixtures{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;margin:24px 0}.identities{display:flex;flex-wrap:wrap;align-items:center;gap:24px;margin:30px 0}.edge{position:fixed;width:130px;z-index:2}.tl{left:10px;top:10px}.br{right:10px;bottom:10px}.local{--primary:#176b3c;--input-background:#e8f0ea;--input-border:none;--avatar-background:#123456;--avatar-color:#fff;--badge-background:#123456;--badge-color:#fff}.modal-body{display:grid;gap:20px}pre{font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere}@media(max-width:760px){.fixtures{grid-template-columns:1fr}.edge{width:115px}}</style><div id="app"></div><script type="module">
 import{createApp,h,nextTick,ref}from'vue'
 import { Avatar, Badge, Button, Combobox, Dialog, Icon, Menu } from '/packages/vue/index.ts'
-import { applyTheme } from '/example/src/commons/theme/index.js'
-import portrait from'/example/src/commons/assets/avatar-lan.svg'
+import { applyTheme } from '/examples/vue/src/commons/theme/index.js'
+import portrait from'/examples/vue/src/commons/assets/avatar-lan.svg'
 applyTheme({mode:'light'})
 const el=s=>document.querySelector(s),all=s=>[...document.querySelectorAll(s)],pause=ms=>new Promise(r=>setTimeout(r,ms)),assert=(v,m)=>{if(!v)throw Error(m)},near=(a,b,m)=>assert(Math.abs(a-b)<1.2,m+': '+a+'/'+b)
 const flush=async()=>{await nextTick();await nextTick();for(let i=0;i<3;i++)await new Promise(r=>requestAnimationFrame(r));await pause(20)}

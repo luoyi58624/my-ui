@@ -26,7 +26,7 @@ test('HTML + class 静态组件', { timeout: 60_000 }, async suite => {
         page.on('request', request => {
           if (request.resourceType() === 'script') scripts.push(request.url())
         })
-        await page.goto(new URL('../example/components.html', import.meta.url).href)
+        await page.goto(new URL('../examples/others/components.html', import.meta.url).href)
         assert.deepEqual(await page.evaluate(() => ({
           scripts: document.scripts.length,
           markers: [...document.querySelectorAll('*')].some(node =>

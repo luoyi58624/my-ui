@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { installNativeOverlayBack } from '../example/src/commons/overlay-back'
+import { installNativeOverlayBack } from '../examples/vue/src/commons/overlay-back'
 import test from 'node:test'
 
 const settle = async () => { for (let i = 0; i < 16; i++) await Promise.resolve() }

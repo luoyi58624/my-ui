@@ -30,9 +30,9 @@
     if (new URLSearchParams(location.search).has('frame')) {
       document.body.innerHTML = '<div id="app"></div>'
       const base = document.createElement('base')
-      base.href = '/example/'
+      base.href = '/examples/vue/'
       document.head.append(base)
-      await import('/example/src/main.ts')
+      await import('/examples/vue/src/main.ts')
     } else {
       const reports = [],
         pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -186,8 +186,8 @@
               () => files.querySelector('code')?.textContent.includes('FormField'),
               '切换文件后代码未更新'
             )
-            const { demoExamples } = await import('/example/src/pages/catalog.ts')
-            const { exampleCode } = await import('/example/src/commons/code/examples.ts')
+            const { demoExamples } = await import('/examples/vue/src/pages/catalog.ts')
+            const { exampleCode } = await import('/examples/vue/src/commons/code/examples.ts')
             for (const item of demoExamples.filter((item) => !item.path || item.id === 'showcase')) {
               const files = exampleCode(item.id)
               assert(files.length > 0, '示例缺少代码：' + item.id)
@@ -196,7 +196,7 @@
                 assert(source.trim().length > 20, '代码为空：' + file.name)
               }
             }
-            const { guides } = await import('/example/src/commons/code/guides.ts')
+            const { guides } = await import('/examples/vue/src/commons/code/guides.ts')
             for (const guide of Object.values(guides))
               for (const section of guide.sections)
                 for (const file of section.files ?? []) {

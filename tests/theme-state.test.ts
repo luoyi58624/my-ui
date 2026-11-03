@@ -3,10 +3,10 @@ import test from 'node:test'
 import { createApp, nextTick } from 'vue'
 import { createPinia, disposePinia, type Pinia } from 'pinia'
 import { createSharedStatePlugin, sharedStateKey, type SharedStateStorage } from '../packages/vue/state'
-import { installThemeState, useThemeStore } from '../example/src/commons/state/theme'
-import { readThemeSnapshot, themeStateKey } from '../example/src/commons/theme/preferences'
-import { installNativeAppearance } from '../example/src/commons/native-appearance'
-import { readPageAppearance } from '../example/src/commons/native-context'
+import { installThemeState, useThemeStore } from '../examples/vue/src/commons/state/theme'
+import { readThemeSnapshot, themeStateKey } from '../examples/vue/src/commons/theme/preferences'
+import { installNativeAppearance } from '../examples/vue/src/commons/native-appearance'
+import { readPageAppearance } from '../examples/vue/src/commons/native-context'
 
 const settle = async () => { for(let i=0;i<25;i++){ await Promise.resolve(); await nextTick() } }
 function cache() {

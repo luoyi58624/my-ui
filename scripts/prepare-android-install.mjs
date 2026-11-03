@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const application = JSON.parse(readFileSync(new URL('../example/src-tauri/tauri.conf.json', import.meta.url), 'utf8')).identifier
+const application = JSON.parse(readFileSync(new URL('../examples/tauri/tauri.conf.json', import.meta.url), 'utf8')).identifier
 const runAdb = args => execFileSync('adb', args, { encoding: 'utf8', windowsHide: true }).trim()
 
 /** 安装前只结束明确目标设备上的旧示例进程，避免系统更新恢复与开发启动同时创建首页。 */

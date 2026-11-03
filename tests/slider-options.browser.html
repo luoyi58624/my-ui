@@ -4,7 +4,7 @@
 <div id="app"></div><script type="module">
 import{createApp,h,nextTick,ref}from'vue'
 import { Button, Slider, Tooltip } from '/packages/vue/index.ts'
-import { applyTheme } from '/example/src/commons/theme/index.js'
+import { applyTheme } from '/examples/vue/src/commons/theme/index.js'
 applyTheme({mode:'light'})
 const el=selector=>document.querySelector(selector),all=selector=>[...document.querySelectorAll(selector)],pause=ms=>new Promise(resolve=>setTimeout(resolve,ms))
 const assert=(value,message)=>{if(!value)throw new Error(message)},near=(a,b,message)=>assert(Math.abs(a-b)<1.2,`${message}: ${a}/${b}`)

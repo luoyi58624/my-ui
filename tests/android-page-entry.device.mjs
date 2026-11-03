@@ -7,7 +7,7 @@ import { chromium } from 'playwright'
 
 // 实际创建子 Activity，验证 Web 首帧、安全视口以及返回后保留父 WebView。
 assert(process.argv.slice(2).every(value => value === '--attach'), '用法：node tests/android-page-entry.device.mjs [--attach]')
-const application = JSON.parse(readFileSync(new URL('../example/src-tauri/tauri.conf.json', import.meta.url))).identifier
+const application = JSON.parse(readFileSync(new URL('../examples/tauri/tauri.conf.json', import.meta.url))).identifier
 const serial = process.env.ANDROID_SERIAL || execFileSync('adb', ['get-serialno'], { encoding: 'utf8', windowsHide: true }).trim()
 assert(serial && serial !== 'unknown', '请连接已授权设备或指定 ANDROID_SERIAL')
 const adbArguments = ['-s', serial]

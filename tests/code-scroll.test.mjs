@@ -12,9 +12,9 @@ test('代码完整展开，鼠标位于代码区域时仍能滚动整页', { tim
   let server, browser
   try {
     server = await createServer({
-      configFile: fileURLToPath(new URL('../example/vite.config.ts', import.meta.url)),
+      configFile: fileURLToPath(new URL('../examples/vue/vite.config.ts', import.meta.url)),
       cacheDir,
-      optimizeDeps: { entries: ['example/index.html', 'tests/code-font-weight.browser.html'] },
+      optimizeDeps: { entries: ['examples/vue/index.html', 'tests/code-font-weight.browser.html'] },
       mode: 'test',
       logLevel: 'error',
       server: { host: '127.0.0.1', port: 0, open: false, hmr: false, watch: null }

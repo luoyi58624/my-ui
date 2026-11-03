@@ -3,8 +3,8 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const projectRoot = fileURLToPath(new URL('..', import.meta.url))
-const configFile = fileURLToPath(new URL('../example/vite.config.ts', import.meta.url))
-const config = JSON.parse(readFileSync(new URL('../example/src-tauri/tauri.conf.json', import.meta.url), 'utf8'))
+const configFile = fileURLToPath(new URL('../examples/vue/vite.config.ts', import.meta.url))
+const config = JSON.parse(readFileSync(new URL('../examples/tauri/tauri.conf.json', import.meta.url), 'utf8'))
 const normalize = path => process.platform === 'win32' ? resolve(path).toLowerCase() : resolve(path)
 
 /** 复用当前项目的开发服务；端口空闲时才创建由本次启动负责的 Vite。 */

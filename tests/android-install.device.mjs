@@ -9,7 +9,7 @@ import { installAndroid } from '../scripts/install-android.mjs'
 // 实际覆盖安装前台、后台和子页中的应用，持续观察首次启动，不能用第二次打开代替通过。
 const apk = process.argv[2]
 assert(apk && process.argv.length === 3, '用法：node tests/android-install.device.mjs <debug-apk>')
-const application = JSON.parse(readFileSync(new URL('../example/src-tauri/tauri.conf.json', import.meta.url))).identifier
+const application = JSON.parse(readFileSync(new URL('../examples/tauri/tauri.conf.json', import.meta.url))).identifier
 const serial = process.env.ANDROID_SERIAL || execFileSync('adb', ['get-serialno'], { encoding: 'utf8', windowsHide: true }).trim()
 const output = mkdtempSync(join(tmpdir(), 'my-ui-install-entry-')), reports = []
 const adb = args => execFileSync('adb', args, { encoding: 'utf8', windowsHide: true, maxBuffer: 24 * 1024 * 1024 }).trim()

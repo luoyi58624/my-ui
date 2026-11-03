@@ -12,7 +12,7 @@ test('ImagePreview：真实触摸切页、双指缩放与拖动边界', { timeou
   let server, browser, context
   try {
     server = await createServer({
-      configFile: fileURLToPath(new URL('../example/vite.config.ts', import.meta.url)),
+      configFile: fileURLToPath(new URL('../examples/vue/vite.config.ts', import.meta.url)),
       cacheDir, mode: 'test', logLevel: 'error',
       optimizeDeps: { entries: ['tests/image-preview.browser.html'] },
       server: { host: '127.0.0.1', port: 0, open: false, hmr: false, watch: null },

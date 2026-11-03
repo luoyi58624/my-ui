@@ -6,10 +6,10 @@
 const params=new URLSearchParams(location.search);
 if(params.has('frame')){
   document.body.innerHTML='<div id="app"></div>';
-  const base=document.createElement('base');base.href='/example/';document.head.append(base);
-  await import('/example/src/main.ts');
+  const base=document.createElement('base');base.href='/examples/vue/';document.head.append(base);
+  await import('/examples/vue/src/main.ts');
 }else if(params.has('previous')){
-  document.body.innerHTML='<a id="previous" href="/example/native.html">打开 HTML 示例</a>';
+  document.body.innerHTML='<a id="previous" href="/examples/others/native.html">打开 HTML 示例</a>';
 }else{
   const reports=[],pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   const assert=(value,message)=>{if(!value)throw Error(message)};
@@ -33,7 +33,7 @@ if(params.has('frame')){
         await until(()=>win.document.querySelector('#previous'),'标题栏未返回前页');win.close();
       });
       await check('新窗口直接打开 HTML 时回到组件目录',async()=>{
-        const win=await openPopup('/example/native.html');await until(()=>header(win),'HTML 顶栏未加载');
+        const win=await openPopup('/examples/others/native.html');await until(()=>header(win),'HTML 顶栏未加载');
         assert(win.history.length===1,'测试窗口包含额外历史');header(win).click();
         await until(()=>win.document.querySelector('[data-demo-page="home"]:not([inert])'),'直接打开时没有回退目录');
         assert(win.location.hash==='#/home','回退地址不正确');win.close();
