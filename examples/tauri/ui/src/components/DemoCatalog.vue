@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { inject, nextTick, ref, watch } from 'vue'
 import { CellGroup, Icon, ListRow } from '@my-ui/vue'
-import { openPage } from '../commons/navigation'
-import type { DemoExample } from '../pages/catalog'
-import { demoLayoutKey } from './layoutContext'
+import { openPage } from '@demo/commons/navigation'
+import type { DemoExample } from '@demo/pages/catalog'
+import { demoLayoutKey } from '@demo/components/layoutContext'
 
 const props = defineProps<{
   /** 目录标题。 */

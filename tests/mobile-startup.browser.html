@@ -17,9 +17,9 @@
       document.documentElement.classList.add('my-mobile-native')
       document.body.innerHTML = '<div id="app"></div>'
       const base = document.createElement('base')
-      base.href = '/examples/vue/'
+      base.href = '/examples/tauri/ui/'
       document.head.append(base)
-      await import('/examples/vue/src/main.ts')
+      await import('/examples/tauri/ui/src/main.ts')
     } else {
       const reports = [], pause = ms => new Promise(resolve => setTimeout(resolve, ms))
       const assert = (value, message) => { if (!value) throw Error(message) }

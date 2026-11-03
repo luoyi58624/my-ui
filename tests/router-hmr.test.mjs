@@ -12,12 +12,13 @@ test('开发热更新后，目录、Tab 和返回仍由同一个路由驱动', {
   const cacheDir = mkdtempSync(join(tmpdir(), 'my-ui-router-hmr-'))
   let server, browser
   try {
+    // 示例应用入口在 examples/tauri/ui，test 模式以仓库为根目录，组件示例页仍由 @demo 指向 examples/vue。
     server = await createServer({
-      configFile: fileURLToPath(new URL('../examples/vue/vite.config.ts', import.meta.url)),
+      configFile: fileURLToPath(new URL('../examples/tauri/ui/vite.config.ts', import.meta.url)),
       cacheDir,
-      mode: 'development',
+      mode: 'test',
       logLevel: 'error',
-      // 使用页面自身的端口，覆盖项目为 Android 固定的 5178 热更新地址。
+      // 使用页面自身的端口，覆盖项目为 Android 固定的 5177 热更新地址。
       server: { host: '127.0.0.1', port: 0, open: false, watch: null, ws: { clientPort: 0 } }
     })
     await server.listen()
@@ -30,16 +31,18 @@ test('开发热更新后，目录、Tab 和返回仍由同一个路由驱动', {
     page.on('console', (message) => {
       if (message.text().includes('[vite] hot updated:')) revision++
     })
-    const url = new URL('#/home', server.resolvedUrls.local[0]).href
+    const url = new URL('examples/tauri/ui/index.html#/home', server.resolvedUrls.local[0]).href
 
-    for (const path of ['/src/pages/catalog.ts', '/src/commons/navigation.ts', '/src/router.ts']) {
+    // 共享模块位于 examples/vue/src，按文件查找实际进入页面的模块再触发更新。
+    for (const path of ['pages/catalog.ts', 'commons/navigation.ts', 'router.ts']) {
       await t.test(path, async () => {
         await page.goto(url)
         await page.locator('[data-demo-link="button"]').waitFor()
-        const module = await server.moduleGraph.getModuleByUrl(path)
-        assert.ok(module, '待更新模块没有进入实际页面')
+        const file = fileURLToPath(new URL('../examples/vue/src/' + path, import.meta.url))
+        const modules = [...(server.moduleGraph.getModulesByFile(file) ?? [])]
+        assert.ok(modules.length, '待更新模块没有进入实际页面')
         const before = revision
-        await server.reloadModule(module)
+        for (const module of modules) await server.reloadModule(module)
         const deadline = Date.now() + 10_000
         while (revision === before && Date.now() < deadline)
           await new Promise((resolve) => setTimeout(resolve, 20))

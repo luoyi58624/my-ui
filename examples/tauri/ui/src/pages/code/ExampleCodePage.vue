@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import DemoAppBar from '../../components/DemoAppBar.vue'
-import ExampleCode from '../../components/ExampleCode.vue'
-import { demoExamples } from '../catalog'
-import { exampleCode } from '../../commons/code/examples'
-import { closePage } from '../../commons/navigation'
-import { usePageReady } from '../../commons/page-ready'
+import DemoAppBar from '@demo/components/DemoAppBar.vue'
+import ExampleCode from '@demo/components/ExampleCode.vue'
+import { demoExamples } from '@demo/pages/catalog'
+import { exampleCode } from '@demo/commons/code/examples'
+import { closePage } from '@demo/commons/navigation'
+import { usePageReady } from '@demo/commons/page-ready'
 
 usePageReady()
 

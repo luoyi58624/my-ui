@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Button, Icon, type IconName } from '@my-ui/vue'
-import type { DemoTab } from '../../components/layoutContext'
+import type { DemoTab } from '@demo/components/layoutContext'
 
 defineProps<{
   /** 当前栏目的展示配置。 */

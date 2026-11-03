@@ -9,7 +9,11 @@
     "skipLibCheck": true,
     "isolatedModules": true,
     "noEmit": true,
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "paths": {
+      "@demo/*": ["./examples/vue/src/*"],
+      "@shell/*": ["./examples/tauri/ui/src/*"]
+    }
   },
   "include": [
     "packages/vue/**/*.ts",
@@ -18,6 +22,9 @@
     "examples/vue/src/**/*.ts",
     "examples/vue/src/**/*.vue",
     "examples/vue/vite.config.ts",
+    "examples/tauri/ui/src/**/*.ts",
+    "examples/tauri/ui/src/**/*.vue",
+    "examples/tauri/ui/vite.config.ts",
     "examples/react/react.tsx",
     "examples/react/vite.config.ts",
     "tests/react.fixture.tsx",

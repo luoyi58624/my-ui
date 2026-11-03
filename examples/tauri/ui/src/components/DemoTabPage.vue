@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import DemoAppBar from './DemoAppBar.vue'
-import type { DemoTab } from './layoutContext'
-import { navigation } from '../commons/navigation'
-import { usePageReady } from '../commons/page-ready'
+import DemoAppBar from '@demo/components/DemoAppBar.vue'
+import type { DemoTab } from '@demo/components/layoutContext'
+import { navigation } from '@demo/commons/navigation'
+import { usePageReady } from '@demo/commons/page-ready'
 import HomePage from '../pages/home/index.vue'
 import ApplicationPage from '../pages/native/index.vue'
 import MessagesPage from '../pages/messages/index.vue'

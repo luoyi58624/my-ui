@@ -5,7 +5,7 @@ import { demoPages } from './pages/routes'
 export const router: Router = import.meta.hot?.data.router ?? createRouter({
   history: createWebHashHistory(),
   routes: [
-    { path: '/', name: 'demo', component: () => import('./components/DemoLayout.vue'), children: [
+    { path: '/', name: 'demo', component: () => import('@shell/components/DemoLayout.vue'), children: [
       { path: '', redirect: () => location.pathname.endsWith('/native-page.html') ? '/shared-state' : '/home' },
       ...['home', 'native', 'messages', 'settings'].map(tab => ({
         path: tab, name: 'tab-' + tab, components: {},
@@ -15,9 +15,9 @@ export const router: Router = import.meta.hot?.data.router ?? createRouter({
       { path: 'shared-state', name: 'shared-state', component: () => import('./pages/native/shared-state/index.vue') },
       { path: 'html', name: 'html', component: () => import('./pages/native/html/index.vue') },
       { path: 'showcase', name: 'showcase', component: () => import('./pages/showcase/index.vue') },
-      { path: 'guide/quick-start', name: 'quick-start', component: () => import('./pages/guide/GuidePage.vue'), props: { kind: 'quick-start' } },
-      { path: 'guide/native', name: 'native-integration', component: () => import('./pages/guide/GuidePage.vue'), props: { kind: 'native' } },
-      { path: 'code/:id', name: 'example-code', component: () => import('./pages/code/ExampleCodePage.vue'), props: true }
+      { path: 'guide/quick-start', name: 'quick-start', component: () => import('@shell/pages/guide/GuidePage.vue'), props: { kind: 'quick-start' } },
+      { path: 'guide/native', name: 'native-integration', component: () => import('@shell/pages/guide/GuidePage.vue'), props: { kind: 'native' } },
+      { path: 'code/:id', name: 'example-code', component: () => import('@shell/pages/code/ExampleCodePage.vue'), props: true }
     ] },
     { path: '/native/app-bar', alias: '/example/native-app-bar', redirect: '/example/app-bar' },
     { path: '/native/tabbar', alias: ['/native/bottom-navigation', '/example/native-bottom-navigation', '/example/native-tabbar'], redirect: '/example/tabbar' },

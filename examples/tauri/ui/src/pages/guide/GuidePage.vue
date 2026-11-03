@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, onActivated, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Button } from '@my-ui/vue'
-import DemoAppBar from '../../components/DemoAppBar.vue'
-import CodeFiles from '../../components/CodeFiles.vue'
-import DocumentOutline from '../../components/DocumentOutline.vue'
-import { guides, type GuideKind } from '../../commons/code/guides'
-import { closePage, openPage } from '../../commons/navigation'
-import { usePageReady } from '../../commons/page-ready'
+import DemoAppBar from '@demo/components/DemoAppBar.vue'
+import CodeFiles from '@demo/components/CodeFiles.vue'
+import DocumentOutline from '@demo/components/DocumentOutline.vue'
+import { guides, type GuideKind } from '@demo/commons/code/guides'
+import { closePage, openPage } from '@demo/commons/navigation'
+import { usePageReady } from '@demo/commons/page-ready'
 
 usePageReady()
 

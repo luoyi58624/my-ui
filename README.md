@@ -27,17 +27,23 @@ examples/               示例站点：每个入口一个独立项目
   html/                 纯静态“完整交互示例”单页，无依赖、无构建，双击 index.html 即可
     index.html          唯一页面，只引用 ../../lib/ 与下方 assets
     assets/             页面自己的样式、脚本、图片与字体
-  vue/                  @my-ui/examples-vue：Vue 展示页，Web/桌面/Android 共用
-    src/                Vue 示例页面、演示业务和示例专用 theme/
+  vue/                  @my-ui/examples-vue：组件示例页与“完整交互示例”长页（Web 展示）
+    src/                组件示例页、文档组件与示例专用 theme/
     public/             示例静态资源
-    index.html          Vue 入口
+    index.html          Vue 入口，默认进入长页
     vite.config.ts      示例的开发与构建配置
-    dist/               构建产物（桌面壳与 Android 直接引用这里）
+    dist/               Web 与离线页面产物
   react/                @my-ui/examples-react：React 组件示例站点
     index.html          站点入口，脚本加载 react.tsx
     react.tsx           value/onChange、JSX 内容、ref 与弹层示例
     vite.config.ts      React 示例的开发与构建配置
-  tauri/                @my-ui/examples-tauri：桌面与 Android 壳，复用 examples/vue/dist
+  tauri/                @my-ui/examples-tauri：桌面与 Android 壳
+    ui/                 应用前端（标准 Vite 项目）：四栏目、Tabbar、详情路由
+      src/              应用壳、栏目页与详情页；组件示例页通过 @demo 引用 examples/vue/src
+      public/           应用静态资源
+      index.html        应用入口
+      vite.config.ts    应用的开发与构建配置（5177）
+      dist/             应用产物（桌面壳与 Android 直接引用这里）
     src/                Rust 启动入口
     tauri.conf.json     窗口、开发地址与前端产物路径
     capabilities/       原生能力权限
@@ -46,7 +52,7 @@ examples/               示例站点：每个入口一个独立项目
     native.html         不加载 Vue 的完整原生示例
     card.html           直接引用公共 CSS/JS 的原生卡片示例
     components.html     只加载 CSS 的 HTML + class 静态组件示例
-    native-page.html    原生子页打开时加载 Vue 应用的页面入口（脚本由 examples/vue 构建）
+    native-page.html    原生子页打开时加载应用入口的页面（脚本由 examples/tauri/ui 构建）
 tests/                  正式测试与浏览器回归页面
 scripts/                构建辅助脚本
 reference/              原始设计参考
@@ -54,7 +60,7 @@ package.json            Bun workspace 与统一命令
 bun.lock                唯一依赖锁文件
 ```
 
-Vue 封装、React 封装与三个示例项目由 Bun 统一安装与关联；`lib/` 直接保存浏览器可用的 CSS/JS。示例通过 `@my-ui/vue`、`@my-ui/react` 使用本地源码，修改 `lib/` 后实时更新。`examples/html` 与 `examples/others` 只是静态页面，没有 package.json、不需要安装或构建。包配置中的 `private` 用于禁止 npm 发布，不影响公开 GitHub 仓库中的静态文件访问。
+Vue 封装、React 封装与三个示例项目（含应用前端 `examples/tauri/ui`）由 Bun 统一安装与关联；`lib/` 直接保存浏览器可用的 CSS/JS。示例通过 `@my-ui/vue`、`@my-ui/react` 使用本地源码，修改 `lib/` 后实时更新。`examples/html` 与 `examples/others` 只是静态页面，没有 package.json、不需要安装或构建。包配置中的 `private` 用于禁止 npm 发布，不影响公开 GitHub 仓库中的静态文件访问。
 
 ## 普通 HTML
 
@@ -514,22 +520,23 @@ await storage.flush?.()
 
 ## 本地展示与验证
 
-首页的“完整交互示例”入口打开 `#/showcase`，按需加载整页展示。`examples/vue/src/components/ShowcaseLayout.vue` 保留头图、分类导航和连续布局，通过 `examples/vue/src/pages/home/index.ts` 与 `examples/vue/src/pages/native/index.ts` 的文档注册表复用独立示例；返回目录保留滚动与入口焦点，离开整页时暂停播放和模拟上传。目录在桌面与手机上统一使用移动端单列布局。
+首页的“完整交互示例”入口打开 `#/showcase`，按需加载整页展示。`examples/vue/src/components/ShowcaseLayout.vue` 保留头图、分类导航和连续布局，通过 `examples/vue/src/pages/home/index.ts` 与 `examples/vue/src/pages/native/index.ts` 的文档注册表复用独立示例；返回目录保留滚动与入口焦点，离开整页时暂停播放和模拟上传。目录在桌面与手机上统一使用移动端单列布局。`examples/vue` 开发服务默认就停在这一页，四栏目应用（含该入口）在 `examples/tauri/ui`。
 
 ```powershell
 bun install
-bun run dev        # examples/vue，5178
+bun run dev        # examples/vue，5178（组件示例页与长页）
+bun run dev:app    # examples/tauri/ui，5177（四栏目应用）
 bun run dev:react  # examples/react，5181
 bun run build
 ```
 
 `examples/html/` 是纯静态的“完整交互示例”单页：没有 package.json、没有构建、没有开发服务，直接双击 `examples/html/index.html` 即可打开，全部交互由 `../../lib/my-ui.css` 与 `../../lib/my-ui.js` 承担。需要经由 HTTP 查看时，用任意静态服务器指向仓库根目录再访问 `examples/html/index.html`。
 
-开发地址默认 `http://127.0.0.1:5178/`，散装原生页面由同一服务按原地址提供：`/native.html`、`/card.html`、`/components.html`，文件本体在 `examples/others/`。示例采用“首页、应用、消息、设置”四个底部 Tab；页面里的顶栏、底栏、正文和下拉刷新全部使用 Web 组件。主 Tab 首次访问后保留实例，切换保持输入、计数与滚动位置，不增加返回历史。`#/example/app-bar`、`#/example/tabbar`、`#/example/pull-refresh` 分别演示三个公共组件。
+组件示例页开发地址默认 `http://127.0.0.1:5178/`，散装原生页面由同一服务按原地址提供：`/native.html`、`/card.html`、`/components.html`，文件本体在 `examples/others/`。应用开发地址默认 `http://127.0.0.1:5177/`，由同一中间件按原地址提供 `/native-page.html`。应用采用“首页、应用、消息、设置”四个底部 Tab；页面里的顶栏、底栏、正文和下拉刷新全部使用 Web 组件。主 Tab 首次访问后保留实例，切换保持输入、计数与滚动位置，不增加返回历史。`#/example/app-bar`、`#/example/tabbar`、`#/example/pull-refresh` 分别演示三个公共组件。
 
 **原生多页面导航保留。** Android 在支持移动端多窗口时，`navigation.push()` 仍创建独立 Activity/WebView，`back()` 关闭当前子页；Web、桌面及不支持多窗口的 Android 使用 Vue Router。UI 渲染方式不改变这个导航契约。旧的 `#/discover`、`#/profile`、`#/native/app-bar`、`#/native/tabbar` 和 `#/page-refresh` 入口继续可访问。
 
-`examples/vue/src/router.ts` 定义每个 WebView 内的路由，`App.vue` 提供统一弹层和提示，`components/DemoLayout.vue` 保留主栏目实例并显示详情。Web 同窗口详情通过有数量上限的 KeepAlive 保留往返状态；Android 子 Activity 根据自己的地址展示详情。`commons/navigation.ts` 继续接入 `tauri-plugin-native-components/router`，组件库本身不依赖 Tauri。Android 子页地址仍使用 `index.html?pageWindow=1#/example/组件标识`；目录、指南、源码展示、独立 HTML 和共享持久状态均保留。
+`examples/vue/src/router.ts` 定义每个 WebView 内的路由（应用与组件示例页共用同一张表），`examples/vue/src/App.vue` 提供统一弹层和提示，`examples/tauri/ui/src/components/DemoLayout.vue` 保留主栏目实例并显示详情，`examples/vue/src/commons/navigation.ts` 继续接入 `tauri-plugin-native-components/router`，组件库本身不依赖 Tauri。Web 同窗口详情通过有数量上限的 KeepAlive 保留往返状态；Android 子 Activity 根据自己的地址展示详情。Android 子页地址仍使用 `index.html?pageWindow=1#/example/组件标识`；目录、指南、源码展示、独立 HTML 和共享持久状态均保留。
 
 CSS 保存后即时更新，修改 JS 核心会完整刷新示例；构建结果同时提供 Vue 页面、普通 HTML 页面与原样的 CSS/JS。
 
@@ -545,7 +552,7 @@ Android 的预测性返回会先让上页进入 `onStart` 并可见，手势提�
 
 `tests/demo-layout.browser.html` 使用真实示例入口检查全部目录跳转、详情返回与前进、滚动和输入保留、旧链接、弹层返回、键盘、320px 窄屏与桌面布局。
 
-`bun run check` 检查 Vue 封装、示例和原生 JavaScript 核心；`bun run check:lib` 可单独检查核心。核心通过 JSDoc 和 `checkJs` 检查，仍然可以直接复制使用，无需编译。`bun run preview` 在 4178 端口预览 `examples/vue/dist/`。构建后的 `examples/vue/dist/native.html` 与 `examples/vue/dist/lib/` 可直接离线使用，`examples/vue/dist/lib/` 同时保留原生类型声明。
+`bun run check` 检查 Vue 封装、示例和原生 JavaScript 核心；`bun run check:lib` 可单独检查核心。核心通过 JSDoc 和 `checkJs` 检查，仍然可以直接复制使用，无需编译。`bun run preview` 在 4178 端口预览 `examples/vue/dist/`。构建后的 `examples/vue/dist/native.html` 与 `examples/vue/dist/lib/` 可直接离线使用，`examples/vue/dist/lib/` 同时保留原生类型声明；`native-page.html` 与主入口脚本一起落在 `examples/tauri/ui/dist/`。
 
 浏览器回归使用 Node.js、Playwright 和本机 Chrome，自动启动并关闭独立测试服务，必须指定模块，不默认运行全量：
 
@@ -560,7 +567,7 @@ bun run test:browser demo-layout
 
 ## PC 桌面应用
 
-桌面示例使用 Tauri 2，原生工程独立放在 `examples/tauri/`，与 `examples/vue` 一同由根 workspace 管理。前端由 `examples/vue/src/main.ts` 启动 `examples/vue/src/App.vue`，再通过路由加载 `examples/vue/src/pages/`，共用 `@my-ui/vue`、原生 CSS/JS 和示例主题。
+桌面示例使用 Tauri 2，原生工程独立放在 `examples/tauri/`，应用前端在 `examples/tauri/ui/`，组件示例页在 `examples/vue/`，三者由根 workspace 统一管理。应用前端由 `examples/tauri/ui/src/main.ts` 启动共享的 `examples/vue/src/App.vue`，再通过路由加载应用栏目页与 `examples/vue/src/pages/` 下的组件示例页（`@demo` 别名），共用 `@my-ui/vue`、原生 CSS/JS 和示例主题。
 
 ```powershell
 bun install
@@ -573,7 +580,7 @@ bun run dev:desktop
 bun run build:desktop
 ```
 
-构建时先在仓库根目录执行现有类型检查与 Web 构建，再把 `examples/vue/dist/` 嵌入桌面应用；Windows 可执行文件为 `examples/tauri/target/release/my-ui-example.exe`，运行时无需开发服务器。此命令生成直接运行的程序；需要安装包时可在示例目录执行 `bun run tauri build`。
+构建时先在仓库根目录执行现有类型检查与前端构建，再把 `examples/tauri/ui/dist/` 嵌入桌面应用；Windows 可执行文件为 `examples/tauri/target/release/my-ui-example.exe`，运行时无需开发服务器。此命令生成直接运行的程序；需要安装包时可在示例目录执行 `bun run tauri build`。
 
 桌面配置保留系统标题栏，窗口可调整大小，默认 1280×860，最小 760×560，工作区不足时自动限制初始大小以适配系统缩放。关闭 Tauri 的原生文件拖放接管，让已有 Upload 的 HTML 拖放继续工作。Rust 编译产物与自动生成的权限类型已排除 Git，`Cargo.lock` 与 `bun.lock` 提交以固定依赖。
 
@@ -581,7 +588,7 @@ bun run build:desktop
 
 ## Android 真机
 
-Android 端复用同一个 Tauri 2 壳与同一份 Vue 示例，原生工程由 `tauri android init` 生成在 `examples/tauri/gen/android/`。前端打包后嵌入 APK，安装后不依赖开发服务器，拔掉数据线也能离线打开。
+Android 端复用同一个 Tauri 2 壳与同一份应用前端，原生工程由 `tauri android init` 生成在 `examples/tauri/gen/android/`。前端打包后嵌入 APK，安装后不依赖开发服务器，拔掉数据线也能离线打开。
 
 前置环境：Rust 的 `aarch64-linux-android` target、JDK 17、Android SDK（platform 与 build-tools）与 NDK，`ANDROID_HOME` 或 `ANDROID_SDK_ROOT` 指向本机 SDK。手机开启开发者选项与 USB 调试（OPPO/小米/vivo 等还需允许「USB 安装」），`adb devices` 能看到 `device` 状态即可。
 
@@ -589,7 +596,7 @@ Android 端复用同一个 Tauri 2 壳与同一份 Vue 示例，原生工程由 
 bun run dev:android      # 自动复用或启动 Vite，通过 USB 编译、安装并启动手机应用
 ```
 
-开发命令默认连接 `127.0.0.1:5178`，由 Tauri 自动设置 USB 端口转发，无需手动运行 `adb reverse`。已运行的服务必须确认属于当前项目才会复用；启动失败不会关闭已有服务。未设置 `NDK_HOME` 时自动选择 SDK 中最新的稳定 NDK，显式设置时保留原值；额外设备参数与 `--host` 仍可传入。
+开发命令默认连接 `127.0.0.1:5177`，由 Tauri 自动设置 USB 端口转发，无需手动运行 `adb reverse`。已运行的服务必须确认属于当前项目才会复用；启动失败不会关闭已有服务。未设置 `NDK_HOME` 时自动选择 SDK 中最新的稳定 NDK，显式设置时保留原值；额外设备参数与 `--host` 仍可传入。
 
 开发 APK 组装成功后、实际安装前会结束目标手机上的旧示例进程，避免系统在更新时恢复旧首页、开发工具又同时启动首页。独立 APK 使用下方 `install:android` 执行同样的处理；构建 APK 不操作设备。多设备时请用 `ANDROID_SERIAL` 明确目标，脚本不会猜测或关闭另一台设备的应用。
 
@@ -611,7 +618,7 @@ bun run install:android ./examples/tauri/gen/android/app/build/outputs/apk/unive
 
 `examples/vue/src/commons/font-weight.ts` 管理缓存及系统跟随：启动与返回前台时自动同步，只有实际修改滑块数值才进入手动模式，点「恢复字重」重新采集。异步结果不会覆盖较新的手动设置；读取失败保留当前值，不伪装成成功读取到 400。主题设置统一应用 `settings.fontWeight`，正文、操作文字、次标题和标题保留原有层级。Tauri 权限使用 `[default]` 集合，仅向 Android 首页与原生示例子页授权；编译缓存、Tauri API 副本与自动生成的权限文件均不提交。
 
-**移动端适配**（只写在示例层，组件库保持中立）：`examples/vue/src/mobile.ts` 按 UA 加 `my-mobile-native` 类并拦截长按选中与系统 callout（输入框、可复制文本除外）；`mobile.css` 处理 edge-to-edge 下的状态栏与手势条安全区；viewport 使用 `viewport-fit=cover`。字重统一走主题系统的 `settings.fontWeight`，不另设一套变量。
+**移动端适配**（只写在示例层，组件库保持中立）：`examples/vue/src/commons/mobile.ts` 按 UA 加 `my-mobile-native` 类并拦截长按选中与系统 callout（输入框、可复制文本除外）；`mobile.css` 处理 edge-to-edge 下的状态栏与手势条安全区；viewport 使用 `viewport-fit=cover`。字重统一走主题系统的 `settings.fontWeight`，不另设一套变量。
 
 **统一页面跳转**：导航已并入 `D:/project/tauri/plugins/tauri-plugin-native-components/`，前端通过 `tauri-plugin-native-components/router` 使用，Rust 只注册一个 `native-components` 插件。Bun 通过本地 `file:` 依赖安装，Cargo 引用 `examples/tauri/node_modules/tauri-plugin-native-components`；将来可换成实际 GitHub 来源，目前没有发布。Web、桌面端使用传入的 Vue Router，Android `push` 创建宿主的 `NativePageActivity`；暂不实现 iOS 原生导航。
 
@@ -635,7 +642,7 @@ Android 首页使用 `singleTop`，子页保持 `standard`。此前首页的 `si
 
 ## 浏览器回归
 
-浏览器回归使用 `bun run dev:test`，在 `http://127.0.0.1:5179/tests/文件名.browser.html` 打开对应页面。测试服务以仓库为根目录，示例服务以 `examples/vue/` 为根目录，互不混入构建产物。纯函数测试通过 `bun test ./tests/文件名.test.mjs` 按模块运行。
+浏览器回归使用 `bun run dev:test`，在 `http://127.0.0.1:5179/tests/文件名.browser.html` 打开对应页面。测试服务以仓库为根目录，组件示例服务以 `examples/vue/` 为根目录、应用服务以 `examples/tauri/ui/` 为根目录，互不混入构建产物。纯函数测试通过 `bun test ./tests/文件名.test.mjs` 按模块运行。
 
 两个示例入口都禁用移动端页面缩放，并保留单指滚动。自己的页面需要相同策略时，在 `html` 添加 `my-no-zoom`，并沿用示例的 viewport 配置；仅引入组件不会自动限制宿主页面缩放。按钮统一禁用文本选中，输入与正文复制不受影响。
 
@@ -653,7 +660,7 @@ Android 示例的系统返回优先交给当前 WebView 的最上层弹层：级
 
 保持手机解锁、竖屏与手势导航，运行 `dev:android` 后可执行 `node tests/android-back.device.mjs --record`，定向检查首页回桌面、取消手势、弹层关闭及释放、子页返回；截图与可选录屏保存在系统临时目录。回归会重启当前示例，不清除应用数据。
 
-宿主可通过 `MyUI.layers.dismissTop()` 请求返回，通过 `MyUI.layers.subscribe(active => {})` 立即订阅是否存在弹层并取得取消订阅方法。接口不依赖 Tauri；安卓桥接只放在 examples/vue 中。禁用 `closeOnEscape` 的弹窗也会消费系统返回，等待业务操作关闭；滑块常驻数值提示不占用返回。
+宿主可通过 `MyUI.layers.dismissTop()` 请求返回，通过 `MyUI.layers.subscribe(active => {})` 立即订阅是否存在弹层并取得取消订阅方法。接口不依赖 Tauri；安卓桥接只放在 `examples/tauri/ui` 的应用壳里。禁用 `closeOnEscape` 的弹窗也会消费系统返回，等待业务操作关闭；滑块常驻数值提示不占用返回。
 
 `bun test ./tests/overlay-back.test.ts ./tests/navigation.test.ts` 检查原生桥接、跨平台导航、连续点击、错误重试与网页回退；`cargo test --lib navigation::tests` 检查原生目标地址和窗口边界。`tests/navigation.browser.html` 使用真实 Vue 页面和模拟宿主命令检查跳转接入，`tests/demo-layout.browser.html` 检查普通网页导航，`tests/overlay-back.browser.html` 检查真实弹层交互；浏览器模拟宿主不代替原生设备验证。
 

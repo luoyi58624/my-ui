@@ -32,7 +32,7 @@
   <script type="module">
     if (new URLSearchParams(location.search).has('frame')) {
       document.body.innerHTML = '<div id="app"></div>'
-      await import('/examples/vue/src/main.ts')
+      await import('/examples/tauri/ui/src/main.ts')
     } else {
       const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
         assert = (value, message) => {
@@ -75,7 +75,7 @@
       }
       const firstFrame = async (mode) => {
         // 主模块保持未加载，直接检查真实 HTML 入口的第一帧，不能靠最终渲染掩盖闪屏。
-        const html = await (await fetch('/examples/vue/index.html')).text(),
+        const html = await (await fetch('/examples/tauri/ui/index.html')).text(),
           frame = document.createElement('iframe')
         frame.srcdoc = html
           .replace('</head>', '<link rel="stylesheet" href="/lib/my-ui.css"></head>')

@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const projectRoot = fileURLToPath(new URL('..', import.meta.url))
-const configFile = fileURLToPath(new URL('../examples/vue/vite.config.ts', import.meta.url))
+const configFile = fileURLToPath(new URL('../examples/tauri/ui/vite.config.ts', import.meta.url))
 const config = JSON.parse(readFileSync(new URL('../examples/tauri/tauri.conf.json', import.meta.url), 'utf8'))
 const normalize = path => process.platform === 'win32' ? resolve(path).toLowerCase() : resolve(path)
 

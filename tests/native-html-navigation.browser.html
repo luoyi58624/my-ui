@@ -6,8 +6,8 @@
 const params=new URLSearchParams(location.search);
 if(params.has('frame')){
   document.body.innerHTML='<div id="app"></div>';
-  const base=document.createElement('base');base.href='/examples/vue/';document.head.append(base);
-  await import('/examples/vue/src/main.ts');
+  const base=document.createElement('base');base.href='/examples/tauri/ui/';document.head.append(base);
+  await import('/examples/tauri/ui/src/main.ts');
 }else if(params.has('previous')){
   document.body.innerHTML='<a id="previous" href="/examples/others/native.html">打开 HTML 示例</a>';
 }else{

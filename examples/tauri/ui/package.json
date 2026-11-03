@@ -1,0 +1,24 @@
+{
+  "name": "@my-ui/examples-tauri-ui",
+  "private": true,
+  "type": "module",
+  "description": "my-ui 示例应用前端：桌面与 Android 壳的四栏目界面，组件示例页复用 examples/vue/src",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5177 --strictPort",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4177 --strictPort"
+  },
+  "dependencies": {
+    "@my-ui/vue": "workspace:*",
+    "@wdns/vue-code-block": "2.4.1",
+    "highlight.js": "11.12.0",
+    "pinia": "4.1.0",
+    "tauri-plugin-native-components": "file:../../../../../tauri/plugins/tauri-plugin-native-components",
+    "vue": "3.5.43",
+    "vue-router": "4.6.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "6.0.10",
+    "vite": "8.3.4"
+  }
+}

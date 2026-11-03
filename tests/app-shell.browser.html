@@ -8,7 +8,7 @@ if(mode){
   Object.defineProperty(navigator,'userAgent',{value:'Android Tauri',configurable:true});window.isTauri=true;window.calls=[];
   window.__TAURI_INTERNALS__={invoke:async(command,args)=>{window.calls.push({command,args,content:!!document.querySelector('.demo-detail input'),title:document.querySelector('[data-demo-title]')?.textContent});if(command==='plugin:app|supports_multiple_windows')return true}};
  }
- document.body.innerHTML='<div id="app"></div>';const base=document.createElement('base');base.href='/examples/vue/';document.head.append(base);await import('/examples/vue/src/main.ts');
+ document.body.innerHTML='<div id="app"></div>';const base=document.createElement('base');base.href='/examples/tauri/ui/';document.head.append(base);await import('/examples/tauri/ui/src/main.ts');
 }else{
  const reports=[],assert=(value,message)=>{if(!value)throw Error(message)},until=async(check,message='等待应用壳超时')=>{const start=performance.now();while(!check()){if(performance.now()-start>15000)throw Error(message);await pause(20)}};
  let frame,doc,win;

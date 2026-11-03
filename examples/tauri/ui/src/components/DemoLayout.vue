@@ -2,10 +2,10 @@
 import { computed, inject, provide, ref, watch } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
 import { Tabbar } from '@my-ui/vue'
-import { navigation } from '../commons/navigation'
-import { notifyKey } from '../commons/notify'
+import { navigation } from '@demo/commons/navigation'
+import { notifyKey } from '@demo/commons/notify'
 import DemoTabPage from './DemoTabPage.vue'
-import { demoLayoutKey, type DemoTab } from './layoutContext'
+import { demoLayoutKey, type DemoTab } from '@demo/components/layoutContext'
 
 const notify = inject(notifyKey)!
 const items: DemoTab[] = [
@@ -61,48 +61,8 @@ watch(() => route.meta.tab, (tab) => {
 }
 .demo-tab-pages, .demo-route-pages { flex: 1; min-height: 0; overflow: hidden; }
 .demo-app > [data-demo-tabbar] { flex: none; }
-.demo-scroll { flex: 1; min-height: 0; overflow: auto; overscroll-behavior-y: contain; }
 .demo-tabs {
   height: 100%;
-}
-.demo-main {
-  height: 100%;
-  position: relative;
-  min-width: 0;
-  min-height: 0;
-}
-.demo-page {
-  position: absolute;
-  inset: 0;
-  overflow: auto;
-  overscroll-behavior-y: contain;
-  padding: 24px max(20px, env(safe-area-inset-right)) 32px max(20px, env(safe-area-inset-left));
-  scrollbar-gutter: stable;
-}
-.demo-page-inner {
-  --card-radius: 18px;
-  --card-padding: 24px;
-  --card-header-gap: 20px;
-  width: 100%;
-  margin: auto;
-}
-.demo-detail {
-  background: var(--card-background);
-  padding-top: 32px;
-}
-.demo-page-inner > :first-child {
-  margin-top: 0;
-}
-.demo-page-inner .my-sample-id[data-my-card] {
-  flex: none;
-  padding: 4px 8px;
-  border-radius: 6px;
-  background: var(--fill);
-  color: var(--text-secondary);
-  font-size: 10px;
-  font-weight: 500;
-  line-height: 16px;
-  letter-spacing: 0.06em;
 }
 .demo-catalog {
   max-width: 480px;
@@ -207,32 +167,5 @@ watch(() => route.meta.tab, (tab) => {
   margin: 0 0 28px;
   color: var(--text-secondary);
   font-size: 14px;
-}
-@media (max-width: 760px) {
-  .demo-page {
-    padding: 20px max(14px, env(safe-area-inset-right)) 24px max(14px, env(safe-area-inset-left));
-  }
-}
-@media (max-width: 600px) {
-  .demo-page-inner {
-    --card-radius: 16px;
-    --card-padding: 20px;
-  }
-}
-
-.demo-view {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-}
-.demo-view > .demo-tabs,
-.demo-view > .demo-main {
-  flex: 1;
-  height: auto;
-  min-height: 0;
-}
-.demo-view > .demo-top {
-  flex: none;
 }
 </style>

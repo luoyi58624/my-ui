@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import DemoCatalog from '../../components/DemoCatalog.vue'
-import { nativeDemoGroups } from '../catalog'
+import { nativeDemoGroups } from '@demo/pages/catalog'
 
 defineProps<{
   /** 当前栏目是否可见，用于恢复目录焦点。 */

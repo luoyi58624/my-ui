@@ -3,14 +3,15 @@ import vue from '@vitejs/plugin-vue'
 // 仓库级浏览器回归（tests/react.*.tsx）以本配置为测试服务，需要 JSX 转换；React 示例本身在 examples/react 构建。
 import react from '@vitejs/plugin-react'
 
-// examples/vue 只承载 Vue 展示页；散装原生页面在 examples/others，桌面壳在 examples/tauri。
+// examples/vue 只承载组件示例页与完整交互示例长页；四栏目示例应用在 examples/tauri/ui，散装原生页面在 examples/others。
 const appRoot = decodeURIComponent(new URL('.', import.meta.url).pathname).replace(/^\/(\w:)/, '$1')
 const repoRoot = decodeURIComponent(new URL('../..', import.meta.url).pathname).replace(/^\/(\w:)/, '$1')
 const othersRoot = repoRoot + 'examples/others/'
+const shellRoot = repoRoot + 'examples/tauri/ui/src/'
 const nativeComponentsRoot = decodeURIComponent(new URL('../../../../tauri/plugins/tauri-plugin-native-components', import.meta.url).pathname).replace(/^\/(\w:)/, '$1')
 
 // others/ 下的页面按「双击、直接引用 ../../lib」编写，开发服务以本目录为根时换成绝对地址。
-const standalonePages = ['native.html', 'card.html', 'components.html', 'native-page.html']
+const standalonePages = ['native.html', 'card.html', 'components.html']
 // 本项目没有引入 @types/node，按文件读取器的最小签名声明，配置里不额外增加类型依赖。
 let readTextFile: ((path: string, encoding: 'utf8') => string) | undefined
 async function readStandalonePage(name: string, publicBase: string) {
@@ -37,6 +38,10 @@ export default defineConfig(({ mode }) => {
       alias: [
         { find: '/packages', replacement: repoRoot + 'packages' },
         { find: '/lib', replacement: repoRoot + 'lib' },
+        // 示例应用壳（四栏目、Tabbar、详情与指南页）在 examples/tauri/ui，路由表继续引用同一份组件。
+        { find: '@shell', replacement: shellRoot },
+        // 浏览器回归与开发服务都从本目录启动示例应用入口，别名要能回指本项目的组件示例页。
+        { find: '@demo', replacement: appRoot + 'src/' },
         // 浏览器测试以仓库为根目录，真实 HTML 入口仍需加载示例的绝对模块地址。
         ...(mode === 'test' ? [
           { find: '/src', replacement: appRoot + 'src' },

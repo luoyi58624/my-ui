@@ -4,10 +4,10 @@
   "version": "1.0.0",
   "identifier": "dev.myui.example",
   "build": {
-    "frontendDist": "../vue/dist",
-    "devUrl": "http://127.0.0.1:5178",
+    "frontendDist": "./ui/dist",
+    "devUrl": "http://127.0.0.1:5177",
     "beforeDevCommand": "node ../../scripts/dev-server.mjs",
-    "beforeBuildCommand": "bun run --cwd ../vue build"
+    "beforeBuildCommand": "bun run --cwd ui build"
   },
   "app": {
     "withGlobalTauri": true,
