@@ -22,8 +22,8 @@ export default defineConfig({
     host: '127.0.0.1',
     port: 5180,
     strictPort: true,
-    fs: { allow: [repoRoot] },
-    open: '/index.html'
+    fs: { allow: [repoRoot] }
+    // 不设置 open：起服务时自动拉起用户浏览器会打断正在做别的事情。
   },
   build: {
     outDir: 'dist',
