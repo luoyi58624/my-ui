@@ -78,7 +78,7 @@
               </div>
             </section>
 
-            <!-- 4. 01 基础组件 · docs: button | tag -->
+            <!-- 4. 01 基础组件：按 Vue pages/home/{button,tag} 的 DemoExample 逐块还原 -->
             <section id="showcase-actions">
               <div class="section-title">
                 <div>
@@ -89,23 +89,93 @@
               </div>
               <div class="pair">
                 <div class="showcase-example">
-                  <article class="showcase-block">
-                    <h3 class="showcase-label">Button 按钮</h3>
-                    <div class="showcase-row" data-demo-button></div>
-                    <p class="showcase-note" data-button-note>点击任意按钮，感受按压反馈。</p>
-                  </article>
+                  <section id="buttons">
+                    <div class="button-showcase">
+                      <article class="my-card">
+                        <div class="my-surface-head">
+                          <div>
+                            <h3>基础用法</h3>
+                            <p>通过 variant 区分主要、描边和文本操作，按操作优先级选择。</p>
+                          </div>
+                        </div>
+                        <div class="btn-row" data-demo="button-basic"></div>
+                      </article>
+                      <article class="my-card">
+                        <div class="my-surface-head">
+                          <div>
+                            <h3>图标按钮</h3>
+                            <p>独立图标使用 aria-label 描述操作，selected 表示收藏等切换状态。</p>
+                          </div>
+                        </div>
+                        <div class="icon-actions" data-demo="button-icons"></div>
+                      </article>
+                      <article class="my-card">
+                        <div class="my-surface-head">
+                          <div>
+                            <h3>图标与禁用状态</h3>
+                            <p>icon 为按钮添加前置图标，disabled 阻止点击与键盘激活。</p>
+                          </div>
+                        </div>
+                        <div class="btn-row" data-demo="button-states"></div>
+                      </article>
+                    </div>
+                  </section>
                 </div>
                 <div class="showcase-example">
-                  <article class="showcase-block">
-                    <h3 class="showcase-label">Tag 标签</h3>
-                    <div class="showcase-row" data-demo-tags></div>
-                    <div data-demo-tag-group></div>
-                  </article>
+                  <div class="tag-showcase">
+                    <article class="my-card">
+                      <div class="my-surface-head">
+                        <div>
+                          <h3>状态标签</h3>
+                          <p>用 tone 表达不同状态，展示型标签不参与选择。</p>
+                        </div>
+                      </div>
+                      <div
+                        class="display-tags"
+                        aria-label="展示型标签示例"
+                        data-demo="tag-tones"
+                      ></div>
+                    </article>
+                    <article class="my-card">
+                      <div class="my-surface-head">
+                        <div>
+                          <h3>单选标签组</h3>
+                          <p>v-model 使用字符串值，同一组内仅保留一个选择。</p>
+                        </div>
+                      </div>
+                      <div data-demo="tag-single"></div>
+                      <p class="control-foot" data-tag-single-note>当前偏好：灵感</p>
+                    </article>
+                    <article class="my-card">
+                      <div class="my-surface-head">
+                        <div>
+                          <h3>多选标签组</h3>
+                          <p>v-model 使用数组值即可多选，选项可单独禁用。</p>
+                        </div>
+                      </div>
+                      <div data-demo="tag-multiple"></div>
+                      <p class="control-foot" data-tag-multiple-note>已选：灵感</p>
+                    </article>
+                    <article class="my-card">
+                      <div class="my-surface-head">
+                        <div>
+                          <h3>独立选择标签</h3>
+                          <p>独立 Tag 使用布尔值管理选中状态。</p>
+                        </div>
+                      </div>
+                      <div class="display-tags" data-demo="tag-toggle"></div>
+                      <p class="control-foot" data-tag-toggle-note>未选择稍后阅读</p>
+                    </article>
+                  </div>
                 </div>
               </div>
             </section>
 
-            <!-- 5. 02 交互控制 · docs: input | switch / slider | selection / 5 个整行 -->
+            <!--
+              5. 02 交互控制：严格按 Vue pages/home/{input,switch,slider,selection,
+                 selection-collapse,combobox,picker,date-time-picker,upload} 里 <DemoExample>
+                 的装配顺序还原；一个 DemoExample 一张 .my-card 卡片，标题/描述逐字照抄。
+            -->
             <section id="showcase-controls" class="section-gap">
               <div class="section-title">
                 <div>
@@ -114,93 +184,402 @@
                 </div>
                 <div class="subtitle">为手指设计的控件尺寸，状态变化一目了然。</div>
               </div>
+
+              <!-- input 页（3 个示例，纵向 16px）与 switch 页并排 -->
               <div class="pair equal">
                 <div class="showcase-example">
-                  <article class="showcase-block">
-                    <h3 class="showcase-label">Input / Select</h3>
-                    <div data-demo-input></div>
-                    <div data-demo-select></div>
-                  </article>
+                  <div class="field-group">
+                    <article class="my-card">
+                      <div class="my-surface-head">
+                        <div>
+                          <h3>搜索输入</h3>
+                          <p>通过 icon 添加前置图标，clearable 提供一键清空。</p>
+                        </div>
+                      </div>
+                      <div data-demo="input-search"></div>
+                    </article>
+                    <article class="my-card">
+                      <div class="my-surface-head">
+                        <div>
+                          <h3>辅助信息</h3>
+                          <p>hint 插槽补充输入提示，maxlength 限制最大长度。</p>
+                        </div>
+                      </div>
+                      <div data-demo="input-hint"></div>
+                    </article>
+                    <article class="my-card">
+                      <div class="my-surface-head">
+                        <div>
+                          <h3>下拉选择</h3>
+                          <p>Select 通过 options 提供选项，v-model 同步当前值。</p>
+                        </div>
+                      </div>
+                      <div data-demo="select"></div>
+                    </article>
+                  </div>
                 </div>
                 <div class="showcase-example">
-                  <article class="showcase-block">
-                    <h3 class="showcase-label">Switch 开关</h3>
-                    <div data-demo-switch></div>
-                    <p class="showcase-note" data-switch-note>开关状态由 value 与 onChange 维护。</p>
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>列表开关</h3>
+                        <p>为 ListRow 设置 toggle，以整行设置项呈现开关，v-model 同步布尔值。</p>
+                      </div>
+                    </div>
+                    <div class="pref-list" data-demo="switches"></div>
+                    <div class="control-foot">
+                      <span>你的偏好已在本页实时更新</span>
+                      <strong data-switch-count>2 项开启</strong>
+                    </div>
                   </article>
                 </div>
               </div>
+
+              <!-- slider 页（3 个示例）与 selection 页（3 个示例）并排 -->
               <div class="pair equal secondary-pair">
                 <div class="showcase-example">
-                  <article class="showcase-block">
-                    <h3 class="showcase-label">Segmented / Slider</h3>
-                    <div data-demo-segmented></div>
-                    <div data-demo-slider></div>
-                  </article>
+                  <div class="field-group">
+                    <article class="my-card">
+                      <div class="my-surface-head">
+                        <div>
+                          <h3>分段选择</h3>
+                          <p>在少量互斥选项之间切换，支持图标与选中状态联动。</p>
+                        </div>
+                      </div>
+                      <div data-demo="segmented"></div>
+                      <div class="mode-card">
+                        <div class="mode-symbol" data-mode-symbol></div>
+                        <div>
+                          <strong data-mode-title>舒适模式</strong>
+                          <p data-mode-description>让每一次浏览都更轻松</p>
+                        </div>
+                      </div>
+                    </article>
+                    <article class="my-card">
+                      <div class="my-surface-head">
+                        <div>
+                          <h3>基础滑块</h3>
+                          <p>拖动调整数值，也可聚焦后使用方向键精确调节。</p>
+                        </div>
+                      </div>
+                      <div data-demo="slider"></div>
+                    </article>
+                    <article class="my-card">
+                      <div class="my-surface-head">
+                        <div>
+                          <h3>自定义滑块</h3>
+                          <p>通过 CSS 变量调整轨道、填充色和手柄，unit 设置数值单位。</p>
+                        </div>
+                      </div>
+                      <div data-demo="custom-slider"></div>
+                    </article>
+                  </div>
                 </div>
                 <div class="showcase-example">
-                  <article class="showcase-block">
-                    <h3 class="showcase-label">Choices / Stepper</h3>
-                    <div data-demo-choices></div>
-                    <div data-demo-stepper></div>
-                  </article>
+                  <div class="field-group">
+                    <article class="my-card">
+                      <div class="my-surface-head">
+                        <div>
+                          <h3>单选选项</h3>
+                          <p>字符串值表示单选，options 定义选项文案与值。</p>
+                        </div>
+                      </div>
+                      <div data-demo="choices-radio"></div>
+                    </article>
+                    <article class="my-card">
+                      <div class="my-surface-head">
+                        <div>
+                          <h3>复选选项</h3>
+                          <p>type 设置为 checkbox，使用数组保存多个选项值。</p>
+                        </div>
+                      </div>
+                      <div data-demo="choices-checkbox"></div>
+                    </article>
+                    <article class="my-card">
+                      <div class="my-surface-head">
+                        <div>
+                          <h3>数字步进器</h3>
+                          <p>通过加减按钮与输入框调整数量，v-model 始终同步当前值。</p>
+                        </div>
+                      </div>
+                      <div class="choice-bottom">
+                        <span>添加到我的收藏</span>
+                        <div data-demo="stepper"></div>
+                      </div>
+                    </article>
+                  </div>
                 </div>
               </div>
-              <!-- selection-collapse：单选/复选组 + 折叠面板，同一文档整行排开 -->
+
+              <!-- selection-collapse 页：4 个示例两列，折叠面板跨两列 -->
               <div class="secondary-pair">
-                <div class="showcase-example">
-                  <article class="showcase-block">
-                    <h3 class="showcase-label">Radio / Checkbox</h3>
-                    <div data-demo-radio></div>
-                    <div data-demo-checkbox></div>
+                <div id="selection-collapse" class="selection-showcase">
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>独立单选框</h3>
+                        <p>同一组 Radio 共用 name 与 v-model，disabled 禁用单个选项。</p>
+                      </div>
+                    </div>
+                    <div class="standalone standalone-radios" data-demo="radio"></div>
+                    <p class="selection-note" data-radio-note>当前选择：送货上门</p>
                   </article>
-                </div>
-                <div class="showcase-example">
-                  <article class="showcase-block">
-                    <h3 class="showcase-label">Collapse 折叠</h3>
-                    <div data-demo-collapse></div>
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>独立复选框</h3>
+                        <p>每个 Checkbox 使用独立布尔值，description 补充说明。</p>
+                      </div>
+                    </div>
+                    <div class="standalone" data-demo="checkbox"></div>
                   </article>
-                </div>
-              </div>
-              <div class="secondary-pair">
-                <div class="showcase-example">
-                  <article class="showcase-block">
-                    <h3 class="showcase-label">Combobox 搜索选择</h3>
-                    <div data-demo-combobox></div>
-                    <p class="showcase-note" data-combobox-note>
-                      输入关键字，从结果中选择一位协作者。
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>单选组</h3>
+                        <p>RadioGroup 通过 options 定义选项，inline 控制水平排列。</p>
+                      </div>
+                    </div>
+                    <div data-demo="radio-group"></div>
+                  </article>
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>复选组与半选</h3>
+                        <p>通过数组管理复选值，indeterminate 表达全选控件的半选状态。</p>
+                      </div>
+                    </div>
+                    <div data-demo="checkbox-group"></div>
+                    <p class="selection-note" data-checkbox-group-note>
+                      已选 2 项 · 半选状态
                     </p>
                   </article>
-                </div>
-              </div>
-              <div class="secondary-pair">
-                <div class="showcase-example">
-                  <article class="showcase-block">
-                    <h3 class="showcase-label">Picker 滚轮选择</h3>
-                    <div data-demo-picker></div>
+                  <article class="my-card collapse-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>折叠面板</h3>
+                        <p>数组值允许多项展开，字符串值形成手风琴；收起后保留内部输入状态。</p>
+                      </div>
+                    </div>
+                    <div class="collapse-examples">
+                      <div>
+                        <div class="example-label">多项展开</div>
+                        <div data-demo="collapse"></div>
+                      </div>
+                      <div>
+                        <div class="example-label">手风琴 · 一次展开一项</div>
+                        <div data-demo="collapse-guide"></div>
+                      </div>
+                    </div>
+                    <div class="collapse-footer">
+                      <p class="selection-note">
+                        收起保留内部状态，支持连续切换和系统减少动态效果设置。
+                      </p>
+                      <div data-demo="collapse-reset"></div>
+                    </div>
                   </article>
                 </div>
               </div>
+
+              <!-- combobox 页：3 个示例两列 + 底部已选状态条 -->
               <div class="secondary-pair">
-                <div class="showcase-example">
-                  <article class="showcase-block">
-                    <h3 class="showcase-label">Date / Time</h3>
-                    <div data-demo-date></div>
-                    <div data-demo-time></div>
+                <section id="combobox" class="combobox-card">
+                  <div class="combobox-examples">
+                    <article class="my-card">
+                      <div class="my-surface-head">
+                        <div>
+                          <h3>本地搜索</h3>
+                          <p>
+                            输入关键词筛选 options，clearable 允许清空，disabled
+                            禁用整个控件。
+                          </p>
+                        </div>
+                      </div>
+                      <div data-demo="combobox-basic"></div>
+                    </article>
+                    <article class="my-card">
+                      <div class="my-surface-head">
+                        <div>
+                          <h3>自定义选项</h3>
+                          <p>通过 option-leading 插槽为选项补充头像和在线状态。</p>
+                        </div>
+                      </div>
+                      <div data-demo="combobox-option"></div>
+                    </article>
+                    <article class="my-card">
+                      <div class="my-surface-head">
+                        <div>
+                          <h3>异步搜索</h3>
+                          <p>关闭本地 filter，在 search 事件中获取数据，loading 表达等待状态。</p>
+                        </div>
+                      </div>
+                      <div data-demo="combobox-remote"></div>
+                    </article>
+                  </div>
+                  <div class="combobox-foot">
+                    <span data-combobox-summary>已选目的地：杭州</span>
+                    <div data-combobox-reset></div>
+                  </div>
+                </section>
+              </div>
+
+              <!-- picker 页：2 个示例两列 + 级联示例整行 -->
+              <div class="secondary-pair">
+                <section id="picker" class="picker-showcase">
+                  <div class="picker-examples">
+                    <article class="my-card">
+                      <div class="my-surface-head">
+                        <div>
+                          <h3>单列选择</h3>
+                          <p>传入 options 创建单列滚轮，禁用的选项会自动跳过。</p>
+                        </div>
+                      </div>
+                      <div data-demo="picker-single"></div>
+                      <p>已选 <strong data-picker-drink>茉莉花茶</strong></p>
+                    </article>
+                    <article class="my-card">
+                      <div class="my-surface-head">
+                        <div>
+                          <h3>独立多列</h3>
+                          <p>columns 为各列提供独立选项，v-model 使用数组保存各列值。</p>
+                        </div>
+                      </div>
+                      <div data-demo="picker-columns"></div>
+                      <p>到店时间 <strong data-picker-time>09:30</strong></p>
+                    </article>
+                  </div>
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>级联与底部面板</h3>
+                        <p>选项通过 children 定义联动列，先在面板里修改草稿，确认后保存。</p>
+                      </div>
+                    </div>
+                    <div class="picker-area">
+                      <div>
+                        <h4>配送地区</h4>
+                        <p data-picker-area>浙江省 / 杭州市 / 西湖区</p>
+                      </div>
+                      <div data-demo="picker-cascade"></div>
+                    </div>
+                  </article>
+                </section>
+              </div>
+
+              <!-- date-time-picker 页：5 个示例，纵向 28px -->
+              <div class="secondary-pair">
+                <div class="date-time-showcase">
+                  <article class="my-card" id="date-time-picker">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>日期选择</h3>
+                        <p>
+                          min 与 max 限制范围，年月变化后自动保留有效日期，也可放入底部面板确认。
+                        </p>
+                      </div>
+                    </div>
+                    <div class="date-time-heading">
+                      <h4>选择日期</h4>
+                      <strong data-date-value></strong>
+                    </div>
+                    <div data-demo="date-picker"></div>
+                    <p>大小月与闰年自动联动，年月变化后保留有效日期。</p>
+                    <div class="date-time-footer">
+                      <span>也可以在底部面板中选择，确认后保存。</span>
+                      <div data-demo="date-picker-sheet"></div>
+                    </div>
+                  </article>
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>时间选择</h3>
+                        <p>通过 min、max 与 minute-step 定义可选时段和分钟间隔。</p>
+                      </div>
+                    </div>
+                    <div class="date-time-heading">
+                      <span>预约时间</span>
+                      <strong data-time-value>09:30</strong>
+                    </div>
+                    <div data-demo="time-picker"></div>
+                    <p>营业时段 09:00—18:30，每 15 分钟一个时刻。</p>
+                  </article>
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>精确到秒</h3>
+                        <p>show-seconds 开启秒列，second-step 控制秒间隔。</p>
+                      </div>
+                    </div>
+                    <div data-demo="time-seconds"></div>
+                    <p>
+                      当前时间
+                      <strong data-precise-value>01:20:30</strong>
+                      · 秒间隔为 5
+                    </p>
+                  </article>
+                  <article class="my-card" id="calendar">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>单日选择</h3>
+                        <p>Calendar 在月视图中选择日期，支持键盘移动与切换月份。</p>
+                      </div>
+                    </div>
+                    <div data-demo="calendar-single"></div>
+                    <p class="date-time-note">
+                      方向键移动日期，Home / End 跳至周首尾，Page Up / Down 切换月份；加 Shift
+                      切换年份。Enter 或空格选择。
+                    </p>
+                  </article>
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>日期范围与禁选</h3>
+                        <p>range 开启范围选择，disabled-date 控制不可选择的日期。</p>
+                      </div>
+                    </div>
+                    <div data-demo="calendar-range"></div>
+                    <p>每月 13 日、23 日已被预约，范围不能跨过这些日期。</p>
                   </article>
                 </div>
               </div>
+
+              <!-- upload 页：2 个示例（1.2fr / 1fr）+ 底部说明 -->
               <div class="secondary-pair">
-                <div class="showcase-example">
-                  <article class="showcase-block">
-                    <h3 class="showcase-label">Upload 上传</h3>
-                    <div data-demo-upload></div>
-                  </article>
-                </div>
+                <section id="upload">
+                  <div class="upload-examples">
+                    <article class="my-card">
+                      <div class="my-surface-head">
+                        <div>
+                          <h3>拖放与自动上传</h3>
+                          <p>drag 开启拖放，request 处理上传过程，支持进度、失败重试与文件限制。</p>
+                        </div>
+                      </div>
+                      <div data-demo="upload-auto"></div>
+                    </article>
+                    <article class="my-card">
+                      <div class="my-surface-head">
+                        <div>
+                          <h3>手动上传</h3>
+                          <p>关闭 auto-upload 后先选择文件，再通过实例的 submit 与 abort 控制上传。</p>
+                        </div>
+                      </div>
+                      <div data-demo="upload-manual"></div>
+                      <p>
+                        上传中可以取消并保留文件，也可以移除。失败后点击重试，文件会重新开始上传。
+                      </p>
+                    </article>
+                  </div>
+                  <p class="upload-demo-note">这里演示上传过程，文件留在本页，不会发送到服务器。</p>
+                </section>
               </div>
             </section>
 
             <!-- 6. 03 内容容器 · docs: card 整行 + 6 个整行 -->
+            <!--
+              6. 03 内容容器：按 Vue pages/home/{card,shadows,identity,image,app-bar,navigation,list}
+                 的 DemoExample 逐块还原。card 页的两个示例在 Vue 里带 bare（不套 Card，标题直接排在背景上），
+                 这里照抄同样的 doc-example-heading 结构。
+            -->
             <section id="showcase-surfaces" class="section-gap">
               <div class="section-title">
                 <div>
@@ -209,71 +588,191 @@
                 </div>
                 <div class="subtitle">柔和的层次和留白，突出内容本身。</div>
               </div>
-              <div class="showcase-example">
-                <article class="showcase-block">
-                  <h3 class="showcase-label">Card 卡片</h3>
-                  <div class="card-grid" data-demo-card></div>
-                  <p class="showcase-note" data-card-note>
-                    交互卡片可用键盘激活；图文卡片突出内容本身。
+
+              <!-- pages/home/card：两个 bare 示例 -->
+              <section id="surfaces" class="card-showcase" aria-label="交互卡片示例">
+                <div class="card-section">
+                  <header class="doc-example-heading">
+                    <h2>快捷卡片</h2>
+                    <p>interactive 开启整张卡片的按压反馈，activate 统一处理鼠标与键盘激活。</p>
+                  </header>
+                  <div class="card-grid" aria-label="快捷功能" data-demo="card-shortcuts"></div>
+                </div>
+                <div class="card-section">
+                  <header class="doc-example-heading">
+                    <h2>图文内容卡片</h2>
+                    <p>使用默认插槽组织图标、状态、图片与正文，以整张卡片作为操作入口。</p>
+                  </header>
+                  <div class="large-card-list" aria-label="大卡片列表" data-demo="card-content"></div>
+                </div>
+              </section>
+
+              <!-- pages/home/shadows -->
+              <div class="secondary-pair">
+                <article class="my-card shadow-showcase" id="shadows">
+                  <div class="my-surface-head">
+                    <div>
+                      <h3>阴影层级</h3>
+                      <p>通过阴影变量选择层级，打开菜单和弹窗观察实际效果。</p>
+                    </div>
+                  </div>
+                  <div class="shadow-levels" aria-label="五种阴影层级对比" data-demo="shadows"></div>
+                  <div class="shadow-context">
+                    <div class="context-heading">
+                      <h4>放进真实组件</h4>
+                      <p>打开菜单或弹窗，比较它们与内容卡片的距离感。</p>
+                    </div>
+                    <div class="context-stage">
+                      <div data-demo="shadows-context"></div>
+                    </div>
+                  </div>
+                  <p class="shadow-note">
+                    浅色与暗色使用独立阴影。切换顶部主题，即可比较不同背景下的层次。
                   </p>
+                  <div data-demo="shadows-dialog"></div>
                 </article>
               </div>
+
+              <!-- pages/home/identity -->
               <div class="secondary-pair">
-                <div class="showcase-example">
-                  <article class="showcase-block">
-                    <h3 class="showcase-label">Shadow 阴影</h3>
-                    <div
-                      class="shadow-levels"
-                      data-demo-shadows
-                      aria-label="五种阴影层级对比"
-                    ></div>
+                <div id="avatar-badge" class="identity-card">
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>头像与状态组合</h3>
+                        <p>在头像外层使用 Badge，通过圆点展示在线状态。</p>
+                      </div>
+                    </div>
+                    <div class="profile-preview" data-demo="identity-profile"></div>
+                  </article>
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>头像</h3>
+                        <p>支持图片、文字、方形与自定义插槽，通过 size 指定尺寸。</p>
+                      </div>
+                    </div>
+                    <div class="avatar-examples" data-demo="avatar"></div>
+                  </article>
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>徽标</h3>
+                        <p>数字默认合并超出上限的值，dot 使用圆点，show-zero 保留零值。</p>
+                      </div>
+                    </div>
+                    <div class="badge-examples" data-demo="badge"></div>
+                    <div class="identity-actions" data-demo="badge-actions"></div>
                   </article>
                 </div>
               </div>
+
+              <!-- pages/home/image -->
               <div class="secondary-pair">
-                <div class="showcase-example">
-                  <article class="showcase-block">
-                    <h3 class="showcase-label">Avatar / Badge</h3>
-                    <div data-demo-identity></div>
-                  </article>
-                </div>
+                <section id="image" class="image-card">
+                  <div class="image-showcase">
+                    <article class="my-card">
+                      <div class="my-surface-head">
+                        <div>
+                          <h3>图片裁剪</h3>
+                          <p>ratio 预留图片比例，fit 控制裁剪、完整展示或拉伸填满。</p>
+                        </div>
+                      </div>
+                      <figure class="image-main" data-demo="image-fit"></figure>
+                    </article>
+                    <article class="my-card">
+                      <div class="my-surface-head">
+                        <div>
+                          <h3>自定义占位</h3>
+                          <p>通过 placeholder 插槽为未加载的图片提供占位内容。</p>
+                        </div>
+                      </div>
+                      <div data-demo="image-placeholder"></div>
+                    </article>
+                    <article class="my-card">
+                      <div class="my-surface-head">
+                        <div>
+                          <h3>失败与恢复</h3>
+                          <p>图片地址不可用时展示失败状态，更新 src 后重新载入。</p>
+                        </div>
+                      </div>
+                      <div data-demo="image-error"></div>
+                    </article>
+                  </div>
+                  <p class="image-note">
+                    默认使用原生懒加载。设置宽高或比例可预留空间，圆角、背景与裁剪位置可以通过 CSS
+                    覆写。
+                  </p>
+                </section>
               </div>
+
+              <!-- pages/home/app-bar -->
               <div class="secondary-pair">
-                <div class="showcase-example">
-                  <article class="showcase-block">
-                    <h3 class="showcase-label">Image 图片</h3>
-                    <div class="image-grid" data-demo-image></div>
-                  </article>
-                </div>
+                <article class="my-card" id="app-bar">
+                  <div class="my-surface-head">
+                    <div>
+                      <h3>标题与操作区</h3>
+                      <p>组合标题、返回与右侧操作，切换居中设置观察标题的位置。</p>
+                    </div>
+                  </div>
+                  <div class="app-bar-window" data-demo="app-bar"></div>
+                  <div class="app-bar-note">
+                    <span>左右操作区宽度不同，居中标题也保持对齐。</span>
+                    <div data-demo="app-bar-note"></div>
+                  </div>
+                </article>
               </div>
+
+              <!-- pages/home/navigation -->
               <div class="secondary-pair">
-                <div class="showcase-example">
-                  <article class="showcase-block">
-                    <h3 class="showcase-label">AppBar 顶部导航</h3>
-                    <div class="app-bar-preview" data-demo-appbar></div>
-                  </article>
-                </div>
+                <article class="my-card">
+                  <div class="my-surface-head">
+                    <div>
+                      <h3>底部导航</h3>
+                      <p>图标与文字配合选中状态，支持点击与键盘切换。</p>
+                    </div>
+                  </div>
+                  <div data-demo="navigation"></div>
+                </article>
               </div>
+
+              <!-- pages/home/list -->
               <div class="secondary-pair">
-                <div class="showcase-example">
-                  <article class="showcase-block">
-                    <h3 class="showcase-label">Navigation 导航选项</h3>
-                    <div data-demo-navigation></div>
-                    <p class="showcase-note" data-navigation-note>当前栏目：首页</p>
+                <div class="list-grid" aria-label="列表示例">
+                  <article class="my-card list-panel">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>选择列表</h3>
+                        <p>Choices 的 list 模式将单选与复选以整行选项呈现。</p>
+                      </div>
+                    </div>
+                    <div class="list-group">
+                      <div class="list-section-name">单选列表</div>
+                      <div data-demo="list-choices"></div>
+                    </div>
+                    <div class="list-group">
+                      <div class="list-section-name">复选列表</div>
+                      <div data-demo="list-choices-sync"></div>
+                    </div>
                   </article>
-                </div>
-              </div>
-              <div class="secondary-pair">
-                <div class="showcase-example">
-                  <article class="showcase-block">
-                    <h3 class="showcase-label">List 列表</h3>
-                    <div data-demo-list></div>
+                  <article class="my-card list-panel">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>导航与设置列表</h3>
+                        <p>ListRow 支持描述、尾部值、开关和浮层触发器，CellGroup 统一组织分组。</p>
+                      </div>
+                    </div>
+                    <div data-demo="list-navigation"></div>
                   </article>
                 </div>
               </div>
             </section>
 
-            <!-- 7. 04 状态反馈 · docs: native-navigation 整行 + 6 个整行 -->
+            <!--
+              7. 04 状态反馈：按 Vue pages/native/navigation 与 pages/home/{feedback,primitives,
+                 notice-steps,popup,touch-gestures,menu} 的 DemoExample 逐块还原。
+                 primitives 页还包含 PlaybackProgress / SliderExample 两个子组件，它们的 DemoExample 同样是卡片。
+            -->
             <section id="showcase-feedback" class="section-gap">
               <div class="section-title">
                 <div>
@@ -282,105 +781,450 @@
                 </div>
                 <div class="subtitle">提示、确认对话框和移动端操作面板。</div>
               </div>
-              <div class="showcase-example">
-                <article class="showcase-block">
-                  <h3 class="showcase-label">应用与平台 · 共享备注</h3>
-                  <div data-demo-native-nav></div>
-                  <div class="showcase-row" data-native-actions></div>
-                  <p class="showcase-note" data-native-note>
-                    写入 localStorage，刷新页面后仍然保留。
-                  </p>
-                </article>
-              </div>
+
+              <!-- pages/native/navigation -->
+              <article class="my-card" id="native-navigation">
+                <div class="my-surface-head">
+                  <div>
+                    <h3>跨页共享状态</h3>
+                    <p>两页共用备注和计数，重新打开也能恢复。</p>
+                  </div>
+                </div>
+                <div data-demo="shared-state"></div>
+                <div class="native-navigation-actions" data-demo="shared-state-actions"></div>
+                <p class="native-navigation-note">
+                  在当前窗口进入另一页；返回后保留原来的输入与滚动位置。
+                </p>
+              </article>
+
+              <!-- pages/home/feedback -->
               <div class="secondary-pair">
-                <div class="showcase-example">
-                  <article class="showcase-block">
-                    <h3 class="showcase-label">Toast / Dialog / Sheet</h3>
-                    <div class="showcase-row" data-demo-feedback></div>
-                    <p class="showcase-note" data-feedback-note>弹层覆盖整页，关闭后回到这里。</p>
+                <section id="feedback">
+                  <div class="feedback-grid">
+                    <article class="my-card feedback-panel">
+                      <div class="my-surface-head">
+                        <div>
+                          <h3>轻提示</h3>
+                          <p>通过 Toast 实例展示简短反馈，不中断当前操作。</p>
+                        </div>
+                      </div>
+                      <div class="toast-sample">
+                        <span data-demo="toast-icon"></span>
+                        <div>
+                          <strong>保存成功</strong>
+                          <small>你的更改已经同步</small>
+                        </div>
+                      </div>
+                      <div data-demo="toast"></div>
+                    </article>
+                    <article class="my-card feedback-panel">
+                      <div class="my-surface-head">
+                        <div>
+                          <h3>确认弹窗</h3>
+                          <p>等待 showAlert 的返回值，确认后再执行后续操作。</p>
+                        </div>
+                      </div>
+                      <div class="empty-illustration">
+                        <div class="empty-image" data-demo="dialog-icon"></div>
+                        <span>每个决定，都值得确认</span>
+                      </div>
+                      <div data-demo="dialog"></div>
+                    </article>
+                    <article class="my-card feedback-panel">
+                      <div class="my-surface-head">
+                        <div>
+                          <h3>底部操作面板</h3>
+                          <p>showSheet 接收自定义内容，通过 closed 取得用户选择。</p>
+                        </div>
+                      </div>
+                      <div class="sheet-sample">
+                        <div class="handle"></div>
+                        <div class="sheet-line"></div>
+                        <div class="sheet-line"></div>
+                      </div>
+                      <div data-demo="sheet"></div>
+                    </article>
+                  </div>
+                </section>
+              </div>
+
+              <!-- pages/home/primitives（含 PlaybackProgress、SliderExample） -->
+              <div class="secondary-pair">
+                <div id="primitives" class="primitives-grid">
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>文字提示</h3>
+                        <p>设置 placement 控制提示方向，copyable 允许移入提示区选择和复制文字。</p>
+                      </div>
+                    </div>
+                    <div class="tooltip-directions" data-demo="tooltip"></div>
+                    <div data-demo="tooltip-divider"></div>
+                    <div class="quick-tools">
+                      <span>快捷操作</span>
+                      <div class="icon-tools" data-demo="tooltip-tools"></div>
+                    </div>
+                    <p class="demo-note">
+                      鼠标悬停显示，触屏长按显示，均只淡入淡出。默认不接收鼠标交互；右侧示例开启文字复制，可移入选字，离开后收起。
+                    </p>
+                  </article>
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>内容分隔</h3>
+                        <p>支持文字、虚线与垂直分隔，align 控制文字的位置。</p>
+                      </div>
+                    </div>
+                    <div data-demo="divider"></div>
+                  </article>
+                  <article class="my-card progress-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>任务进度</h3>
+                        <p>通过 value 展示确定进度，省略数值表示等待；支持环形、状态色和自定义文案。</p>
+                      </div>
+                    </div>
+                    <div class="progress-layout">
+                      <div class="transfer-demo">
+                        <div class="transfer-heading">
+                          <div class="file-icon" data-demo="progress-file-icon"></div>
+                          <div>
+                            <strong>旅行相册.zip</strong>
+                            <span data-demo="progress-status">准备继续上传 · 164 / 256 MB</span>
+                          </div>
+                        </div>
+                        <div data-demo="progress"></div>
+                        <div class="transfer-actions" data-demo="progress-actions"></div>
+                        <p class="demo-note">模拟文件传输，可暂停、继续与重置。</p>
+                        <div data-demo="progress-divider"></div>
+                        <div class="status-examples" data-demo="progress-statuses"></div>
+                      </div>
+                      <div class="ring-examples">
+                        <div class="ring-example">
+                          <div data-demo="progress-ring"></div>
+                          <span>环形进度</span>
+                        </div>
+                        <div class="ring-example">
+                          <div data-demo="progress-ring-pending"></div>
+                          <span>等待响应</span>
+                        </div>
+                        <div class="pending-example">
+                          <span>正在准备文件</span>
+                          <div data-demo="progress-preparing"></div>
+                        </div>
+                        <div class="pending-example">
+                          <span>自定义文案</span>
+                          <div data-demo="progress-custom"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                  <article class="my-card playback-card" id="playback-progress">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>播放与缓冲</h3>
+                        <p>buffer 表示已缓冲进度。滑块可以拖动定位，Progress 展示对应的只读进度。</p>
+                      </div>
+                    </div>
+                    <div class="playback-layout">
+                      <div class="playback-controls">
+                        <div class="playback-heading">
+                          <div>
+                            <strong>周末的好风景</strong>
+                            <span>模拟播放 · 拖动调整播放位置</span>
+                          </div>
+                          <span class="playback-time" data-demo="playback-time">1:48 / 5:00</span>
+                        </div>
+                        <div data-demo="playback"></div>
+                        <div class="playback-actions" data-demo="playback-actions"></div>
+                      </div>
+                      <div data-demo="playback-divider"></div>
+                      <div class="buffer-overview">
+                        <div class="buffer-heading">
+                          <span>相同样式的只读进度</span>
+                          <span data-demo="playback-buffer-label">已缓冲 72%</span>
+                        </div>
+                        <div data-demo="playback-progress"></div>
+                        <div class="progress-legend">
+                          <span><i class="played"></i>已播放</span>
+                          <span><i class="buffered"></i>已缓冲</span>
+                          <span><i class="remaining"></i>未加载</span>
+                        </div>
+                        <p>仅需传入 <code>buffer</code> 开启缓冲层，颜色由进度色自动生成，也可单独覆盖。</p>
+                      </div>
+                    </div>
+                  </article>
+                  <section id="slider-options" class="slider-showcase">
+                    <div class="slider-examples">
+                      <article class="my-card">
+                        <div class="my-surface-head">
+                          <div>
+                            <h3>按步长生成刻度</h3>
+                            <p>step 设置调整间隔，marks 按步长生成刻度。</p>
+                          </div>
+                        </div>
+                        <div data-demo="slider-step"></div>
+                        <p>每 10 调整一档，悬停或拖动时显示当前值。</p>
+                      </article>
+                      <article class="my-card">
+                        <div class="my-surface-head">
+                          <div>
+                            <h3>仅选择指定刻度</h3>
+                            <p>step 设为 null，使用 marks 指定允许选择的值与文案。</p>
+                          </div>
+                        </div>
+                        <div data-demo="slider-marks"></div>
+                        <p>
+                          拖动连续跟手，按相邻刻度中点预览；触屏抬起后提交，纵向滚动不改值。方向键按刻度移动。
+                        </p>
+                      </article>
+                      <article class="my-card">
+                        <div class="my-surface-head">
+                          <div>
+                            <h3>双滑块范围</h3>
+                            <p>数组值表示范围，两个滑块分别控制上下限。</p>
+                          </div>
+                        </div>
+                        <div data-demo="slider-range"></div>
+                        <p>
+                          拖动最近的端点，交叉后自动切换上下限；Tab 可切换两个滑块，范围值始终有序。
+                        </p>
+                      </article>
+                      <article class="my-card">
+                        <div class="my-surface-head">
+                          <div>
+                            <h3>常显数值</h3>
+                            <p>value-label-display 设置为 on，始终显示当前数值提示。</p>
+                          </div>
+                        </div>
+                        <div data-demo="slider-value"></div>
+                      </article>
+                    </div>
+                    <article class="my-card">
+                      <div class="my-surface-head">
+                        <div>
+                          <h3>提示箭头</h3>
+                          <p>arrow 控制文字提示是否显示方向箭头。</p>
+                        </div>
+                      </div>
+                      <div class="showcase-actions" data-demo="tooltip-arrow"></div>
+                    </article>
+                  </section>
+                </div>
+              </div>
+
+              <!-- pages/home/notice-steps -->
+              <div class="secondary-pair">
+                <div class="notice-steps-showcase">
+                  <article class="my-card" id="notice">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>通知条</h3>
+                        <p>通过 type 区分状态，支持关闭与自定义操作区。</p>
+                      </div>
+                    </div>
+                    <div class="notice-examples" data-demo="notice"></div>
+                    <div data-demo="notice-restore"></div>
+                  </article>
+                  <article class="my-card" id="steps">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>步骤进度</h3>
+                        <p>通过当前步骤值控制进度，支持水平与垂直排列。</p>
+                      </div>
+                    </div>
+                    <div data-demo="steps"></div>
+                    <div class="steps-controls">
+                      <span data-demo="steps-label">第 2 步 · 确认内容</span>
+                      <div data-demo="steps-buttons"></div>
+                    </div>
+                    <div class="steps-detail">
+                      <div data-demo="steps-vertical"></div>
+                      <div class="steps-explanation">
+                        <h4>横向或纵向，都保持清楚</h4>
+                        <p>
+                          点击上方步骤，或使用左右方向键切换。默认的步骤条只展示进度，开启交互后才可以操作。
+                        </p>
+                        <div data-demo="steps-error"></div>
+                      </div>
+                    </div>
                   </article>
                 </div>
               </div>
+
+              <!-- pages/home/popup -->
               <div class="secondary-pair">
-                <div class="showcase-example">
-                  <article class="showcase-block">
-                    <h3 class="showcase-label">Tooltip / Divider / Progress</h3>
-                    <div data-demo-primitives></div>
+                <div class="popup-showcase">
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>侧边抽屉</h3>
+                        <p>设置 placement 控制打开方向，自定义内容通过 closed 返回结果。</p>
+                      </div>
+                    </div>
+                    <div data-demo="drawer"></div>
+                    <p class="example-note">
+                      编辑资料时保留当前页面。单指沿展开方向向外滑动，可以收起抽屉。
+                    </p>
+                    <div data-demo="drawer-button"></div>
                   </article>
-                </div>
-              </div>
-              <div class="secondary-pair">
-                <div class="showcase-example">
-                  <article class="showcase-block">
-                    <h3 class="showcase-label">Notice / Steps</h3>
-                    <div data-demo-notice></div>
-                    <div data-demo-steps></div>
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>自定义选择面板</h3>
+                        <p>选中态由列表组管理，可调整选择框位置并组合单选与多选内容。</p>
+                      </div>
+                    </div>
+                    <div data-demo="selection-sheet"></div>
+                    <div class="selection-actions" data-demo="selection-sheet-actions"></div>
+                    <p class="example-note">
+                      双时钟：<span data-demo="selection-sheet-name">锁屏与时钟桌面插件</span>
+                      <br />
+                      同步内容：已选 <span data-demo="selection-sheet-count">2</span> 项
+                    </p>
                   </article>
-                </div>
-              </div>
-              <div class="secondary-pair">
-                <div class="showcase-example">
-                  <article class="showcase-block">
-                    <h3 class="showcase-label">Popup / Drawer</h3>
-                    <div class="showcase-row" data-demo-popup></div>
-                    <p class="showcase-note" data-popup-note>
-                      命令式弹层共享同一套手势与返回行为。
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>单按钮提示与危险确认</h3>
+                        <p>通过 cancelText 和 danger 表达操作类型，等待返回值后执行后续操作。</p>
+                      </div>
+                    </div>
+                    <div class="alert-actions" data-demo="popup-alert"></div>
+                    <p class="example-note">
+                      默认底部展示并留出 16px 外边距；需要居中时设置 center: true。
                     </p>
                   </article>
                 </div>
               </div>
+
+              <!-- pages/home/touch-gestures -->
               <div class="secondary-pair">
-                <div class="showcase-example">
-                  <article class="showcase-block">
-                    <h3 class="showcase-label">Touch 触摸滑动</h3>
-                    <div data-demo-touch></div>
-                  </article>
-                </div>
+                <article class="my-card touch-showcase" id="touch-gestures">
+                  <div class="my-surface-head">
+                    <div>
+                      <h3>跟手滑动</h3>
+                      <p>左右切页，向外收起；轻拖回弹，快滑关闭。</p>
+                    </div>
+                  </div>
+                  <div data-demo="touch"></div>
+                  <div class="touch-actions">
+                    <div data-demo="touch-actions"></div>
+                    <span>使用单指触摸体验</span>
+                  </div>
+                </article>
               </div>
+
+              <!-- pages/home/menu -->
               <div class="secondary-pair">
-                <div class="showcase-example">
-                  <article class="showcase-block">
-                    <h3 class="showcase-label">Menu 菜单</h3>
-                    <div class="showcase-row" data-demo-menu></div>
-                    <p class="showcase-note" data-menu-note>菜单浮在内容之上，选择一个动作。</p>
+                <div class="menu-showcase">
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>基础菜单</h3>
+                        <p>通过 trigger 插槽绑定触发器，菜单在按压位置展开。</p>
+                      </div>
+                    </div>
+                    <div data-demo="menu-basic"></div>
+                  </article>
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>右键菜单</h3>
+                        <p>trigger 设置为 contextmenu，右键区域与更多按钮可共用同一组选项。</p>
+                      </div>
+                    </div>
+                    <div class="context-notes" data-demo="menu-context"></div>
+                    <p class="menu-note">右键松开打开；触屏长按打开；键盘支持 Shift + F10。</p>
+                  </article>
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>单选与多选菜单</h3>
+                        <p>mode 控制选择模式，v-model 同步当前选择。</p>
+                      </div>
+                    </div>
+                    <div class="choice-menus" data-demo="menu-selection"></div>
+                  </article>
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>级联菜单</h3>
+                        <p>选项的 children 定义子菜单，适合有层级的操作。</p>
+                      </div>
+                    </div>
+                    <div data-demo="menu-cascade"></div>
+                    <p class="menu-note">
+                      桌面悬停 200ms，移动端点击展开。触发行衔接为子菜单标题，父层缩小并露出；点击父层或标题返回，外部按下关闭。
+                    </p>
                   </article>
                 </div>
               </div>
             </section>
-
-            <!-- 8. 05 完整示例 · docs: scenarios | native-html，Vue 版这一区没有 section-title -->
+            <!--
+              8. 05 完整示例：Vue 版这一区没有分区标题，直接是 pages/home/scenarios
+                 （含 ProfileFormExample）与 pages/home/native-html 两个页面组件。
+            -->
             <section id="showcase-scenarios" class="section-gap">
-              <div class="showcase-example">
-                <article class="showcase-block">
-                  <h3 class="showcase-label">表单与内容场景</h3>
-                  <form class="scene-form" data-demo-scenario novalidate>
-                    <div data-scenario-name></div>
-                    <div data-scenario-intro></div>
-                    <div data-scenario-plan></div>
-                    <div data-scenario-switch></div>
-                    <div class="showcase-row" data-scenario-actions></div>
-                    <p class="showcase-note" data-scenario-status>
-                      填写昵称，选择方案后提交。
+              <section id="scenarios" class="essentials-section">
+                <div class="scene-grid">
+                  <article class="my-card form-example">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>资料编辑与校验</h3>
+                        <p>切换表单布局，体验校验、错误定位、异步提交与重置。</p>
+                      </div>
+                    </div>
+                    <div class="layout-toolbar">
+                      <div data-demo="profile-form-layout"></div>
+                      <span data-demo="profile-form-note">标签在上，逐项填写</span>
+                    </div>
+                    <div data-demo="profile-form"></div>
+                  </article>
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>内容加载与失败重试</h3>
+                        <p>组合 Loading、Skeleton 与 Empty，覆盖加载、正常内容与失败状态。</p>
+                      </div>
+                    </div>
+                    <div class="feed-toolbar" data-demo="loading-states-toolbar"></div>
+                    <div class="feed-body" data-demo="loading-states"></div>
+                    <p class="feed-foot" role="status" data-demo="loading-states-foot">
+                      有内容，也为等待和失败留好位置
                     </p>
-                  </form>
-                </article>
-              </div>
-              <div class="secondary-pair">
-                <div class="showcase-example">
-                  <article class="showcase-block">
-                    <h3 class="showcase-label">加载与空状态</h3>
-                    <div data-demo-states></div>
+                  </article>
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>标签页与内容分组</h3>
+                        <p>使用 Tabs 的作用域插槽切换内容，CellGroup 组织列表与设置项。</p>
+                      </div>
+                    </div>
+                    <div data-demo="tabs-content"></div>
+                  </article>
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>输入状态与装饰</h3>
+                        <p>体验只读、禁用、密码显隐、前后缀与不同边框样式。</p>
+                      </div>
+                    </div>
+                    <div class="input-states" data-demo="input-states"></div>
                   </article>
                 </div>
-              </div>
-              <div class="secondary-pair">
-                <div class="showcase-example">
-                  <article class="showcase-block">
-                    <h3 class="showcase-label">原生 HTML 示例</h3>
-                    <div class="scene-links" data-demo-native-html></div>
-                  </article>
+              </section>
+              <article class="my-card native-example">
+                <div class="my-surface-head">
+                  <div>
+                    <h3>原生 HTML 示例</h3>
+                    <p>在独立页面体验直接使用 CSS 与 JavaScript 的组件。</p>
+                  </div>
                 </div>
-              </div>
+                <a class="native-example-link" href="./index.html" data-demo="native-html">
+                  打开原生 HTML 示例
+                </a>
+              </article>
             </section>
           </main>
 
