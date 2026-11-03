@@ -50,10 +50,13 @@ export default defineConfig(({ mode }) => {
       ],
       dedupe: ['vue', 'vue-router', 'react', 'react-dom'],
     },
-    // 本地插件直接分发 Vue 源码，避免开发预构建缓存旧组件出口。
-    optimizeDeps: { exclude: ['tauri-plugin-native-components'] },
+    // 本地插件直接分发 Vue 源码，避免开发预构建缓存旧组件出口；
+    // 插件自己的 @tauri-apps/api 位于仓库外，显式预构建，避免首次进入详情时才优化并整页刷新。
+    optimizeDeps: { exclude: ['tauri-plugin-native-components'], include: ['@tauri-apps/api/core'] },
     server: {
       fs: { allow: [repoRoot, nativeComponentsRoot] },
+      // Rust 编译与生成文件交给 Tauri 守护，避免监听大量构建产物（也避开 Windows 文件占用报错）。
+      watch: { ignored: ['**/tauri/**', '**/dist/**'] },
       // Android 页面使用 Tauri 虚拟域名，热更新连接直接走 USB 转发的开发地址。
       hmr: mode === 'test' ? undefined : { host: loadEnv(mode, repoRoot, 'TAURI_').TAURI_DEV_HOST || '127.0.0.1', clientPort: 5178 },
     },
