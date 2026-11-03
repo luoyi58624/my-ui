@@ -203,15 +203,6 @@
       })
     })
 
-    // 「原生 HTML 示例 ↗」在单页站点里退化为定位到示例分区。
-    Array.prototype.slice.call(document.querySelectorAll('[data-scroll-scenarios]')).forEach(
-      function (node) {
-        node.addEventListener('click', function (event) {
-          event.preventDefault()
-          scrollToSection('scenarios')
-        })
-      }
-    )
     Array.prototype.slice.call(document.querySelectorAll('[data-scroll-actions]')).forEach(
       function (node) {
         node.addEventListener('click', function (event) {

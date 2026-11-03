@@ -1,6 +1,9 @@
 import { createRouter, createWebHashHistory, type Router } from 'vue-router'
 import { demoPages } from './pages/routes'
 
+/** 路由初始化前的地址片段，用于区分直接打开与显式导航。 */
+export const initialHash = location.hash
+
 /** 各窗口复用同一路由与 Web 壳，Android 独立页面由原生导航创建。 */
 export const router: Router = import.meta.hot?.data.router ?? createRouter({
   history: createWebHashHistory(),

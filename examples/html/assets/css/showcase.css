@@ -2949,7 +2949,13 @@ footer strong {
 
 @media (max-width: 760px) {
   .scene-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
+  }
+}
+
+@media (max-width: 380px) {
+  .shadow-levels {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

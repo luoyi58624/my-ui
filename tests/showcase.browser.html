@@ -100,7 +100,7 @@
               '完整示例数量未同步'
             )
             assert(!home().querySelector('.demo-intro [data-showcase-entry]'), '顶部仍有重复按钮')
-            assert(home().querySelectorAll('[data-demo-link]').length === 31, '原有目录丢失')
+            assert(home().querySelectorAll('[data-demo-link]').length === 32, '目录项目数量不符')
             assert(!showcase() && !doc.querySelector('.demo-detail'), '首页提前挂载整页交互')
             assert(
               !win.performance
