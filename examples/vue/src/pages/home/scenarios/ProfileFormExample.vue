@@ -258,7 +258,8 @@ onBeforeUnmount(() => clearTimeout(saveTimer))
   flex-basis: 100%;
   width: 100%;
 }
-.form-actions span {
+/* 仅命中表单操作区的提示文字，避免盖掉按钮内部的文案颜色。 */
+.form-actions > span {
   color: var(--text-secondary);
   font-size: 12px;
 }
