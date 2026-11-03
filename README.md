@@ -24,7 +24,9 @@ packages/
     adapter.tsx         属性、值回调、Portal 内容和生命周期适配
     components.ts       组件声明，不包含独立样式或交互实现
 examples/               示例站点：每个入口一个独立项目
-  html/                 @my-ui/examples-html：纯 HTML 发布页站点
+  html/                 纯静态“完整交互示例”单页，无依赖、无构建，双击 index.html 即可
+    index.html          唯一页面，只引用 ../../lib/ 与下方 assets
+    assets/             页面自己的样式、脚本、图片与字体
   vue/                  @my-ui/examples-vue：Vue 展示页，Web/桌面/Android 共用
     src/                Vue 示例页面、演示业务和示例专用 theme/
     public/             示例静态资源
@@ -52,7 +54,7 @@ package.json            Bun workspace 与统一命令
 bun.lock                唯一依赖锁文件
 ```
 
-Vue 封装、React 封装与四个示例项目由 Bun 统一安装与关联；`lib/` 直接保存浏览器可用的 CSS/JS。示例通过 `@my-ui/vue`、`@my-ui/react` 使用本地源码，修改 `lib/` 后实时更新。`examples/others` 只是静态页面，没有 package.json。包配置中的 `private` 用于禁止 npm 发布，不影响公开 GitHub 仓库中的静态文件访问。
+Vue 封装、React 封装与三个示例项目由 Bun 统一安装与关联；`lib/` 直接保存浏览器可用的 CSS/JS。示例通过 `@my-ui/vue`、`@my-ui/react` 使用本地源码，修改 `lib/` 后实时更新。`examples/html` 与 `examples/others` 只是静态页面，没有 package.json、不需要安装或构建。包配置中的 `private` 用于禁止 npm 发布，不影响公开 GitHub 仓库中的静态文件访问。
 
 ## 普通 HTML
 
@@ -517,10 +519,11 @@ await storage.flush?.()
 ```powershell
 bun install
 bun run dev        # examples/vue，5178
-bun run dev:html   # examples/html，5180
 bun run dev:react  # examples/react，5181
 bun run build
 ```
+
+`examples/html/` 是纯静态的“完整交互示例”单页：没有 package.json、没有构建、没有开发服务，直接双击 `examples/html/index.html` 即可打开，全部交互由 `../../lib/my-ui.css` 与 `../../lib/my-ui.js` 承担。需要经由 HTTP 查看时，用任意静态服务器指向仓库根目录再访问 `examples/html/index.html`。
 
 开发地址默认 `http://127.0.0.1:5178/`，散装原生页面由同一服务按原地址提供：`/native.html`、`/card.html`、`/components.html`，文件本体在 `examples/others/`。示例采用“首页、应用、消息、设置”四个底部 Tab；页面里的顶栏、底栏、正文和下拉刷新全部使用 Web 组件。主 Tab 首次访问后保留实例，切换保持输入、计数与滚动位置，不增加返回历史。`#/example/app-bar`、`#/example/tabbar`、`#/example/pull-refresh` 分别演示三个公共组件。
 

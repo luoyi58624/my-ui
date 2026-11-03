@@ -19,12 +19,6 @@
         "vue-tsc": "3.3.13",
       },
     },
-    "examples/html": {
-      "name": "@my-ui/examples-html",
-      "devDependencies": {
-        "vite": "8.3.4",
-      },
-    },
     "examples/react": {
       "name": "@my-ui/examples-react",
       "dependencies": {
@@ -98,8 +92,6 @@
     "@babel/types": ["@babel/types@7.29.8", "", { "dependencies": { "@babel/helper-string-parser": "^7.29.7", "@babel/helper-validator-identifier": "^7.29.7" } }, "sha512-Vj1jF3cPfxg7OAfoI7QnVKLoILlm2JF9pnVHrX8qx7AHMiYWT+NDAA7jChlNgRS4WTLc/fD1lXLmPixluj+3Gg=="],
 
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.6.0", "", {}, "sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw=="],
-
-    "@my-ui/examples-html": ["@my-ui/examples-html@workspace:examples/html"],
 
     "@my-ui/examples-react": ["@my-ui/examples-react@workspace:examples/react"],
 
