@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { onBeforeUnmount, provide, ref } from 'vue'
-import { RouterView } from 'vue-router'
 import { Popup, Toast } from '@my-ui/vue'
 import { notifyKey } from './commons/notify'
 
@@ -11,7 +10,7 @@ onBeforeUnmount(() => document.documentElement.classList.remove('my-demo-app'))
 </script>
 
 <template>
-  <RouterView />
+  <slot />
   <Popup />
   <Toast ref="toast" />
 </template>

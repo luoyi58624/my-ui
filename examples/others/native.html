@@ -222,7 +222,7 @@
       if (window.frameElement && !window.frameElement.dispatchEvent(new CustomEvent('my:back', {cancelable: true}))) return;
       if (history.length > 1) history.back();
       // Vue 展示页在 ../vue，构建后与原生页面同层，copy-native 会把这段前缀改回 ./。
-      else location.replace('../vue/#/home');
+      else location.replace('../vue/');
     });
     document.querySelector('#native-structure ol').addEventListener('my:change', event => { document.querySelector('#structure-result').textContent = '当前步骤：' + (event.detail + 1); });
     document.querySelector('#native-upload').addEventListener('my:change', event => { document.querySelector('#upload-result').textContent = event.detail.length ? '已选择：' + event.detail.map(file => file.name).join('、') : '尚未选择文件'; });

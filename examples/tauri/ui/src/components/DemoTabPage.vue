@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, inject } from 'vue'
 import DemoAppBar from '@demo/components/DemoAppBar.vue'
 import type { DemoTab } from '@demo/components/layoutContext'
-import { navigation } from '@demo/commons/navigation'
+import { demoNavigationKey } from '@demo/commons/navigation'
 import { usePageReady } from '@demo/commons/page-ready'
 import HomePage from '../pages/home/index.vue'
 import ApplicationPage from '../pages/native/index.vue'
 import MessagesPage from '../pages/messages/index.vue'
 import SettingsPage from '../pages/settings/index.vue'
 
+const { navigation } = inject(demoNavigationKey)!
 const props = defineProps<{
   /** 当前栏目的展示配置。 */
   page: DemoTab

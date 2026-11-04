@@ -1,21 +1,22 @@
 <script setup lang="ts">
 import { computed, inject, onActivated, onBeforeUnmount, onDeactivated, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import DemoAppBar from './DemoAppBar.vue'
-import { closePage, isChildPage } from '../commons/navigation'
-import { demoExamples } from '../pages/catalog'
-import { demoDescriptions } from '../pages/descriptions'
-import { demoLayoutKey } from './layoutContext'
-import { useDemoScroll } from './useDemoScroll'
-import { usePageReady } from '../commons/page-ready'
-import DemoDocument from './DemoDocument.vue'
-import { homeDocs } from '../pages/home'
-import { nativeDocs } from '../pages/native'
+import DemoAppBar from '@demo/components/DemoAppBar.vue'
+import { demoNavigationKey, isChildPage } from '@demo/commons/navigation'
+import { demoExamples } from '@demo/pages/catalog'
+import { demoDescriptions } from '@demo/pages/descriptions'
+import { demoLayoutKey } from '@demo/components/layoutContext'
+import { useDemoScroll } from '@demo/components/useDemoScroll'
+import { usePageReady } from '@demo/commons/page-ready'
+import DemoDocument from '@demo/components/DemoDocument.vue'
+import { homeDocs } from '@demo/pages/home'
+import { nativeDocs } from '@demo/pages/native'
 
 const props = defineProps<{
   /** 当前独立文档的目录标识。 */
   id: string
 }>()
+const { closePage } = inject(demoNavigationKey)!
 const layout = inject(demoLayoutKey)!,
   route = useRoute()
 const item = demoExamples.find((item) => item.id === props.id)!

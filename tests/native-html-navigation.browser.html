@@ -32,11 +32,11 @@ if(params.has('frame')){
         await until(()=>header(win),'HTML 顶栏未加载');header(win).click();
         await until(()=>win.document.querySelector('#previous'),'标题栏未返回前页');win.close();
       });
-      await check('新窗口直接打开 HTML 时回到组件目录',async()=>{
+      await check('新窗口直接打开 HTML 时回到独立 Vue 长页',async()=>{
         const win=await openPopup('/examples/others/native.html');await until(()=>header(win),'HTML 顶栏未加载');
         assert(win.history.length===1,'测试窗口包含额外历史');header(win).click();
-        await until(()=>win.document.querySelector('[data-demo-page="home"]:not([inert])'),'直接打开时没有回退目录');
-        assert(win.location.hash==='#/home','回退地址不正确');win.close();
+        await until(()=>win.document.querySelector('.showcase-layout'),'直接打开时没有回退到 Vue 长页');
+        assert(!win.document.querySelector('.demo-app'),'回退时加载了应用壳');win.close();
       });
       await check('嵌入 HTML 的返回交给 Vue 宿主，恢复原示例',async()=>{
         const win=await loadFrame('/example/native-html');

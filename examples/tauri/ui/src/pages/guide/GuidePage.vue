@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { computed, nextTick, onActivated, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onActivated, onBeforeUnmount, onMounted, ref, inject } from 'vue'
 import { Button } from '@my-ui/vue'
 import DemoAppBar from '@demo/components/DemoAppBar.vue'
 import CodeFiles from '@demo/components/CodeFiles.vue'
 import DocumentOutline from '@demo/components/DocumentOutline.vue'
 import { guides, type GuideKind } from '@demo/commons/code/guides'
-import { closePage, openPage } from '@demo/commons/navigation'
+import { demoNavigationKey } from '@demo/commons/navigation'
 import { usePageReady } from '@demo/commons/page-ready'
 
+const { closePage, openPage } = inject(demoNavigationKey)!
 usePageReady()
 
 const props = defineProps<{

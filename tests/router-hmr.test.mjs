@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright'
-import { createServer } from 'vite'
+import { createServer, normalizePath } from 'vite'
 
 // 使用真实开发服务触发热更新，覆盖普通浏览器回归未开启 HMR 的场景。
 test('开发热更新后，目录、Tab 和返回仍由同一个路由驱动', { timeout: 90_000 }, async (t) => {
@@ -33,12 +33,12 @@ test('开发热更新后，目录、Tab 和返回仍由同一个路由驱动', {
     })
     const url = new URL('examples/tauri/ui/index.html#/home', server.resolvedUrls.local[0]).href
 
-    // 共享模块位于 examples/vue/src，按文件查找实际进入页面的模块再触发更新。
-    for (const path of ['pages/catalog.ts', 'commons/navigation.ts', 'router.ts']) {
+    // 共享模块和应用自己的路由都参与热更新。
+    for (const path of ['vue/src/pages/catalog.ts', 'vue/src/commons/navigation.ts', 'tauri/ui/src/router.ts']) {
       await t.test(path, async () => {
         await page.goto(url)
         await page.locator('[data-demo-link="button"]').waitFor()
-        const file = fileURLToPath(new URL('../examples/vue/src/' + path, import.meta.url))
+        const file = normalizePath(fileURLToPath(new URL('../examples/' + path, import.meta.url)))
         const modules = [...(server.moduleGraph.getModulesByFile(file) ?? [])]
         assert.ok(modules.length, '待更新模块没有进入实际页面')
         const before = revision
@@ -49,7 +49,7 @@ test('开发热更新后，目录、Tab 和返回仍由同一个路由驱动', {
         assert.ok(revision > before, '页面没有收到开发更新')
 
         await page.locator('[data-demo-link="button"]').click()
-        await page.waitForURL('**/#/example/button')
+        await page.waitForURL(url => url.hash === '#/example/button')
         await page
           .locator('[data-demo-page="example/button"]:not([inert])')
           .waitFor({ timeout: 5000 })
@@ -60,7 +60,7 @@ test('开发热更新后，目录、Tab 和返回仍由同一个路由驱动', {
         await page.locator('.demo-view:not([inert]) .demo-top [aria-label^="返回"]').click()
         await page.locator('[data-demo-page="home"]:not([inert])').waitFor()
         await page.locator('[data-demo-tabbar] button').nth(1).click()
-        await page.waitForURL('**/#/native')
+        await page.waitForURL(url => url.hash === '#/native')
         await page.locator('[data-demo-page="native"]:not([inert])').waitFor({ timeout: 5000 })
         await page.locator('[data-demo-tabbar] button').nth(0).click()
         await page.locator('[data-showcase-entry]').click()

@@ -1,7 +1,9 @@
 import '@demo/commons/mobile'
-import { createApp } from 'vue'
+import { createApp, h } from 'vue'
+import { RouterView } from 'vue-router'
 import App from '@demo/App.vue'
-import { router } from '@demo/router'
+import { router } from './router'
+import { createDemoNavigation, demoNavigationKey } from '@demo/commons/navigation'
 import { applyTheme } from '@demo/commons/theme/index.js'
 import { sharedPinia } from '@demo/commons/state/shared'
 import { installNativeOverlayBack } from './commons/overlay-back'
@@ -10,7 +12,9 @@ import { installThemeState } from '@demo/commons/state/theme'
 import { readThemeSnapshot } from '@demo/commons/theme/preferences'
 
 applyTheme(readThemeSnapshot())
-const app = createApp(App).use(sharedPinia).use(router)
+const app = createApp({
+  render: () => h(App, null, () => h(RouterView)),
+}).use(sharedPinia).use(router).provide(demoNavigationKey, createDemoNavigation(router))
 const stopTheme = installThemeState(sharedPinia)
 let stopOverlayBack = () => {},
   stopAppearance = () => {}

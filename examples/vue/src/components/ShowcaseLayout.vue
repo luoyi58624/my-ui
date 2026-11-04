@@ -2,24 +2,24 @@
 import {
   computed,
   inject,
-  nextTick,
   onActivated,
   onBeforeUnmount,
   onDeactivated,
   onMounted,
   ref
 } from 'vue'
-import { useRoute } from 'vue-router'
 import { Icon } from '@my-ui/vue'
-import DemoAppBar from './DemoAppBar.vue'
-import { closePage, openPage } from '../commons/navigation'
-import { usePageReady } from '../commons/page-ready'
+import { demoNavigationKey } from '../commons/navigation'
 import { notifyKey } from '../commons/notify'
 import { homeDocs } from '../pages/home'
 import { nativeDocs } from '../pages/native'
 
+const props = defineProps<{
+  /** 首次打开时定位的分类。 */
+  section?: string
+}>()
+const navigation = inject(demoNavigationKey, null)
 const notify = inject(notifyKey)!
-usePageReady()
 const docs = { ...homeDocs, ...nativeDocs }
 const sections = [
   { id: 'actions', label: '基础组件' },
@@ -29,13 +29,13 @@ const sections = [
   { id: 'scenarios', label: '完整示例' }
 ]
 const root = ref<HTMLElement>()
-const route = useRoute()
 const scrolled = ref(false),
   currentSection = ref('')
 const activated = ref(true),
   visible = ref(!document.hidden)
 const active = computed(() => activated.value && visible.value)
 let frame = 0
+let sectionObserver: ResizeObserver | undefined
 
 function syncHeader() {
   const page = root.value
@@ -60,7 +60,7 @@ function scheduleHeader() {
     syncHeader()
   })
 }
-function scrollToSection(id: string) {
+function scrollToSection(id: string, behavior: ScrollBehavior = 'smooth') {
   const page = root.value
   const target = page?.querySelector<HTMLElement>('#showcase-' + id)
   if (!page || !target) return
@@ -74,17 +74,19 @@ function scrollToSection(id: string) {
           page.scrollTop -
           header.offsetHeight -
           20,
-    behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'
+    behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : behavior
   })
 }
-function reportError(error: unknown) {
-  notify(error instanceof Error ? error.message : String(error))
+function releaseSection() {
+  sectionObserver?.disconnect()
+  sectionObserver = undefined
 }
-function back() {
-  void closePage('/home').catch(reportError)
-}
-function openHtml() {
-  void openPage('/html', { title: '原生 HTML 示例' }).catch(reportError)
+function openHtml(event: MouseEvent) {
+  if (!navigation) return
+  event.preventDefault()
+  void navigation.openPage('/html', { title: '原生 HTML 示例' }).catch(error => {
+    notify(error instanceof Error ? error.message : String(error))
+  })
 }
 function updateVisibility() {
   visible.value = !document.hidden
@@ -95,16 +97,22 @@ onActivated(() => {
 })
 onDeactivated(() => {
   activated.value = false
+  releaseSection()
 })
-onMounted(async () => {
+onMounted(() => {
   document.addEventListener('visibilitychange', updateVisibility)
   window.addEventListener('resize', scheduleHeader, { passive: true })
-  await nextTick()
-  const anchor = route.hash.slice(1)
-  if (sections.some((section) => section.id === anchor)) scrollToSection(anchor)
+  const section = props.section
+  const content = root.value?.querySelector('main')
+  if (content && section && sections.some(item => item.id === section)) {
+    // 异步示例加载会推移分区位置，用户开始操作前保持入口锚点对齐。
+    sectionObserver = new ResizeObserver(() => scrollToSection(section, 'instant'))
+    sectionObserver.observe(content)
+  }
   syncHeader()
 })
 onBeforeUnmount(() => {
+  releaseSection()
   cancelAnimationFrame(frame)
   document.removeEventListener('visibilitychange', updateVisibility)
   window.removeEventListener('resize', scheduleHeader)
@@ -113,17 +121,15 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="showcase-page demo-view">
-      <DemoAppBar
-        title="完整交互示例"
-        back
-        back-label="返回组件目录"
-        @back="back"
-      />
+    <slot name="header" />
     <div
       ref="root"
       class="showcase-layout"
       aria-label="完整交互示例"
+      @keydown="releaseSection"
+      @pointerdown="releaseSection"
       @scroll.passive="scheduleHeader"
+      @wheel.passive="releaseSection"
     >
       <header class="masthead" :class="{ scrolled }">
         <div class="shell">
@@ -131,12 +137,12 @@ onBeforeUnmount(() => {
             <a
               v-for="item in sections"
               :key="item.id"
-              :href="'#/showcase#' + item.id"
+              :href="(navigation ? '#/showcase#' : '#showcase-') + item.id"
               :class="{ current: currentSection === item.id }"
               :aria-current="currentSection === item.id ? 'location' : undefined"
               @click.prevent="scrollToSection(item.id)"
               >{{ item.label }}</a
-            ><a href="./native.html" @click.prevent="openHtml">原生 HTML ↗</a>
+            ><a href="./native.html" @click="openHtml">原生 HTML ↗</a>
           </nav>
         </div>
       </header>
@@ -149,11 +155,11 @@ onBeforeUnmount(() => {
               <p>用克制的色彩、舒适的留白与柔和卡片，<br />原生 HTML 与 Vue 共用一套组件体验。</p>
               <div class="hero-cta">
                 <a
-                  href="#/showcase#actions"
+                  :href="navigation ? '#/showcase#actions' : '#showcase-actions'"
                   class="cta-btn"
                   @click.prevent="scrollToSection('actions')"
                   >探索组件 <Icon name="arrow-right" /></a
-                ><a class="hero-note" href="./native.html" @click.prevent="openHtml"
+                ><a class="hero-note" href="./native.html" @click="openHtml"
                   >原生 HTML 示例 ↗</a
                 >
               </div>

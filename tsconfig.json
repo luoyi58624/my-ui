@@ -11,8 +11,7 @@
     "noEmit": true,
     "types": ["vite/client"],
     "paths": {
-      "@demo/*": ["./examples/vue/src/*"],
-      "@shell/*": ["./examples/tauri/ui/src/*"]
+      "@demo/*": ["./examples/vue/src/*"]
     }
   },
   "include": [

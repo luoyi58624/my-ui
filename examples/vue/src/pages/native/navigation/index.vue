@@ -3,20 +3,21 @@ import { inject, ref } from 'vue'
 import { notifyKey } from '../../../commons/notify'
 import DemoExample from '../../../components/DemoExample.vue'
 import { Button, Card, Icon, Input } from '@my-ui/vue'
-import { isAndroidNative, openPage } from '../../../commons/navigation'
+import { demoNavigationKey, isAndroidNative } from '../../../commons/navigation'
 import { updateDemoCache, useSharedDemoStore } from '../../../commons/state/shared'
 
 const notify = inject(notifyKey)!
-const available = isAndroidNative()
+const navigation = inject(demoNavigationKey, null)
+const available = navigation && isAndroidNative()
 const opening = ref(false)
 const shared = useSharedDemoStore()
 
 async function open() {
-  if (opening.value) return
+  if (!navigation || opening.value) return
   opening.value = true
   try {
     await shared.$shared?.flush()
-    await openPage('/shared-state', { title: '跨页共享状态' })
+    await navigation.openPage('/shared-state', { title: '跨页共享状态' })
   } catch (error) {
     notify(error instanceof Error ? error.message : String(error))
   } finally {
@@ -44,15 +45,20 @@ async function updateCache() {
     <Input v-model="shared.note" label="共享备注" clearable />
     <div class="native-navigation-actions">
       <Button variant="outline" @click="shared.count++">共享计数 {{ shared.count }}</Button>
-      <Button :loading="opening" @click="open">
+      <Button v-if="navigation" :loading="opening" @click="open">
         {{ available ? '打开原生页面' : '打开另一页' }}
         <Icon name="arrow-right" />
       </Button>
+      <a v-else class="my-button my-primary" href="#showcase-feedback" target="_blank" rel="noopener">
+        在新标签页打开 <Icon name="arrow-right" />
+      </a>
       <Button variant="text" @click="updateCache">从本地更新</Button>
       <Button variant="text" @click="shared.$reset()">重置数据</Button>
     </div>
     <p class="native-navigation-note">
-      {{ available ? '打开独立原生窗口，在新页面修改后返回，这里也会更新。' : '在当前窗口进入另一页；返回后保留原来的输入与滚动位置。' }}
+      {{ !navigation ? '在另一个标签页修改共享备注或计数，两个页面会同步。' : available
+        ? '打开独立原生窗口，在新页面修改后返回，这里也会更新。'
+        : '在当前窗口进入另一页；返回后保留原来的输入与滚动位置。' }}
     </p>
     <p v-if="shared.$shared?.error" class="native-navigation-error" role="alert">
       本地同步失败：{{ shared.$shared.error.message }}

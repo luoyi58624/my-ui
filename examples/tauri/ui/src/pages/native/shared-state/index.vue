@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { h, ref } from 'vue'
+import { h, inject, ref } from 'vue'
 import { Button, Card, CellGroup, Icon, Input, ListRow, Menu, Stepper, popup } from '@my-ui/vue'
-import DemoAppBar from '../../../components/DemoAppBar.vue'
-import { closePage, isAndroidNative } from '../../../commons/navigation'
-import { updateDemoCache, useSharedDemoStore } from '../../../commons/state/shared'
-import { usePageReady } from '../../../commons/page-ready'
+import DemoAppBar from '@demo/components/DemoAppBar.vue'
+import { demoNavigationKey, isAndroidNative } from '@demo/commons/navigation'
+import { updateDemoCache, useSharedDemoStore } from '@demo/commons/state/shared'
+import { usePageReady } from '@demo/commons/page-ready'
 
+const { closePage } = inject(demoNavigationKey)!
 usePageReady()
 
 const available = isAndroidNative()

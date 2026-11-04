@@ -1,5 +1,5 @@
 import type { RouteRecordRaw } from 'vue-router'
-import { demoExamples } from './catalog'
+import { demoExamples } from '@demo/pages/catalog'
 
 /** 文档独立页统一交给 Vue Router，旧组件链接仍指向同一页面。 */
 export const demoPages: RouteRecordRaw[] = demoExamples

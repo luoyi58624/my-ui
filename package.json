@@ -13,7 +13,7 @@
     "dev:desktop": "bun run --cwd examples/tauri dev",
     "dev:android": "bun run --cwd examples/tauri dev:android",
     "dev:test": "bun run --cwd examples/vue dev:test",
-    "build": "bun run check && bun run build:react && bun run --cwd examples/vue build && bun run --cwd examples/tauri/ui build && bun scripts/copy-native.mjs",
+    "build": "bun run check && bun run build:react && bun run --cwd examples/vue build && bun run --cwd examples/tauri/ui build",
     "build:react": "bun run --cwd examples/react build",
     "build:desktop": "bun run --cwd examples/tauri build",
     "build:android": "bun run --cwd examples/tauri build:android",

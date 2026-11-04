@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, inject } from 'vue'
 import { Icon } from '@my-ui/vue'
-import { openPage } from '../commons/navigation'
+import { demoNavigationKey } from '../commons/navigation'
 import { exampleCode } from '../commons/code/examples'
 import CodeFiles from './CodeFiles.vue'
 import { previewGroups, type PreviewCodeGroup } from '../commons/code/source'
 
+const { openPage } = inject(demoNavigationKey)!
 const props = defineProps<{
   /** 组件目录中的示例标识。 */
   id: string

@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import DemoAppBar from '../../../components/DemoAppBar.vue'
-import { closePage } from '../../../commons/navigation'
-import { usePageReady } from '../../../commons/page-ready'
+import { inject, ref } from 'vue'
+import DemoAppBar from '@demo/components/DemoAppBar.vue'
+import { demoNavigationKey } from '@demo/commons/navigation'
+import { usePageReady } from '@demo/commons/page-ready'
 
+const { closePage } = inject(demoNavigationKey)!
 const pageReady = usePageReady(false)
 
 const error = ref('')

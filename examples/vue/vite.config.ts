@@ -1,13 +1,12 @@
-import { defineConfig, loadEnv } from 'vite'
+import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 // 仓库级浏览器回归（tests/react.*.tsx）以本配置为测试服务，需要 JSX 转换；React 示例本身在 examples/react 构建。
 import react from '@vitejs/plugin-react'
 
-// examples/vue 只承载组件示例页与完整交互示例长页；四栏目示例应用在 examples/tauri/ui，散装原生页面在 examples/others。
+// examples/vue 的正式入口只挂载完整交互长页。
 const appRoot = decodeURIComponent(new URL('.', import.meta.url).pathname).replace(/^\/(\w:)/, '$1')
 const repoRoot = decodeURIComponent(new URL('../..', import.meta.url).pathname).replace(/^\/(\w:)/, '$1')
 const othersRoot = repoRoot + 'examples/others/'
-const shellRoot = repoRoot + 'examples/tauri/ui/src/'
 const nativeComponentsRoot = decodeURIComponent(new URL('../../../../tauri/plugins/tauri-plugin-native-components', import.meta.url).pathname).replace(/^\/(\w:)/, '$1')
 
 // others/ 下的页面按「双击、直接引用 ../../lib」编写，开发服务以本目录为根时换成绝对地址。
@@ -38,12 +37,10 @@ export default defineConfig(({ mode }) => {
       alias: [
         { find: '/packages', replacement: repoRoot + 'packages' },
         { find: '/lib', replacement: repoRoot + 'lib' },
-        // 示例应用壳（四栏目、Tabbar、详情与指南页）在 examples/tauri/ui，路由表继续引用同一份组件。
-        { find: '@shell', replacement: shellRoot },
-        // 浏览器回归与开发服务都从本目录启动示例应用入口，别名要能回指本项目的组件示例页。
-        { find: '@demo', replacement: appRoot + 'src/' },
         // 浏览器测试以仓库为根目录，真实 HTML 入口仍需加载示例的绝对模块地址。
         ...(mode === 'test' ? [
+          // 仓库级回归还会直接打开 Tauri 的应用入口。
+          { find: '@demo', replacement: appRoot + 'src/' },
           { find: '/src', replacement: appRoot + 'src' },
           // 测试入口位于仓库根目录，和示例及插件共用同一个路由实例。
           { find: /^vue-router$/, replacement: appRoot + 'node_modules/vue-router/dist/vue-router.mjs' },
@@ -57,19 +54,20 @@ export default defineConfig(({ mode }) => {
     },
     // 本地插件直接分发 Vue 源码，避免开发预构建缓存旧组件出口；
     // 插件自己的 @tauri-apps/api 位于仓库外，显式预构建，避免首次进入详情时才优化并整页刷新。
-    optimizeDeps: { exclude: ['tauri-plugin-native-components'], include: ['@tauri-apps/api/core'] },
+    optimizeDeps: {
+      exclude: ['tauri-plugin-native-components'],
+      include: ['tauri-plugin-native-components > @tauri-apps/api/core'],
+    },
     server: {
       fs: { allow: [repoRoot, nativeComponentsRoot] },
       // Rust 编译与生成文件交给 Tauri 守护，避免监听大量构建产物（也避开 Windows 文件占用报错）。
       watch: { ignored: ['**/tauri/**', '**/dist/**'] },
-      // Android 页面使用 Tauri 虚拟域名，热更新连接直接走 USB 转发的开发地址。
-      hmr: mode === 'test' ? undefined : { host: loadEnv(mode, repoRoot, 'TAURI_').TAURI_DEV_HOST || '127.0.0.1', clientPort: 5178 },
     },
     build: {
       outDir: appRoot + 'dist',
       emptyOutDir: true,
       rolldownOptions: {
-        // native-page.html 在 examples/others，构建时由 scripts/copy-native.mjs 复制并指向同一份主入口脚本。
+        // 原生 HTML 的主题桥接单独产出，供散装示例使用。
         input: { main: appRoot + 'index.html', nativeTheme: appRoot + 'src/commons/native-theme.ts' },
         output: { entryFileNames: chunk => chunk.name === 'nativeTheme' ? 'native-theme.js' : 'assets/[name]-[hash].js' },
       },

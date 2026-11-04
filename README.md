@@ -27,10 +27,10 @@ examples/               示例站点：每个入口一个独立项目
   html/                 纯静态“完整交互示例”单页，无依赖、无构建，双击 index.html 即可
     index.html          唯一页面，只引用 ../../lib/ 与下方 assets
     assets/             页面自己的样式、脚本、图片与字体
-  vue/                  @my-ui/examples-vue：组件示例页与“完整交互示例”长页（Web 展示）
-    src/                组件示例页、文档组件与示例专用 theme/
+  vue/                  @my-ui/examples-vue：独立的“完整交互示例”长页（Web 展示）
+    src/                长页、可复用的组件示例内容与主题
     public/             示例静态资源
-    index.html          Vue 入口，默认进入长页
+    index.html          Vue 长页入口
     vite.config.ts      示例的开发与构建配置
     dist/               Web 与离线页面产物
   react/                @my-ui/examples-react：React 组件示例站点
@@ -520,11 +520,11 @@ await storage.flush?.()
 
 ## 本地展示与验证
 
-首页的“完整交互示例”入口打开 `#/showcase`，按需加载整页展示。`examples/vue/src/components/ShowcaseLayout.vue` 保留头图、分类导航和连续布局，通过 `examples/vue/src/pages/home/index.ts` 与 `examples/vue/src/pages/native/index.ts` 的文档注册表复用独立示例；返回目录保留滚动与入口焦点，离开整页时暂停播放和模拟上传。目录在桌面与手机上统一使用移动端单列布局。`examples/vue` 开发服务默认就停在这一页，四栏目应用（含该入口）在 `examples/tauri/ui`。
+`examples/vue` 直接挂载完整交互长页。Tauri 应用的首页也可进入 `#/showcase`，由应用提供标题栏和返回目录入口。两个入口共用 `examples/vue/src/components/ShowcaseLayout.vue` 和各组件示例内容。应用返回目录时保留滚动和入口焦点，离开长页时暂停播放和模拟上传。
 
 ```powershell
 bun install
-bun run dev        # examples/vue，5178（组件示例页与长页）
+bun run dev        # examples/vue，5178（独立 Vue 长页）
 bun run dev:app    # examples/tauri/ui，5177（四栏目应用）
 bun run dev:react  # examples/react，5181
 bun run build
@@ -532,11 +532,11 @@ bun run build
 
 `examples/html/` 是纯静态的“完整交互示例”单页：没有 package.json、没有构建、没有开发服务，直接双击 `examples/html/index.html` 即可打开，全部交互由 `../../lib/my-ui.css` 与 `../../lib/my-ui.js` 承担。需要经由 HTTP 查看时，用任意静态服务器指向仓库根目录再访问 `examples/html/index.html`。
 
-组件示例页开发地址默认 `http://127.0.0.1:5178/`，散装原生页面由同一服务按原地址提供：`/native.html`、`/card.html`、`/components.html`，文件本体在 `examples/others/`。应用开发地址默认 `http://127.0.0.1:5177/`，由同一中间件按原地址提供 `/native-page.html`。应用采用“首页、应用、消息、设置”四个底部 Tab；页面里的顶栏、底栏、正文和下拉刷新全部使用 Web 组件。主 Tab 首次访问后保留实例，切换保持输入、计数与滚动位置，不增加返回历史。`#/example/app-bar`、`#/example/tabbar`、`#/example/pull-refresh` 分别演示三个公共组件。
+独立 Vue 长页默认在 `http://127.0.0.1:5178/`，完整应用默认在 `http://127.0.0.1:5177/`。两个服务都提供 `/native.html`、`/card.html` 和 `/components.html`，文件本体在 `examples/others/`。应用另外提供原生子页入口 `/native-page.html`。应用采用“首页、应用、消息、设置”四个底部 Tab；页面里的顶栏、底栏、正文和下拉刷新全部使用 Web 组件。主 Tab 首次访问后保留实例，切换保持输入、计数与滚动位置，不增加返回历史。`#/example/app-bar`、`#/example/tabbar`、`#/example/pull-refresh` 分别演示三个公共组件。
 
 **原生多页面导航保留。** Android 在支持移动端多窗口时，`navigation.push()` 仍创建独立 Activity/WebView，`back()` 关闭当前子页；Web、桌面及不支持多窗口的 Android 使用 Vue Router。UI 渲染方式不改变这个导航契约。旧的 `#/discover`、`#/profile`、`#/native/app-bar`、`#/native/tabbar` 和 `#/page-refresh` 入口继续可访问。
 
-`examples/vue/src/router.ts` 定义每个 WebView 内的路由（应用与组件示例页共用同一张表），`examples/vue/src/App.vue` 提供统一弹层和提示，`examples/tauri/ui/src/components/DemoLayout.vue` 保留主栏目实例并显示详情，`examples/vue/src/commons/navigation.ts` 继续接入 `tauri-plugin-native-components/router`，组件库本身不依赖 Tauri。Web 同窗口详情通过有数量上限的 KeepAlive 保留往返状态；Android 子 Activity 根据自己的地址展示详情。Android 子页地址仍使用 `index.html?pageWindow=1#/example/组件标识`；目录、指南、源码展示、独立 HTML 和共享持久状态均保留。
+`examples/tauri/ui/src/router.ts` 定义应用在各 WebView 中的路由，`DemoLayout.vue` 保留栏目实例并显示详情。`examples/vue/src/App.vue` 为两个入口提供统一的弹层和提示。Web 同窗口详情通过有数量上限的 KeepAlive 保留往返状态，Android 子 Activity 根据自己的地址展示详情，例如 `index.html?pageWindow=1#/example/组件标识`。独立 Vue 长页通过新浏览器标签页演示共享状态。
 
 CSS 保存后即时更新，修改 JS 核心会完整刷新示例；构建结果同时提供 Vue 页面、普通 HTML 页面与原样的 CSS/JS。
 

@@ -5,7 +5,7 @@
   "description": "my-ui 示例应用前端：桌面与 Android 壳的四栏目界面，组件示例页复用 examples/vue/src",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 5177 --strictPort",
-    "build": "vite build",
+    "build": "vite build && node ../../../scripts/copy-native.mjs tauri",
     "preview": "vite preview --host 127.0.0.1 --port 4177 --strictPort"
   },
   "dependencies": {

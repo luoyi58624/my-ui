@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { inject, nextTick, ref, watch } from 'vue'
 import { CellGroup, Icon, ListRow } from '@my-ui/vue'
-import { openPage } from '@demo/commons/navigation'
+import { demoNavigationKey } from '@demo/commons/navigation'
 import type { DemoExample } from '@demo/pages/catalog'
 import { demoLayoutKey } from '@demo/components/layoutContext'
 
@@ -13,6 +13,7 @@ const props = defineProps<{
   /** 返回目录时恢复刚刚打开的入口焦点。 */
   active: boolean
 }>()
+const { openPage } = inject(demoNavigationKey)!
 const layout = inject(demoLayoutKey)!
 const root = ref<HTMLElement>()
 let entry: HTMLElement | undefined

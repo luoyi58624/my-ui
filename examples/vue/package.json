@@ -2,11 +2,11 @@
   "name": "@my-ui/examples-vue",
   "private": true,
   "type": "module",
-  "description": "my-ui 的 Vue 展示页：Web、桌面与 Android 共用同一份前端",
+  "description": "my-ui 的独立 Vue 完整交互展示页",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 5178 --strictPort",
     "dev:test": "vite --mode test --host 127.0.0.1 --port 5179 --strictPort",
-    "build": "vite build",
+    "build": "vite build && node ../../scripts/copy-native.mjs vue",
     "preview": "vite preview --host 127.0.0.1 --port 4178 --strictPort"
   },
   "dependencies": {

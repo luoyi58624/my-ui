@@ -2,7 +2,7 @@
   "name": "@my-ui/examples-tauri",
   "private": true,
   "type": "module",
-  "description": "my-ui 示例的桌面与 Android 原生壳，复用 examples/vue 的前端产物",
+  "description": "my-ui 完整示例应用的桌面与 Android 原生壳",
   "scripts": {
     "dev": "tauri dev",
     "dev:android": "node ../../scripts/dev-android.mjs",

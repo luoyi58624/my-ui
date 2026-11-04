@@ -2,11 +2,12 @@
 import { computed, inject, provide, ref, watch } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
 import { Tabbar } from '@my-ui/vue'
-import { navigation } from '@demo/commons/navigation'
+import { demoNavigationKey } from '@demo/commons/navigation'
 import { notifyKey } from '@demo/commons/notify'
 import DemoTabPage from './DemoTabPage.vue'
 import { demoLayoutKey, type DemoTab } from '@demo/components/layoutContext'
 
+const { navigation } = inject(demoNavigationKey)!
 const notify = inject(notifyKey)!
 const items: DemoTab[] = [
   { value: 'home', label: '首页', title: '组件示例', icon: 'home' },

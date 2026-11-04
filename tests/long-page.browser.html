@@ -69,24 +69,28 @@
         reports.length = 0
         try {
           frame = document.createElement('iframe')
-          // 不带 hash：验证默认落到长页。
+          // 不带 hash：验证入口直接渲染长页。
           frame.src = '/tests/long-page.browser.html?frame=1'
           document.querySelector('#fixture').replaceChildren(frame)
           await until(() => frame.contentDocument?.querySelector('.showcase-layout'), '长页未加载')
           doc = frame.contentDocument
           win = frame.contentWindow
 
-          await check('无地址进入时落到长页，五组完整交互都已挂载且没有栏目底栏', async () => {
+          await check('独立入口展示完整长页，不加载或挂载应用壳', async () => {
             await waitShowcase()
-            assert(win.location.hash === '#/showcase', '默认入口没有落到 #/showcase：' + win.location.hash)
+            assert(win.location.hash === '', '长页启动改写了地址')
             assert(showcase().querySelector('.hero h1').textContent.includes('自然留白'), '缺少头图')
             assert(showcase().querySelectorAll('.sample-window,.float-chip').length === 3, '头图卡片缺失')
             for (const id of sections)
               assert(showcase().querySelector('#showcase-' + id), '缺少分区 ' + id)
-            const visible = (selector) =>
-              [...doc.querySelectorAll(selector)].some((element) => element.getClientRects().length)
-            assert(!visible('[data-demo-tabbar]'), '组件示例页出现了栏目底栏')
-            assert(!visible('.demo-catalog'), '组件示例页出现了组件目录')
+            assert(
+              !doc.querySelector('.demo-app, [data-demo-tabbar], .demo-catalog, [aria-label="返回组件目录"]'),
+              '独立长页挂载了应用壳'
+            )
+            assert(
+              !win.performance.getEntriesByType('resource').some(entry => entry.name.includes('/examples/tauri/ui/')),
+              '独立长页加载了应用前端模块'
+            )
           })
 
           await check('分类导航驱动选中状态与顶栏阴影', async () => {
@@ -105,7 +109,7 @@
             showcase().scrollTo({ top: 0, behavior: 'instant' })
             await pause(120)
             assert(!showcase().querySelector('.masthead.scrolled'), '回到顶部后顶栏阴影未移除')
-            assert(win.location.hash === '#/showcase', '锚点变成了页面跳转')
+            assert(win.location.hash === '', '锚点变成了页面跳转')
           })
 
           await check('分类导航从页面底部把长页带回分区顶部（页面没有独立的回到顶部控件）', async () => {
@@ -150,19 +154,22 @@
             await sample.decode()
           })
 
-          await check('显式带地址打开时保持原地址，重定向只对空地址生效', async () => {
+          await check('长页支持旧分类链接，应用路由地址也只打开长页', async () => {
             const previous = doc
-            // 换一个查询参数让 iframe 真正重新加载，否则只改 hash 不会重新执行入口脚本。
-            frame.src = '/tests/long-page.browser.html?frame=1&direct=1#/home'
+            frame.src = '/tests/long-page.browser.html?frame=1&direct=1#/showcase#controls'
             await until(
-              () => frame.contentDocument !== previous && frame.contentDocument?.querySelector('[data-demo-page="home"]'),
-              '显式地址没有进入组件目录'
+              () => frame.contentDocument !== previous && frame.contentDocument?.querySelector('.showcase-layout'),
+              '旧分类地址未打开长页'
             )
             doc = frame.contentDocument
-            win = frame.contentWindow
-            await pause(160)
-            assert(win.location.hash === '#/home', '显式 #/home 被重定向：' + win.location.hash)
-            assert(!doc.querySelector('.showcase-layout'), '显式 #/home 仍渲染了长页')
+            await until(() => nav()[1].getAttribute('aria-current') === 'location', '旧链接没有定位分类')
+            const anchored = doc
+            frame.src = '/tests/long-page.browser.html?frame=1&direct=2#/home'
+            await until(
+              () => frame.contentDocument !== anchored && frame.contentDocument?.querySelector('.showcase-layout'),
+              '带旧应用地址时未打开长页'
+            )
+            assert(!frame.contentDocument.querySelector('.demo-app'), '旧应用地址打开了应用壳')
           })
 
           document.querySelector('#result').textContent = JSON.stringify(

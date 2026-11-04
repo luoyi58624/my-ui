@@ -9,15 +9,19 @@ const demoRoot = repoRoot + 'examples/vue/src/'
 const othersRoot = repoRoot + 'examples/others/'
 const nativeComponentsRoot = decodeURIComponent(new URL('../../../../../tauri/plugins/tauri-plugin-native-components', import.meta.url).pathname).replace(/^\/(\w:)/, '$1')
 
-// 原生子页入口在 examples/others，开发时按原地址直接读取，脚本指向本项目的 main.ts。
+const standalonePages = ['native.html', 'card.html', 'components.html']
 let readTextFile: ((path: string, encoding: 'utf8') => string) | undefined
-async function readNativePage() {
+async function readNativePage(name: string) {
   if (!readTextFile) {
     // 非字面量模块名让类型检查跳过 node 内置模块解析。
     const builtin = 'node:' + 'fs'
     readTextFile = (await import(builtin)).readFileSync
   }
-  return readTextFile!(othersRoot + 'native-page.html', 'utf8')
+  return readTextFile!(othersRoot + name, 'utf8')
+    .replaceAll('../../lib/', '/lib/')
+    .replaceAll('../vue/public/', '/')
+    .replaceAll('../vue/src/commons/native-theme.ts', '/@fs/' + demoRoot + 'commons/native-theme.ts')
+    .replaceAll('../vue/', '/')
 }
 
 export default defineConfig(({ mode }) => {
@@ -33,7 +37,6 @@ export default defineConfig(({ mode }) => {
         { find: '/lib', replacement: repoRoot + 'lib' },
         // 组件示例页、文档组件与共享示例逻辑只有一份，统一在 examples/vue/src。
         { find: '@demo', replacement: demoRoot },
-        { find: '@shell', replacement: appRoot + 'src' },
         // 回归服务以仓库为根目录，真实 HTML 入口仍需加载本项目的绝对模块地址。
         ...(isTest ? [
           { find: '/src', replacement: appRoot + 'src' },
@@ -49,15 +52,25 @@ export default defineConfig(({ mode }) => {
     },
     // 本地插件直接分发 Vue 源码，避免开发预构建缓存旧组件出口；
     // 插件自己的 @tauri-apps/api 位于仓库外，显式预构建，避免首次进入详情时才优化并整页刷新。
-    optimizeDeps: { exclude: ['tauri-plugin-native-components'], include: ['@tauri-apps/api/core'] },
+    optimizeDeps: {
+      exclude: ['tauri-plugin-native-components'],
+      include: ['tauri-plugin-native-components > @tauri-apps/api/core'],
+    },
     server: {
       fs: { allow: [repoRoot, nativeComponentsRoot] },
       // Rust 编译与生成文件交给 Tauri 守护，避免监听大量构建产物（也避开 Windows 文件占用报错）。
-      watch: { ignored: ['**/tauri/**', '**/dist/**'] },
+      watch: { ignored: ['**/tauri/target/**', '**/tauri/gen/**', '**/dist/**'] },
       // Android 页面使用 Tauri 虚拟域名，热更新连接直接走 USB 转发的开发地址。
       hmr: isTest ? undefined : { host: loadEnv(mode, repoRoot, 'TAURI_').TAURI_DEV_HOST || '127.0.0.1', clientPort: 5177 },
     },
-    build: { outDir: appRoot + 'dist', emptyOutDir: true },
+    build: {
+      outDir: appRoot + 'dist',
+      emptyOutDir: true,
+      rolldownOptions: {
+        input: { main: appRoot + 'index.html', nativeTheme: demoRoot + 'commons/native-theme.ts' },
+        output: { entryFileNames: chunk => chunk.name === 'nativeTheme' ? 'native-theme.js' : 'assets/[name]-[hash].js' },
+      },
+    },
     plugins: [
       vue(),
       {
@@ -66,8 +79,8 @@ export default defineConfig(({ mode }) => {
           // Android 子 Activity 打开 native-page.html 时加载同一个应用入口。
           server.middlewares.use((request, response, next) => {
             const pathname = new URL((request as { url?: string }).url ?? '/', 'http://127.0.0.1').pathname.slice(1)
-            if (pathname !== 'native-page.html') return next()
-            void readNativePage().then(html => {
+            if (pathname !== 'native-page.html' && !standalonePages.includes(pathname)) return next()
+            void readNativePage(pathname).then(html => {
               response.setHeader('Content-Type', 'text/html; charset=utf-8')
               response.setHeader('Cache-Control', 'no-store')
               response.end(html)

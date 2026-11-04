@@ -54,8 +54,7 @@
       const detail = () => doc.querySelector('.demo-detail:not([inert])')
       const route = async (id) => {
         win.location.hash = '/example/' + id
-        await until(() => detail()?.dataset.demoPage === 'example/' + id)
-        await pause(40)
+        await until(() => detail()?.dataset.demoPage === 'example/' + id && detail().querySelector('[data-example]'))
       }
       document.querySelector('#run').onclick = async () => {
         document.querySelector('#run').disabled = true
