@@ -118,6 +118,17 @@
             assert(win.location.hash === '', '锚点变成了页面跳转')
           })
 
+          await check('桌面按组排卡，按钮同行，标签和输入每行对齐', async () => {
+            const cardTops = (selector) =>
+              [...showcase().querySelectorAll(selector)].map(card => Math.round(card.getBoundingClientRect().top))
+            const buttons = cardTops('.button-showcase > .my-card')
+            assert(buttons.length === 3 && new Set(buttons).size === 1, '三张按钮卡片没有同行')
+            for (const selector of ['.tag-showcase > .my-card', '#showcase-control-fields .my-card']) {
+              const tops = cardTops(selector)
+              assert(tops.length === 4 && tops[0] === tops[1] && tops[2] === tops[3] && tops[0] < tops[2], '两列卡片没有按行对齐')
+            }
+          })
+
           await check('分类导航从页面底部把长页带回分区顶部', async () => {
             showcase().scrollTo({ top: showcase().scrollHeight, behavior: 'instant' })
             await pause(120)
@@ -202,7 +213,7 @@
           })
 
           document.querySelector('#result').textContent = JSON.stringify(
-            { passed: true, total: 7, reports },
+            { passed: true, total: 8, reports },
             null,
             2
           )

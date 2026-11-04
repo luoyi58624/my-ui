@@ -486,10 +486,10 @@
     })
 
     var directions = [
-      { value: '灵感', label: '✨ 灵感' },
-      { value: '云端', label: '☁️ 云端' },
-      { value: '发现', label: '✦ 发现' },
-      { value: '音乐', label: '♫ 音乐' }
+      { value: '灵感', label: '灵感' },
+      { value: '云端', label: '云端' },
+      { value: '发现', label: '发现' },
+      { value: '音乐', label: '音乐' }
     ]
     var singleNote = pick('[data-tag-single-note]')
     window.MyUI.mount(demo('tag-single'), 'TagGroup', {
@@ -3729,6 +3729,7 @@
     formActions.append(savingButton.element, resetButton.element, localNote)
 
     var form = window.MyUI.create('Form', { layout: 'vertical' }, {
+      attributes: { class: 'profile-form', 'aria-label': '资料编辑示例', novalidate: true },
       slots: {
         default: [
           nameInput.element,
@@ -3742,9 +3743,6 @@
         ]
       }
     })
-    form.element.classList.add('profile-form')
-    form.element.setAttribute('aria-label', '资料编辑示例')
-    form.element.setAttribute('novalidate', '')
     form.element.addEventListener('submit', function (event) {
       event.preventDefault()
       submitProfile()

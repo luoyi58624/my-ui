@@ -14,10 +14,10 @@ const multiDirections = ref<string[]>(['灵感'])
 // #endregion
 // #region tag-options
 const directions: Option[] = [
-  { value: '灵感', label: '✨ 灵感' },
-  { value: '云端', label: '☁️ 云端' },
-  { value: '发现', label: '✦ 发现' },
-  { value: '音乐', label: '♫ 音乐' }
+  { value: '灵感', label: '灵感' },
+  { value: '云端', label: '云端' },
+  { value: '发现', label: '发现' },
+  { value: '音乐', label: '音乐' }
 ]
 // #endregion
 </script>
@@ -81,6 +81,7 @@ const directions: Option[] = [
 <style scoped>
 .tag-showcase {
   display: grid;
+  grid-template-columns: var(--showcase-sample-columns, minmax(0, 1fr));
   gap: 18px;
 }
 

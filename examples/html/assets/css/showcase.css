@@ -69,20 +69,9 @@ body {
   display: none;
 }
 
-/* 整行分区里若有多块演示（如 selection-collapse），纵向排开。 */
-.secondary-pair > .showcase-example + .showcase-example {
-  margin-top: 22px;
-}
-
-/* 每块演示：单列栅格，保证内部组件不会被压扁。 */
-.showcase-example {
-  display: grid;
-  min-width: 0;
-}
-
-.showcase-example > .showcase-block {
-  display: grid;
-  min-width: 0;
+/* 让输入、开关和选择卡片参与同一个行网格。 */
+.sample-grid :is(.showcase-example, .field-group) {
+  display: contents;
 }
 
 /* ── 3. 03 内容容器：示例内部排版（照 Vue pages/home/{card,shadows,identity,image,app-bar,navigation,list} 的 scoped 样式） ── */
@@ -1207,6 +1196,7 @@ body {
 
 .button-showcase {
   display: grid;
+  grid-template-columns: var(--showcase-sample-columns, minmax(0, 1fr));
   gap: 24px;
 }
 
@@ -1226,6 +1216,7 @@ body {
 
 .tag-showcase {
   display: grid;
+  grid-template-columns: var(--showcase-sample-columns, minmax(0, 1fr));
   gap: 18px;
 }
 
@@ -2210,6 +2201,7 @@ body {
 /* ProfileFormExample.vue */
 .form-example {
   grid-column: 1 / -1;
+  container-type: inline-size;
 }
 
 .layout-toolbar {
@@ -2284,6 +2276,13 @@ body {
 
 .profile-form .my-form-field.my-inline:has(textarea) {
   flex-basis: 100%;
+}
+
+@container (max-width: 420px) {
+  .profile-form .my-form-field:is(.my-horizontal, .my-inline)[data-my-form-field] {
+    grid-template-columns: clamp(56px, 25cqw, 80px) minmax(0, 1fr);
+    column-gap: 10px;
+  }
 }
 
 /* pages/home/native-html */

@@ -104,6 +104,7 @@ onBeforeUnmount(() => clearTimeout(saveTimer))
 
 <template>
   <DemoExample
+    id="showcase-scenario-form"
     name="profile-form"
     source="pages/home/scenarios/ProfileFormExample.vue"
     class="form-example"
@@ -216,6 +217,7 @@ onBeforeUnmount(() => clearTimeout(saveTimer))
 <style scoped>
 .form-example {
   grid-column: 1 / -1;
+  container-type: inline-size;
 }
 .layout-toolbar {
   display: flex;
@@ -278,5 +280,12 @@ onBeforeUnmount(() => clearTimeout(saveTimer))
 }
 .profile-form :deep(.my-form-field.my-inline:has(textarea)) {
   flex-basis: 100%;
+}
+
+@container (max-width: 420px) {
+  .profile-form :deep(.my-form-field:is(.my-horizontal, .my-inline)[data-my-form-field]) {
+    grid-template-columns: clamp(56px, 25cqw, 80px) minmax(0, 1fr);
+    column-gap: 10px;
+  }
 }
 </style>

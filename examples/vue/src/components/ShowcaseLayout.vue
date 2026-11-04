@@ -69,6 +69,17 @@ const feedbackLinks = [
   { id: 'feedback-progress', label: '进度与通知' },
   { id: 'feedback-overlays', label: '抽屉与菜单' }
 ]
+const surfaceLinks = [
+  { id: 'surface-cards', label: '卡片与阴影' },
+  { id: 'surface-images', label: '头像与图片' },
+  { id: 'surface-navigation', label: '导航与列表' }
+]
+const scenarioLinks = [
+  { id: 'scenario-form', label: '资料编辑' },
+  { id: 'scenario-feed', label: '内容加载' },
+  { id: 'scenario-tabs', label: '标签页' },
+  { id: 'scenario-inputs', label: '输入状态' }
+]
 const root = ref<HTMLElement>()
 const masthead = ref<HTMLElement>()
 const chapterMenu = ref<HTMLDetailsElement>()
@@ -168,6 +179,7 @@ onBeforeUnmount(() => {
     <div
       ref="root"
       class="showcase-layout"
+      :class="{ 'showcase-layout--app': navigation }"
       aria-label="完整交互示例"
       @click="!chapterMenu?.contains($event.target as Node) && closeChapterMenu()"
       @keydown="releaseInitialSection"
@@ -260,9 +272,13 @@ onBeforeUnmount(() => {
               </div>
               <div class="subtitle">清晰的操作层级，自然的按压反馈。</div>
             </div>
-            <div class="pair">
-              <div class="showcase-example"><ButtonExamples /></div>
-              <div class="showcase-example"><TagExamples /></div>
+            <div class="sample-group sample-group--buttons">
+              <h3 class="sample-group-title">按钮</h3>
+              <ButtonExamples />
+            </div>
+            <div class="sample-group">
+              <h3 class="sample-group-title">标签</h3>
+              <TagExamples />
             </div>
           </section>
           <section id="showcase-controls" class="section-gap">
@@ -280,13 +296,13 @@ onBeforeUnmount(() => {
                 @click.prevent="scrollToSection(item.id)"
               >{{ item.label }}</a>
             </nav>
-            <div id="showcase-control-fields" class="pair equal">
-              <div class="showcase-example"><InputExamples /></div>
-              <div class="showcase-example"><SwitchExamples /></div>
+            <div id="showcase-control-fields" class="sample-grid">
+              <InputExamples />
+              <SwitchExamples />
             </div>
-            <div class="pair equal secondary-pair">
-              <div class="showcase-example"><SliderExamples /></div>
-              <div class="showcase-example"><SelectionExamples /></div>
+            <div class="sample-grid secondary-pair">
+              <SliderExamples />
+              <SelectionExamples />
             </div>
             <div class="secondary-pair"><CollapseExamples /></div>
             <div id="showcase-control-pickers" class="secondary-pair"><ComboboxExamples /></div>
@@ -302,14 +318,20 @@ onBeforeUnmount(() => {
               </div>
               <div class="subtitle">柔和的层次和留白，突出内容本身。</div>
             </div>
-            <CardExamples />
-            <div
-              v-for="(example, index) in [ShadowExamples, IdentityExamples, ImageExamples, AppBarExamples, NavigationExamples, ListExamples]"
-              :key="index"
-              class="secondary-pair"
-            >
-              <component :is="example" />
-            </div>
+            <nav class="section-links" aria-label="内容容器小节">
+              <a
+                v-for="item in surfaceLinks" :key="item.id"
+                :href="sectionPrefix + item.id"
+                @click.prevent="scrollToSection(item.id)"
+              >{{ item.label }}</a>
+            </nav>
+            <div id="showcase-surface-cards"><CardExamples /></div>
+            <div class="secondary-pair"><ShadowExamples /></div>
+            <div id="showcase-surface-images" class="secondary-pair"><IdentityExamples /></div>
+            <div class="secondary-pair"><ImageExamples /></div>
+            <div id="showcase-surface-navigation" class="secondary-pair"><AppBarExamples /></div>
+            <div class="secondary-pair"><NavigationExamples /></div>
+            <div class="secondary-pair"><ListExamples /></div>
           </section>
           <section id="showcase-feedback" class="section-gap">
             <div class="section-title">
@@ -342,6 +364,13 @@ onBeforeUnmount(() => {
               </div>
               <div class="subtitle">从资料编辑到内容加载，体验多个组件一起工作。</div>
             </div>
+            <nav class="section-links" aria-label="完整示例小节">
+              <a
+                v-for="item in scenarioLinks" :key="item.id"
+                :href="sectionPrefix + item.id"
+                @click.prevent="scrollToSection(item.id)"
+              >{{ item.label }}</a>
+            </nav>
             <ScenarioExamples />
             <NativeHtmlExample />
           </section>
@@ -370,13 +399,8 @@ onBeforeUnmount(() => {
   scrollbar-gutter: stable;
 }
 
-.showcase-example {
-  display: grid;
-  min-width: 0;
-}
-.showcase-example > :deep(section) {
-  display: grid;
-  min-width: 0;
+.sample-grid :deep(:is(#controls, .field-group)) {
+  display: contents;
 }
 .showcase-layout :deep(.my-card) {
   min-width: 0;

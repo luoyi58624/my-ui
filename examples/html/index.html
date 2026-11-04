@@ -97,86 +97,86 @@
                 </div>
                 <div class="subtitle">清晰的操作层级，自然的按压反馈。</div>
               </div>
-              <div class="pair">
-                <div class="showcase-example">
-                  <section id="buttons">
-                    <div class="button-showcase">
-                      <article class="my-card">
-                        <div class="my-surface-head">
-                          <div>
-                            <h3>基础用法</h3>
-                            <p>通过 variant 区分主要、描边和文本操作，按操作优先级选择。</p>
-                          </div>
-                        </div>
-                        <div class="btn-row" data-demo="button-basic"></div>
-                      </article>
-                      <article class="my-card">
-                        <div class="my-surface-head">
-                          <div>
-                            <h3>图标按钮</h3>
-                            <p>独立图标使用 aria-label 描述操作，selected 表示收藏等切换状态。</p>
-                          </div>
-                        </div>
-                        <div class="icon-actions" data-demo="button-icons"></div>
-                      </article>
-                      <article class="my-card">
-                        <div class="my-surface-head">
-                          <div>
-                            <h3>图标与禁用状态</h3>
-                            <p>icon 为按钮添加前置图标，disabled 阻止点击与键盘激活。</p>
-                          </div>
-                        </div>
-                        <div class="btn-row" data-demo="button-states"></div>
-                      </article>
-                    </div>
-                  </section>
-                </div>
-                <div class="showcase-example">
-                  <div class="tag-showcase">
+              <div class="sample-group sample-group--buttons">
+                <h3 class="sample-group-title">按钮</h3>
+                <section id="buttons">
+                  <div class="button-showcase">
                     <article class="my-card">
                       <div class="my-surface-head">
                         <div>
-                          <h3>状态标签</h3>
-                          <p>用 tone 表达不同状态，展示型标签不参与选择。</p>
+                          <h3>基础用法</h3>
+                          <p>通过 variant 区分主要、描边和文本操作，按操作优先级选择。</p>
                         </div>
                       </div>
-                      <div
-                        class="display-tags"
-                        aria-label="展示型标签示例"
-                        data-demo="tag-tones"
-                      ></div>
+                      <div class="btn-row" data-demo="button-basic"></div>
                     </article>
                     <article class="my-card">
                       <div class="my-surface-head">
                         <div>
-                          <h3>单选标签组</h3>
-                          <p>v-model 使用字符串值，同一组内仅保留一个选择。</p>
+                          <h3>图标按钮</h3>
+                          <p>独立图标使用 aria-label 描述操作，selected 表示收藏等切换状态。</p>
                         </div>
                       </div>
-                      <div data-demo="tag-single"></div>
-                      <p class="control-foot" data-tag-single-note>当前偏好：灵感</p>
+                      <div class="icon-actions" data-demo="button-icons"></div>
                     </article>
                     <article class="my-card">
                       <div class="my-surface-head">
                         <div>
-                          <h3>多选标签组</h3>
-                          <p>v-model 使用数组值即可多选，选项可单独禁用。</p>
+                          <h3>图标与禁用状态</h3>
+                          <p>icon 为按钮添加前置图标，disabled 阻止点击与键盘激活。</p>
                         </div>
                       </div>
-                      <div data-demo="tag-multiple"></div>
-                      <p class="control-foot" data-tag-multiple-note>已选：灵感</p>
-                    </article>
-                    <article class="my-card">
-                      <div class="my-surface-head">
-                        <div>
-                          <h3>独立选择标签</h3>
-                          <p>独立 Tag 使用布尔值管理选中状态。</p>
-                        </div>
-                      </div>
-                      <div class="display-tags" data-demo="tag-toggle"></div>
-                      <p class="control-foot" data-tag-toggle-note>未选择稍后阅读</p>
+                      <div class="btn-row" data-demo="button-states"></div>
                     </article>
                   </div>
+                </section>
+              </div>
+              <div class="sample-group">
+                <h3 class="sample-group-title">标签</h3>
+                <div class="tag-showcase">
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>状态标签</h3>
+                        <p>用 tone 表达不同状态，展示型标签不参与选择。</p>
+                      </div>
+                    </div>
+                    <div
+                      class="display-tags"
+                      aria-label="展示型标签示例"
+                      data-demo="tag-tones"
+                    ></div>
+                  </article>
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>单选标签组</h3>
+                        <p>使用字符串 value，同一组内仅保留一个选择。</p>
+                      </div>
+                    </div>
+                    <div data-demo="tag-single"></div>
+                    <p class="control-foot" data-tag-single-note>当前偏好：灵感</p>
+                  </article>
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>多选标签组</h3>
+                        <p>使用数组 value 即可多选，选项可单独禁用。</p>
+                      </div>
+                    </div>
+                    <div data-demo="tag-multiple"></div>
+                    <p class="control-foot" data-tag-multiple-note>已选：灵感</p>
+                  </article>
+                  <article class="my-card">
+                    <div class="my-surface-head">
+                      <div>
+                        <h3>独立选择标签</h3>
+                        <p>独立 Tag 使用布尔值管理选中状态。</p>
+                      </div>
+                    </div>
+                    <div class="display-tags" data-demo="tag-toggle"></div>
+                    <p class="control-foot" data-tag-toggle-note>未选择稍后阅读</p>
+                  </article>
                 </div>
               </div>
             </section>
@@ -201,8 +201,8 @@
                 <a href="#showcase-control-upload" data-jump="control-upload">文件上传</a>
               </nav>
 
-              <!-- input 页（3 个示例，纵向 16px）与 switch 页并排 -->
-              <div id="showcase-control-fields" class="pair equal">
+              <!-- 四张输入与开关卡片按行排列。 -->
+              <div id="showcase-control-fields" class="sample-grid">
                 <div class="showcase-example">
                   <div class="field-group">
                     <article class="my-card">
@@ -227,7 +227,7 @@
                       <div class="my-surface-head">
                         <div>
                           <h3>下拉选择</h3>
-                          <p>Select 通过 options 提供选项，v-model 同步当前值。</p>
+                          <p>Select 通过 options 提供选项，onChange 返回当前值。</p>
                         </div>
                       </div>
                       <div data-demo="select"></div>
@@ -239,7 +239,7 @@
                     <div class="my-surface-head">
                       <div>
                         <h3>列表开关</h3>
-                        <p>为 ListRow 设置 toggle，以整行设置项呈现开关，v-model 同步布尔值。</p>
+                        <p>为 ListRow 设置 toggle，以整行设置项呈现开关，onChange 返回布尔值。</p>
                       </div>
                     </div>
                     <div class="pref-list" data-demo="switches"></div>
@@ -251,8 +251,7 @@
                 </div>
               </div>
 
-              <!-- slider 页（3 个示例）与 selection 页（3 个示例）并排 -->
-              <div class="pair equal secondary-pair">
+              <div class="sample-grid secondary-pair">
                 <div class="showcase-example">
                   <div class="field-group">
                     <article class="my-card">
@@ -315,7 +314,7 @@
                       <div class="my-surface-head">
                         <div>
                           <h3>数字步进器</h3>
-                          <p>通过加减按钮与输入框调整数量，v-model 始终同步当前值。</p>
+                          <p>通过加减按钮与输入框调整数量，onChange 返回当前值。</p>
                         </div>
                       </div>
                       <div class="choice-bottom">
@@ -334,7 +333,7 @@
                     <div class="my-surface-head">
                       <div>
                         <h3>独立单选框</h3>
-                        <p>同一组 Radio 共用 name 与 v-model，disabled 禁用单个选项。</p>
+                        <p>同一组 Radio 共用 name，disabled 禁用单个选项。</p>
                       </div>
                     </div>
                     <div class="standalone standalone-radios" data-demo="radio"></div>
@@ -457,7 +456,7 @@
                       <div class="my-surface-head">
                         <div>
                           <h3>独立多列</h3>
-                          <p>columns 为各列提供独立选项，v-model 使用数组保存各列值。</p>
+                          <p>columns 为各列提供独立选项，value 使用数组保存各列值。</p>
                         </div>
                       </div>
                       <div data-demo="picker-columns"></div>
@@ -604,24 +603,30 @@
                 </div>
                 <div class="subtitle">柔和的层次和留白，突出内容本身。</div>
               </div>
-
-              <!-- pages/home/card：两个 bare 示例 -->
-              <section id="surfaces" class="card-showcase" aria-label="交互卡片示例">
-                <div class="card-section">
-                  <header class="doc-example-heading">
-                    <h2>快捷卡片</h2>
-                    <p>interactive 开启整张卡片的按压反馈，activate 统一处理鼠标与键盘激活。</p>
-                  </header>
-                  <div class="card-grid" aria-label="快捷功能" data-demo="card-shortcuts"></div>
-                </div>
-                <div class="card-section">
-                  <header class="doc-example-heading">
-                    <h2>图文内容卡片</h2>
-                    <p>使用默认插槽组织图标、状态、图片与正文，以整张卡片作为操作入口。</p>
-                  </header>
-                  <div class="large-card-list" aria-label="大卡片列表" data-demo="card-content"></div>
-                </div>
-              </section>
+              <nav class="section-links" aria-label="内容容器小节">
+                <a href="#showcase-surface-cards" data-jump="surface-cards">卡片与阴影</a>
+                <a href="#showcase-surface-images" data-jump="surface-images">头像与图片</a>
+                <a href="#showcase-surface-navigation" data-jump="surface-navigation">导航与列表</a>
+              </nav>
+              <div id="showcase-surface-cards">
+                <!-- pages/home/card：两个 bare 示例 -->
+                <section id="surfaces" class="card-showcase" aria-label="交互卡片示例">
+                  <div class="card-section">
+                    <header class="doc-example-heading">
+                      <h2>快捷卡片</h2>
+                      <p>interactive 开启整张卡片的按压反馈，activate 统一处理鼠标与键盘激活。</p>
+                    </header>
+                    <div class="card-grid" aria-label="快捷功能" data-demo="card-shortcuts"></div>
+                  </div>
+                  <div class="card-section">
+                    <header class="doc-example-heading">
+                      <h2>图文内容卡片</h2>
+                      <p>使用默认插槽组织图标、状态、图片与正文，以整张卡片作为操作入口。</p>
+                    </header>
+                    <div class="large-card-list" aria-label="大卡片列表" data-demo="card-content"></div>
+                  </div>
+                </section>
+              </div>
 
               <!-- pages/home/shadows -->
               <div class="secondary-pair">
@@ -650,7 +655,7 @@
               </div>
 
               <!-- pages/home/identity -->
-              <div class="secondary-pair">
+              <div id="showcase-surface-images" class="secondary-pair">
                 <div id="avatar-badge" class="identity-card">
                   <article class="my-card">
                     <div class="my-surface-head">
@@ -723,7 +728,7 @@
               </div>
 
               <!-- pages/home/app-bar -->
-              <div class="secondary-pair">
+              <div id="showcase-surface-navigation" class="secondary-pair">
                 <article class="my-card" id="app-bar">
                   <div class="my-surface-head">
                     <div>
@@ -1165,7 +1170,7 @@
                     <div class="my-surface-head">
                       <div>
                         <h3>单选与多选菜单</h3>
-                        <p>mode 控制选择模式，v-model 同步当前选择。</p>
+                        <p>mode 控制选择模式，onChange 返回当前选择。</p>
                       </div>
                     </div>
                     <div class="choice-menus" data-demo="menu-selection"></div>
@@ -1193,9 +1198,15 @@
                 </div>
                 <div class="subtitle">从资料编辑到内容加载，体验多个组件一起工作。</div>
               </div>
+              <nav class="section-links" aria-label="完整示例小节">
+                <a href="#showcase-scenario-form" data-jump="scenario-form">资料编辑</a>
+                <a href="#showcase-scenario-feed" data-jump="scenario-feed">内容加载</a>
+                <a href="#showcase-scenario-tabs" data-jump="scenario-tabs">标签页</a>
+                <a href="#showcase-scenario-inputs" data-jump="scenario-inputs">输入状态</a>
+              </nav>
               <section id="scenarios" class="essentials-section">
                 <div class="scene-grid">
-                  <article class="my-card form-example">
+                  <article id="showcase-scenario-form" class="my-card form-example">
                     <div class="my-surface-head">
                       <div>
                         <h3>资料编辑与校验</h3>
@@ -1208,7 +1219,7 @@
                     </div>
                     <div data-demo="profile-form"></div>
                   </article>
-                  <article class="my-card">
+                  <article id="showcase-scenario-feed" class="my-card">
                     <div class="my-surface-head">
                       <div>
                         <h3>内容加载与失败重试</h3>
@@ -1221,7 +1232,7 @@
                       有内容，也为等待和失败留好位置
                     </p>
                   </article>
-                  <article class="my-card">
+                  <article id="showcase-scenario-tabs" class="my-card">
                     <div class="my-surface-head">
                       <div>
                         <h3>标签页与内容分组</h3>
@@ -1230,7 +1241,7 @@
                     </div>
                     <div data-demo="tabs-content"></div>
                   </article>
-                  <article class="my-card">
+                  <article id="showcase-scenario-inputs" class="my-card">
                     <div class="my-surface-head">
                       <div>
                         <h3>输入状态与装饰</h3>

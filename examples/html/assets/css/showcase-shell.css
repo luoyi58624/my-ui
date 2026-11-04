@@ -4,6 +4,16 @@
   margin-inline: auto;
 }
 
+.showcase-layout {
+  --showcase-header-height: 65px;
+  --showcase-anchor-gap: 20px;
+  scroll-padding-block-start: calc(var(--showcase-header-height) + var(--showcase-anchor-gap));
+}
+
+.showcase-layout--app {
+  --showcase-header-height: 55px;
+}
+
 .masthead {
   position: sticky;
   top: 0;
@@ -19,7 +29,7 @@
 
 .masthead-shell {
   position: relative;
-  min-height: 64px;
+  min-height: calc(var(--showcase-header-height) - 1px);
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
@@ -118,7 +128,6 @@
 }
 
 .masthead--app .masthead-shell {
-  min-height: 54px;
   display: flex;
 }
 
@@ -275,15 +284,32 @@
   color: var(--primary);
 }
 
-.pair {
-  display: grid;
-  align-items: start;
-  grid-template-columns: minmax(0, 1.07fr) minmax(0, 0.93fr);
-  gap: 22px;
+.sample-group + .sample-group {
+  margin-top: clamp(28px, 4vw, 44px);
 }
 
-.pair.equal {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.sample-group-title {
+  margin: 0 0 12px;
+  font-size: 17px;
+  font-weight: var(--font-weight-subtitle, 600);
+}
+
+.sample-grid,
+.sample-group {
+  --showcase-sample-gap: 18px;
+  --showcase-sample-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sample-grid {
+  display: grid;
+  grid-template-columns: var(--showcase-sample-columns);
+  gap: var(--showcase-sample-gap);
+}
+
+@media (min-width: 1060px) {
+  .sample-group--buttons {
+    --showcase-sample-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .secondary-pair {
@@ -507,8 +533,11 @@
 }
 
 @media (max-width: 760px) {
+  .showcase-layout:not(.showcase-layout--app) {
+    --showcase-header-height: 57px;
+  }
+
   .masthead-shell {
-    min-height: 56px;
     grid-template-columns: minmax(0, 1fr) auto 44px;
     gap: 8px;
   }
@@ -606,10 +635,10 @@
     display: none;
   }
 
-  .pair,
-  .pair.equal {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
+  .sample-grid,
+  .sample-group {
+    --showcase-sample-columns: minmax(0, 1fr);
+    --showcase-sample-gap: 16px;
   }
 
   .section-links a {

@@ -100,6 +100,7 @@ onBeforeUnmount(() => clearTimeout(feedTimer))
       <ProfileFormExample />
 
       <DemoExample
+        id="showcase-scenario-feed"
         name="loading-states"
         setup="records loading-states"
         source="pages/home/scenarios/index.vue"
@@ -150,6 +151,7 @@ onBeforeUnmount(() => clearTimeout(feedTimer))
       </DemoExample>
 
       <DemoExample
+        id="showcase-scenario-tabs"
         name="tabs-content"
         setup="records tabs-content"
         source="pages/home/scenarios/index.vue"
@@ -209,6 +211,7 @@ onBeforeUnmount(() => clearTimeout(feedTimer))
       </DemoExample>
 
       <DemoExample
+        id="showcase-scenario-inputs"
         name="input-states"
         source="pages/home/scenarios/index.vue"
         title="输入状态与装饰"

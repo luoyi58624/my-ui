@@ -138,6 +138,7 @@ async function selectAction(action: Option) {
 <style scoped>
 .button-showcase {
   display: grid;
+  grid-template-columns: var(--showcase-sample-columns, minmax(0, 1fr));
   gap: 24px;
 }
 
