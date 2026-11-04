@@ -10,17 +10,46 @@ import {
 } from 'vue'
 import { Icon } from '@my-ui/vue'
 import { demoNavigationKey } from '../commons/navigation'
-import { notifyKey } from '../commons/notify'
-import { homeDocs } from '../pages/home'
-import { nativeDocs } from '../pages/native'
+import { useThemeStore } from '../commons/state/theme'
+import AppBarExamples from '../pages/home/app-bar/index.vue'
+import ButtonExamples from '../pages/home/button/index.vue'
+import CardExamples from '../pages/home/card/index.vue'
+import ComboboxExamples from '../pages/home/combobox/index.vue'
+import DateTimeExamples from '../pages/home/date-time-picker/index.vue'
+import FeedbackExamples from '../pages/home/feedback/index.vue'
+import IdentityExamples from '../pages/home/identity/index.vue'
+import ImageExamples from '../pages/home/image/index.vue'
+import InputExamples from '../pages/home/input/index.vue'
+import ListExamples from '../pages/home/list/index.vue'
+import MenuExamples from '../pages/home/menu/index.vue'
+import NativeHtmlExample from '../pages/home/native-html/index.vue'
+import NavigationExamples from '../pages/home/navigation/index.vue'
+import NoticeExamples from '../pages/home/notice-steps/index.vue'
+import PickerExamples from '../pages/home/picker/index.vue'
+import PopupExamples from '../pages/home/popup/index.vue'
+import PrimitiveExamples from '../pages/home/primitives/index.vue'
+import ScenarioExamples from '../pages/home/scenarios/index.vue'
+import SelectionExamples from '../pages/home/selection/index.vue'
+import CollapseExamples from '../pages/home/selection-collapse/index.vue'
+import ShadowExamples from '../pages/home/shadows/index.vue'
+import SliderExamples from '../pages/home/slider/index.vue'
+import SwitchExamples from '../pages/home/switch/index.vue'
+import TagExamples from '../pages/home/tag/index.vue'
+import TouchExamples from '../pages/home/touch-gestures/index.vue'
+import UploadExamples from '../pages/home/upload/index.vue'
+import SharedStateExample from '../pages/native/navigation/index.vue'
 
 const props = defineProps<{
   /** 首次打开时定位的分类。 */
   section?: string
 }>()
 const navigation = inject(demoNavigationKey, null)
-const notify = inject(notifyKey)!
-const docs = { ...homeDocs, ...nativeDocs }
+const sectionPrefix = navigation ? '#/showcase#' : '#showcase-'
+const theme = useThemeStore()
+const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
+const systemDark = ref(systemTheme.matches)
+const dark = computed(() => theme.mode === 'dark' || (theme.mode === 'system' && systemDark.value))
+const followSystem = (event: MediaQueryListEvent) => { systemDark.value = event.matches }
 const sections = [
   { id: 'actions', label: '基础组件' },
   { id: 'controls', label: '交互控制' },
@@ -28,9 +57,25 @@ const sections = [
   { id: 'feedback', label: '状态反馈' },
   { id: 'scenarios', label: '完整示例' }
 ]
+const controlLinks = [
+  { id: 'control-fields', label: '输入与选项' },
+  { id: 'control-pickers', label: '搜索与选择' },
+  { id: 'control-dates', label: '日期与时间' },
+  { id: 'control-upload', label: '文件上传' }
+]
+const feedbackLinks = [
+  { id: 'feedback-state', label: '共享状态' },
+  { id: 'feedback-prompts', label: '提示与确认' },
+  { id: 'feedback-progress', label: '进度与通知' },
+  { id: 'feedback-overlays', label: '抽屉与菜单' }
+]
 const root = ref<HTMLElement>()
+const masthead = ref<HTMLElement>()
+const chapterMenu = ref<HTMLDetailsElement>()
+const chapterTrigger = ref<HTMLElement>()
 const scrolled = ref(false),
   currentSection = ref('')
+const chapterLabel = computed(() => sections.find(section => section.id === currentSection.value)?.label ?? '章节目录')
 const activated = ref(true),
   visible = ref(!document.hidden)
 const active = computed(() => activated.value && visible.value)
@@ -38,16 +83,15 @@ let frame = 0
 let sectionObserver: ResizeObserver | undefined
 
 function syncHeader() {
-  const page = root.value
-  if (!page) return
+  const page = root.value, header = masthead.value
+  if (!page || !header) return
   scrolled.value = page.scrollTop > 24
   let current = ''
   for (const item of sections) {
     const section = page.querySelector<HTMLElement>('#showcase-' + item.id)
     if (
       section &&
-      section.getBoundingClientRect().top - page.getBoundingClientRect().top <=
-        page.clientHeight * 0.35
+      section.getBoundingClientRect().top <= header.getBoundingClientRect().bottom + 48
     )
       current = item.id
   }
@@ -61,32 +105,28 @@ function scheduleHeader() {
   })
 }
 function scrollToSection(id: string, behavior: ScrollBehavior = 'smooth') {
-  const page = root.value
-  const target = page?.querySelector<HTMLElement>('#showcase-' + id)
-  if (!page || !target) return
-  const header = page.querySelector<HTMLElement>('.masthead')!
+  const page = root.value, header = masthead.value
+  if (!page || !header) return
+  const target = document.getElementById('showcase-' + id)
+  if (id !== 'top' && !target) return
   page.scrollTo({
-    top:
-      id === 'top'
-        ? 0
-        : target.getBoundingClientRect().top -
-          page.getBoundingClientRect().top +
-          page.scrollTop -
-          header.offsetHeight -
-          20,
+    top: id === 'top' ? 0
+      : target!.getBoundingClientRect().top - page.getBoundingClientRect().top + page.scrollTop - header.offsetHeight - 20,
     behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : behavior
   })
 }
-function releaseSection() {
+function closeChapterMenu(restoreFocus = false) {
+  if (!chapterMenu.value?.open) return
+  chapterMenu.value.open = false
+  if (restoreFocus) chapterTrigger.value?.focus({ preventScroll: true })
+}
+function selectChapter(id: string) {
+  closeChapterMenu(true)
+  scrollToSection(id)
+}
+function releaseInitialSection() {
   sectionObserver?.disconnect()
   sectionObserver = undefined
-}
-function openHtml(event: MouseEvent) {
-  if (!navigation) return
-  event.preventDefault()
-  void navigation.openPage('/html', { title: '原生 HTML 示例' }).catch(error => {
-    notify(error instanceof Error ? error.message : String(error))
-  })
 }
 function updateVisibility() {
   visible.value = !document.hidden
@@ -97,22 +137,25 @@ onActivated(() => {
 })
 onDeactivated(() => {
   activated.value = false
-  releaseSection()
+  closeChapterMenu()
+  releaseInitialSection()
 })
 onMounted(() => {
+  systemTheme.addEventListener('change', followSystem)
   document.addEventListener('visibilitychange', updateVisibility)
   window.addEventListener('resize', scheduleHeader, { passive: true })
   const section = props.section
   const content = root.value?.querySelector('main')
-  if (content && section && sections.some(item => item.id === section)) {
-    // 异步示例加载会推移分区位置，用户开始操作前保持入口锚点对齐。
+  if (section && content?.contains(document.getElementById('showcase-' + section))) {
+    // 图片或字体就位可能推移入口锚点，用户操作前保持对齐。
     sectionObserver = new ResizeObserver(() => scrollToSection(section, 'instant'))
     sectionObserver.observe(content)
   }
   syncHeader()
 })
 onBeforeUnmount(() => {
-  releaseSection()
+  releaseInitialSection()
+  systemTheme.removeEventListener('change', followSystem)
   cancelAnimationFrame(frame)
   document.removeEventListener('visibilitychange', updateVisibility)
   window.removeEventListener('resize', scheduleHeader)
@@ -126,41 +169,64 @@ onBeforeUnmount(() => {
       ref="root"
       class="showcase-layout"
       aria-label="完整交互示例"
-      @keydown="releaseSection"
-      @pointerdown="releaseSection"
+      @click="!chapterMenu?.contains($event.target as Node) && closeChapterMenu()"
+      @keydown="releaseInitialSection"
+      @pointerdown="releaseInitialSection"
       @scroll.passive="scheduleHeader"
-      @wheel.passive="releaseSection"
+      @wheel.passive="releaseInitialSection"
     >
-      <header class="masthead" :class="{ scrolled }">
-        <div class="shell">
-          <nav class="site-nav" aria-label="页面导航">
+      <header ref="masthead" class="masthead" :class="{ scrolled, 'masthead--app': navigation }">
+        <div class="shell masthead-shell">
+          <a v-if="!navigation" class="showcase-brand" href="#showcase-top" aria-label="my-ui，回到顶部" @click.prevent="scrollToSection('top')">
+            <img src="/favicon.svg" width="28" height="28" alt="" />
+            <strong>my-ui</strong><span>交互示例</span>
+          </a>
+          <nav class="site-nav" aria-label="章节目录">
             <a
               v-for="item in sections"
               :key="item.id"
-              :href="(navigation ? '#/showcase#' : '#showcase-') + item.id"
+              :href="sectionPrefix + item.id"
               :class="{ current: currentSection === item.id }"
               :aria-current="currentSection === item.id ? 'location' : undefined"
               @click.prevent="scrollToSection(item.id)"
               >{{ item.label }}</a
-            ><a href="./native.html" @click="openHtml">原生 HTML ↗</a>
+            >
           </nav>
+          <details ref="chapterMenu" class="chapter-menu" @keydown.esc.stop.prevent="closeChapterMenu(true)">
+            <summary ref="chapterTrigger" aria-label="章节目录">{{ chapterLabel }}</summary>
+            <nav aria-label="章节目录">
+              <a
+                v-for="item in sections"
+                :key="item.id"
+                :href="sectionPrefix + item.id"
+                :class="{ current: currentSection === item.id }"
+                :aria-current="currentSection === item.id ? 'location' : undefined"
+                @click.prevent="selectChapter(item.id)"
+              >{{ item.label }}</a>
+            </nav>
+          </details>
+          <div v-if="!navigation" class="nav-theme">
+            <button
+              type="button"
+              :aria-label="dark ? '切换到浅色模式' : '切换到暗黑模式'"
+              @click="theme.mode = dark ? 'light' : 'dark'"
+            ><Icon :name="dark ? 'sun' : 'moon'" /></button>
+          </div>
         </div>
       </header>
       <div class="shell">
         <main id="showcase-top">
           <section class="hero">
             <div class="hero-copy">
-              <div class="eyebrow"><i class="dash"></i> MOBILE COMPONENT SYSTEM</div>
+                <div class="eyebrow"><i class="dash"></i> MY-UI · 组件展示</div>
               <h1>自然留白，<br /><span>轻盈交互。</span></h1>
-              <p>用克制的色彩、舒适的留白与柔和卡片，<br />原生 HTML 与 Vue 共用一套组件体验。</p>
+                <p>体验按钮、表单、弹层与完整交互场景。</p>
               <div class="hero-cta">
                 <a
-                  :href="navigation ? '#/showcase#actions' : '#showcase-actions'"
+                  :href="sectionPrefix + 'actions'"
                   class="cta-btn"
                   @click.prevent="scrollToSection('actions')"
                   >探索组件 <Icon name="arrow-right" /></a
-                ><a class="hero-note" href="./native.html" @click="openHtml"
-                  >原生 HTML 示例 ↗</a
                 >
               </div>
             </div>
@@ -195,8 +261,8 @@ onBeforeUnmount(() => {
               <div class="subtitle">清晰的操作层级，自然的按压反馈。</div>
             </div>
             <div class="pair">
-              <div class="showcase-example"><component :is="docs['button']" /></div>
-              <div class="showcase-example"><component :is="docs['tag']" /></div>
+              <div class="showcase-example"><ButtonExamples /></div>
+              <div class="showcase-example"><TagExamples /></div>
             </div>
           </section>
           <section id="showcase-controls" class="section-gap">
@@ -207,27 +273,26 @@ onBeforeUnmount(() => {
               </div>
               <div class="subtitle">为手指设计的控件尺寸，状态变化一目了然。</div>
             </div>
-            <div class="pair equal">
-              <div class="showcase-example"><component :is="docs['input']" /></div>
-              <div class="showcase-example"><component :is="docs['switch']" /></div>
+            <nav class="section-links" aria-label="交互控制小节">
+              <a
+                v-for="item in controlLinks" :key="item.id"
+                :href="sectionPrefix + item.id"
+                @click.prevent="scrollToSection(item.id)"
+              >{{ item.label }}</a>
+            </nav>
+            <div id="showcase-control-fields" class="pair equal">
+              <div class="showcase-example"><InputExamples /></div>
+              <div class="showcase-example"><SwitchExamples /></div>
             </div>
             <div class="pair equal secondary-pair">
-              <div class="showcase-example"><component :is="docs['slider']" /></div>
-              <div class="showcase-example"><component :is="docs['selection']" /></div>
+              <div class="showcase-example"><SliderExamples /></div>
+              <div class="showcase-example"><SelectionExamples /></div>
             </div>
-            <div
-              v-for="id in [
-                'selection-collapse',
-                'combobox',
-                'picker',
-                'date-time-picker',
-                'upload'
-              ]"
-              :key="id"
-              class="secondary-pair"
-            >
-              <component :is="docs[id]" />
-            </div>
+            <div class="secondary-pair"><CollapseExamples /></div>
+            <div id="showcase-control-pickers" class="secondary-pair"><ComboboxExamples /></div>
+            <div class="secondary-pair"><PickerExamples /></div>
+            <div id="showcase-control-dates" class="secondary-pair"><DateTimeExamples /></div>
+            <div id="showcase-control-upload" class="secondary-pair"><UploadExamples /></div>
           </section>
           <section id="showcase-surfaces" class="section-gap">
             <div class="section-title">
@@ -237,13 +302,13 @@ onBeforeUnmount(() => {
               </div>
               <div class="subtitle">柔和的层次和留白，突出内容本身。</div>
             </div>
-            <component :is="docs['card']" />
+            <CardExamples />
             <div
-              v-for="id in ['shadows', 'identity', 'image', 'app-bar', 'navigation', 'list']"
-              :key="id"
+              v-for="(example, index) in [ShadowExamples, IdentityExamples, ImageExamples, AppBarExamples, NavigationExamples, ListExamples]"
+              :key="index"
               class="secondary-pair"
             >
-              <component :is="docs[id]" />
+              <component :is="example" />
             </div>
           </section>
           <section id="showcase-feedback" class="section-gap">
@@ -254,612 +319,45 @@ onBeforeUnmount(() => {
               </div>
               <div class="subtitle">提示、确认对话框和移动端操作面板。</div>
             </div>
-            <component :is="docs['native-navigation']" />
-            <div
-              v-for="id in [
-                'feedback',
-                'primitives',
-                'notice-steps',
-                'popup',
-                'touch-gestures',
-                'menu'
-              ]"
-              :key="id"
-              class="secondary-pair"
-            >
-              <component :is="docs[id]" v-bind="id === 'primitives' ? { active } : {}" />
-            </div>
+            <nav class="section-links" aria-label="状态反馈小节">
+              <a
+                v-for="item in feedbackLinks" :key="item.id"
+                :href="sectionPrefix + item.id"
+                @click.prevent="scrollToSection(item.id)"
+              >{{ item.label }}</a>
+            </nav>
+            <div id="showcase-feedback-state"><SharedStateExample /></div>
+            <div id="showcase-feedback-prompts" class="secondary-pair"><FeedbackExamples /></div>
+            <div id="showcase-feedback-progress" class="secondary-pair"><PrimitiveExamples :active="active" /></div>
+            <div class="secondary-pair"><NoticeExamples /></div>
+            <div id="showcase-feedback-overlays" class="secondary-pair"><PopupExamples /></div>
+            <div class="secondary-pair"><TouchExamples /></div>
+            <div class="secondary-pair"><MenuExamples /></div>
           </section>
           <section id="showcase-scenarios" class="section-gap">
-            <component :is="docs['scenarios']" /><component :is="docs['native-html']" />
+            <div class="section-title">
+              <div>
+                <div class="number">05 / 完整示例</div>
+                <h2>组件如何配合</h2>
+              </div>
+              <div class="subtitle">从资料编辑到内容加载，体验多个组件一起工作。</div>
+            </div>
+            <ScenarioExamples />
+            <NativeHtmlExample />
           </section>
         </main>
-        <footer>
-          <span><strong>my-ui</strong> · 从简约出发，让体验更自在。</span
-          ><span>LOCAL SOURCE · YOUR COMPONENTS</span>
+        <footer class="showcase-footer">
+          <span><strong>my-ui</strong> · 完整交互示例</span>
+          <button class="to-top" type="button" @click="scrollToSection('top')">回到顶部 ↑</button>
         </footer>
       </div>
     </div>
   </div>
 </template>
 
+<style scoped src="../../../html/assets/css/showcase-shell.css"></style>
+
 <style scoped>
-/* 旧版整页示例的布局与头图样式，组件内容继续共用 App 的插槽。 */
-.cta-btn {
-  transform: scale(1);
-  transform-origin: center;
-  touch-action: manipulation;
-  display: inline-flex;
-  min-height: 44px;
-  gap: 10px;
-  align-items: center;
-  background: var(--primary);
-  border: 0;
-  color: var(--primary-text);
-  border-radius: 15px;
-  box-shadow: 0 7px 17px color-mix(in srgb, var(--primary) 15%, transparent);
-  padding: 0 20px;
-  font-size: 15px;
-  font-weight: var(--font-weight-action, 500);
-  transition:
-    transform 0.16s ease,
-    filter 0.16s ease;
-}
-
-.cta-btn:active {
-  transform: scale(0.95);
-  background-color: color-mix(in srgb, var(--primary) 86%, #000);
-}
-
-.site-nav a {
-  flex-shrink: 0;
-  opacity: 1;
-  transform: none;
-  touch-action: manipulation;
-  transition: color 0.2s;
-  display: inline-flex;
-  min-height: 44px;
-  align-items: center;
-  position: relative;
-}
-
-.site-nav a:active {
-  background-color: var(--press);
-  border-radius: 8px;
-  transition-duration: 0s;
-  transform: none;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .cta-btn:hover:not(:active) {
-    background-color: color-mix(in srgb, var(--primary) 94%, #000);
-  }
-}
-
-.shell {
-  width: min(1200px, calc(100% - 96px));
-  margin: 0 auto;
-}
-
-.site-nav {
-  display: flex;
-  min-height: 44px;
-  overflow-x: auto;
-  white-space: nowrap;
-  align-items: center;
-  gap: 27px;
-  color: var(--text-secondary);
-  font-size: 13px;
-  font-weight: var(--font-weight-action, 500);
-}
-
-.site-nav a:hover {
-  color: var(--primary);
-}
-
-.hero {
-  position: relative;
-  isolation: isolate;
-  margin: 12px 0 64px;
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--card-background) 72%, transparent);
-  border-radius: 38px;
-  display: grid;
-  grid-template-columns: 1fr 0.95fr;
-  align-items: center;
-  padding: 56px 68px;
-  background: linear-gradient(
-    110deg,
-    color-mix(in srgb, var(--card-background) 92%, transparent) 15%,
-    color-mix(in srgb, var(--card-background) 96%, transparent) 50%,
-    color-mix(in srgb, var(--card-background) 82%, transparent)
-  );
-  box-shadow: var(--shadow);
-  margin-top: 24px;
-  min-height: 325px;
-  padding-top: 47px;
-  padding-bottom: 47px;
-}
-
-.hero::after {
-  content: '';
-  position: absolute;
-  width: 550px;
-  height: 550px;
-  border-radius: 50%;
-  right: -120px;
-  top: -104px;
-  z-index: -1;
-  background: radial-gradient(circle, var(--border), transparent 70%);
-}
-
-.eyebrow {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  font-weight: var(--font-weight-subtitle, 600);
-  font-size: 12px;
-  color: var(--primary);
-  letter-spacing: 2px;
-}
-
-.eyebrow .dash {
-  width: 25px;
-  height: 2px;
-  background: var(--primary);
-  border-radius: 2px;
-}
-
-.hero h1 {
-  font-size: clamp(36px, 3.6vw, 48px);
-  line-height: 1.32;
-  margin: 20px 0 16px;
-  font-weight: var(--font-weight-title, 700);
-  letter-spacing: -1.8px;
-}
-
-.hero h1 span {
-  color: var(--primary);
-}
-
-.hero p {
-  max-width: 425px;
-  font-size: 16px;
-  line-height: 1.85;
-  color: var(--text-secondary);
-  margin: 0;
-}
-
-.hero-cta {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  margin-top: 27px;
-}
-
-.cta-btn:hover {
-  box-shadow: 0 7px 17px color-mix(in srgb, var(--primary) 15%, transparent);
-}
-
-.cta-btn svg {
-  height: 16px;
-  width: 16px;
-}
-
-.hero-note {
-  color: var(--text-secondary);
-  font-size: 13px;
-}
-
-.art {
-  width: 100%;
-  max-width: 440px;
-  height: 304px;
-  position: relative;
-  justify-self: end;
-}
-
-.art-halo {
-  position: absolute;
-  width: 300px;
-  height: 300px;
-  border: 1px solid color-mix(in srgb, var(--primary) 23%, transparent);
-  border-radius: 50%;
-  left: 64px;
-  top: 4px;
-}
-
-.art-halo::before {
-  content: '';
-  position: absolute;
-  inset: 24px;
-  border: 1px dashed color-mix(in srgb, var(--primary) 22%, transparent);
-  border-radius: 50%;
-}
-
-.sample-window {
-  position: absolute;
-  top: 43px;
-  left: 47px;
-  width: 320px;
-  height: 240px;
-  border: 1px solid color-mix(in srgb, var(--card-background) 90%, transparent);
-  border-radius: 30px;
-  padding: 26px;
-  background: color-mix(in srgb, var(--card-background) 75%, transparent);
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(10px);
-  transform: rotate(-5deg);
-}
-
-.sample-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.sample-appicon {
-  width: 47px;
-  height: 47px;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(145deg, var(--primary), var(--primary));
-  border-radius: 15px;
-  color: var(--primary-text);
-  box-shadow: 0 5px 12px color-mix(in srgb, var(--primary) 15%, transparent);
-}
-
-.sample-appicon svg {
-  width: 24px;
-  height: 24px;
-}
-
-.sample-dots {
-  display: flex;
-  gap: 5px;
-}
-
-.sample-dots i {
-  display: block;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--gray);
-}
-
-.sample-title {
-  font-size: 16px;
-  font-weight: var(--font-weight-title, 700);
-  margin-top: 22px;
-  letter-spacing: -0.3px;
-}
-
-.sample-caption {
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin-top: 7px;
-}
-
-.sample-progress {
-  margin-top: 21px;
-  height: 7px;
-  background: var(--border);
-  border-radius: 7px;
-  overflow: hidden;
-}
-
-.sample-progress i {
-  display: block;
-  height: 100%;
-  width: 68%;
-  background: linear-gradient(90deg, var(--primary), var(--primary));
-  border-radius: 7px;
-}
-
-.float-chip {
-  position: absolute;
-  z-index: 2;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  padding: 13px 16px;
-  background: color-mix(in srgb, var(--card-background) 94%, transparent);
-  border: 1px solid color-mix(in srgb, var(--card-background) 94%, transparent);
-  border-radius: 17px;
-  box-shadow: var(--popup-shadow);
-  backdrop-filter: blur(12px);
-}
-
-.float-chip.first {
-  top: 10px;
-  right: 0;
-  transform: rotate(7deg);
-}
-
-.float-chip.second {
-  bottom: 10px;
-  left: -17px;
-  transform: rotate(4deg);
-}
-
-.float-chip .round {
-  width: 31px;
-  height: 31px;
-  border-radius: 11px;
-  display: grid;
-  place-items: center;
-  background: var(--fill);
-  color: var(--primary);
-}
-
-.float-chip .round.green {
-  background: color-mix(in oklab, var(--success) 10%, var(--card-background));
-  color: var(--success);
-}
-
-.float-chip svg {
-  width: 17px;
-  height: 17px;
-}
-
-.float-chip strong {
-  display: block;
-  font-size: 12px;
-  font-weight: var(--font-weight-subtitle, 600);
-}
-
-.float-chip small {
-  display: block;
-  font-size: 10px;
-  color: var(--text-secondary);
-  margin-top: 3px;
-}
-
-.section-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  margin: 0 4px 24px;
-}
-
-.section-title .number {
-  font-size: 12px;
-  color: var(--primary);
-  letter-spacing: 0.65px;
-  font-weight: var(--font-weight-title, 700);
-  margin-bottom: 10px;
-}
-
-.section-title h2 {
-  font-size: 29px;
-  line-height: 1.32;
-  letter-spacing: -0.8px;
-  margin: 0;
-  font-weight: var(--font-weight-title, 700);
-}
-
-.section-title .subtitle {
-  color: var(--text-secondary);
-  line-height: 1.65;
-  max-width: 400px;
-  text-align: right;
-  font-size: 13px;
-}
-
-.section-gap {
-  margin-top: 61px;
-}
-
-.pair {
-  display: grid;
-  grid-template-columns: 1.07fr 0.93fr;
-  gap: 22px;
-}
-
-.pair.equal {
-  grid-template-columns: 1fr 1fr;
-}
-
-footer {
-  border-top: 1px solid var(--border);
-  margin: 77px 0 0;
-  padding: 29px 2px 38px;
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: center;
-  color: var(--text-secondary);
-  font-size: 11px;
-}
-
-footer strong {
-  color: var(--text-secondary);
-  font-weight: var(--font-weight-subtitle, 600);
-}
-
-.masthead {
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  padding-top: 0;
-  background: var(--card-background);
-  transition: box-shadow 0.22s ease;
-}
-
-.masthead.scrolled {
-  box-shadow: var(--shadow);
-}
-
-.site-nav a.current {
-  color: var(--primary);
-}
-
-.site-nav a.current::after {
-  position: absolute;
-  bottom: 5px;
-  left: 0;
-  right: 0;
-  height: 2px;
-  border-radius: 4px;
-  content: '';
-  background: var(--primary);
-  opacity: 0.8;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .site-nav a:hover {
-    color: var(--primary);
-  }
-}
-
-@media (max-width: 1100px) {
-  .shell {
-    width: min(100% - 60px, 1000px);
-  }
-
-  .hero {
-    padding: 54px 50px;
-  }
-
-  .art {
-    transform: scale(0.88);
-    transform-origin: center right;
-  }
-}
-
-@media (max-width: 760px) {
-  .shell {
-    width: calc(100% - 34px);
-  }
-
-  .site-nav {
-    width: 100%;
-    display: flex;
-    gap: 24px;
-    overflow-x: auto;
-    white-space: nowrap;
-    scrollbar-width: none;
-    font-size: 12px;
-    font-weight: var(--font-weight-subtitle, 600);
-  }
-
-  .site-nav::-webkit-scrollbar {
-    display: none;
-  }
-
-  .site-nav a {
-    min-height: 38px;
-    flex-shrink: 0;
-  }
-
-  .site-nav a.current::after {
-    bottom: 2px;
-  }
-
-  .hero {
-    min-height: auto;
-    margin: 16px 0 43px;
-    border-radius: 28px;
-    grid-template-columns: 1fr;
-    padding: 34px 28px 32px;
-  }
-
-  .hero h1 {
-    font-size: 34px;
-    letter-spacing: -1.25px;
-    margin: 20px 0 14px;
-  }
-
-  .hero p {
-    font-size: 14px;
-    line-height: 1.8;
-    max-width: 330px;
-  }
-
-  .hero-cta {
-    margin-top: 24px;
-  }
-
-  .art {
-    display: none;
-  }
-
-  .section-title {
-    display: block;
-    margin-bottom: 20px;
-  }
-
-  .section-title h2 {
-    font-size: 26px;
-  }
-
-  .section-title .subtitle {
-    margin-top: 8px;
-    text-align: left;
-    font-size: 13px;
-  }
-
-  .pair {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .pair.equal {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .section-gap {
-    margin-top: 49px;
-  }
-
-  footer {
-    margin-top: 50px;
-  }
-}
-
-@media (max-width: 400px) {
-  .hero {
-    padding-left: 25px;
-    padding-right: 25px;
-  }
-
-  .hero h1 {
-    font-size: 32px;
-  }
-
-  .hero p {
-    font-size: 14px;
-  }
-
-  .art {
-    display: none;
-  }
-}
-
-@media (max-width: 760px) {
-  .cta-btn {
-    min-height: 44px;
-  }
-
-  footer {
-    font-size: 13px;
-    line-height: 1.6;
-  }
-}
-
-@media (max-width: 400px) {
-  .hero-cta {
-    gap: 11px;
-    flex-wrap: wrap;
-  }
-}
-
-.secondary-pair {
-  margin-top: 22px;
-}
-
 .showcase-page {
   height: 100%;
 }
@@ -882,40 +380,5 @@ footer strong {
 }
 .showcase-layout :deep(.my-card) {
   min-width: 0;
-}
-.cta-btn svg {
-  width: 18px;
-  height: 18px;
-}
-.site-nav a:focus-visible,
-.cta-btn:focus-visible,
-.hero-note:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 4px;
-  border-radius: 6px;
-}
-@media (max-width: 1000px) and (min-width: 761px) {
-  .site-nav {
-    order: 1;
-    justify-content: center;
-    width: 100%;
-  }
-}
-@media (max-width: 760px) {
-  footer {
-    flex-wrap: wrap;
-  }
-}
-@media (max-width: 400px) {
-  .eyebrow {
-    font-size: 10px;
-    letter-spacing: 1px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .masthead,
-  .cta-btn {
-    transition: none;
-  }
 }
 </style>

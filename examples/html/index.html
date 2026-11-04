@@ -12,6 +12,7 @@
     <!-- 首帧恢复主题：必须在样式表之前执行，避免闪烁。 -->
     <script src="assets/js/theme-init.js"></script>
     <link rel="stylesheet" href="../../lib/my-ui.css" />
+    <link rel="stylesheet" href="assets/css/showcase-shell.css" />
     <link rel="stylesheet" href="assets/css/showcase.css" />
     <script src="../../lib/my-ui.js" defer></script>
     <script src="assets/js/theme.js" defer></script>
@@ -19,22 +20,33 @@
   </head>
   <body>
     <div class="showcase-app">
-      <!-- 1. 顶部导航：单页站点没有返回目标，只保留标题（明暗切换在 masthead 右侧）。 -->
-      <div class="showcase-appbar" id="showcase-appbar"></div>
-
-      <div class="showcase-layout" id="showcase-layout" aria-label="完整交互示例">
-        <!-- 2. 固定 masthead + 5 个分区导航 -->
-        <header class="masthead" id="showcase-masthead">
+      <div class="showcase-layout" id="showcase-layout" aria-label="完整交互示例" data-loading>
+        <header class="masthead">
           <div class="shell masthead-shell">
-            <nav class="site-nav" aria-label="页面导航">
+            <a class="showcase-brand" href="#showcase-top" data-scroll-top aria-label="my-ui，回到顶部">
+              <img src="assets/favicon.svg" width="28" height="28" alt="" />
+              <strong>my-ui</strong><span>交互示例</span>
+            </a>
+            <nav class="site-nav" aria-label="章节目录">
               <a href="#showcase-actions" data-section="actions">基础组件</a>
               <a href="#showcase-controls" data-section="controls">交互控制</a>
               <a href="#showcase-surfaces" data-section="surfaces">内容容器</a>
               <a href="#showcase-feedback" data-section="feedback">状态反馈</a>
               <a href="#showcase-scenarios" data-section="scenarios">完整示例</a>
-              <a href="../others/native.html">原生 HTML ↗</a>
             </nav>
-            <span class="nav-theme" id="showcase-theme"></span>
+            <details class="chapter-menu">
+              <summary aria-label="章节目录"><span data-current-chapter>章节目录</span></summary>
+              <nav aria-label="章节目录">
+                <a href="#showcase-actions" data-section="actions">基础组件</a>
+                <a href="#showcase-controls" data-section="controls">交互控制</a>
+                <a href="#showcase-surfaces" data-section="surfaces">内容容器</a>
+                <a href="#showcase-feedback" data-section="feedback">状态反馈</a>
+                <a href="#showcase-scenarios" data-section="scenarios">完整示例</a>
+              </nav>
+            </details>
+            <div class="nav-theme">
+              <button type="button" id="showcase-theme" aria-label="切换配色"></button>
+            </div>
           </div>
         </header>
 
@@ -43,17 +55,14 @@
             <!-- 3. hero -->
             <section class="hero">
               <div class="hero-copy">
-                <div class="eyebrow"><i class="dash"></i> MOBILE COMPONENT SYSTEM</div>
+                <div class="eyebrow"><i class="dash"></i> MY-UI · 组件展示</div>
                 <h1>自然留白，<br /><span>轻盈交互。</span></h1>
-                <p>用克制的色彩、舒适的留白与柔和卡片，<br />原生 HTML 与 Vue 共用一套组件体验。</p>
+                <p>体验按钮、表单、弹层与完整交互场景。</p>
                 <div class="hero-cta">
                   <button class="cta-btn" type="button" data-scroll-actions>
                     探索组件
                     <span data-cta-icon></span>
                   </button>
-                  <a class="hero-note" href="../others/native.html"
-                    >原生 HTML 示例 ↗</a
-                  >
                 </div>
               </div>
               <div class="art" aria-hidden="true">
@@ -77,6 +86,7 @@
                 </div>
               </div>
             </section>
+            <p class="showcase-loading" role="status">正在加载交互示例…</p>
 
             <!-- 4. 01 基础组件：按 Vue pages/home/{button,tag} 的 DemoExample 逐块还原 -->
             <section id="showcase-actions">
@@ -184,9 +194,15 @@
                 </div>
                 <div class="subtitle">为手指设计的控件尺寸，状态变化一目了然。</div>
               </div>
+              <nav class="section-links" aria-label="交互控制小节">
+                <a href="#showcase-control-fields" data-jump="control-fields">输入与选项</a>
+                <a href="#showcase-control-pickers" data-jump="control-pickers">搜索与选择</a>
+                <a href="#showcase-control-dates" data-jump="control-dates">日期与时间</a>
+                <a href="#showcase-control-upload" data-jump="control-upload">文件上传</a>
+              </nav>
 
               <!-- input 页（3 个示例，纵向 16px）与 switch 页并排 -->
-              <div class="pair equal">
+              <div id="showcase-control-fields" class="pair equal">
                 <div class="showcase-example">
                   <div class="field-group">
                     <article class="my-card">
@@ -382,7 +398,7 @@
               </div>
 
               <!-- combobox 页：3 个示例两列 + 底部已选状态条 -->
-              <div class="secondary-pair">
+              <div id="showcase-control-pickers" class="secondary-pair">
                 <section id="combobox" class="combobox-card">
                   <div class="combobox-examples">
                     <article class="my-card">
@@ -467,7 +483,7 @@
               </div>
 
               <!-- date-time-picker 页：5 个示例，纵向 28px -->
-              <div class="secondary-pair">
+              <div id="showcase-control-dates" class="secondary-pair">
                 <div class="date-time-showcase">
                   <article class="my-card" id="date-time-picker">
                     <div class="my-surface-head">
@@ -544,7 +560,7 @@
               </div>
 
               <!-- upload 页：2 个示例（1.2fr / 1fr）+ 底部说明 -->
-              <div class="secondary-pair">
+              <div id="showcase-control-upload" class="secondary-pair">
                 <section id="upload">
                   <div class="upload-examples">
                     <article class="my-card">
@@ -781,24 +797,32 @@
                 </div>
                 <div class="subtitle">提示、确认对话框和移动端操作面板。</div>
               </div>
+              <nav class="section-links" aria-label="状态反馈小节">
+                <a href="#showcase-feedback-state" data-jump="feedback-state">共享状态</a>
+                <a href="#showcase-feedback-prompts" data-jump="feedback-prompts">提示与确认</a>
+                <a href="#showcase-feedback-progress" data-jump="feedback-progress">进度与通知</a>
+                <a href="#showcase-feedback-overlays" data-jump="feedback-overlays">抽屉与菜单</a>
+              </nav>
 
               <!-- pages/native/navigation -->
-              <article class="my-card" id="native-navigation">
-                <div class="my-surface-head">
-                  <div>
-                    <h3>跨页共享状态</h3>
-                    <p>两页共用备注和计数，重新打开也能恢复。</p>
+              <div id="showcase-feedback-state">
+                <article class="my-card" id="native-navigation">
+                  <div class="my-surface-head">
+                    <div>
+                      <h3>跨页共享状态</h3>
+                      <p>两页共用备注和计数，重新打开也能恢复。</p>
+                    </div>
                   </div>
-                </div>
-                <div data-demo="shared-state"></div>
-                <div class="native-navigation-actions" data-demo="shared-state-actions"></div>
-                <p class="native-navigation-note">
-                  在当前窗口进入另一页；返回后保留原来的输入与滚动位置。
-                </p>
-              </article>
+                  <div data-demo="shared-state"></div>
+                  <div class="native-navigation-actions" data-demo="shared-state-actions"></div>
+                  <p class="native-navigation-note">
+                    在当前窗口进入另一页；返回后保留原来的输入与滚动位置。
+                  </p>
+                </article>
+              </div>
 
               <!-- pages/home/feedback -->
-              <div class="secondary-pair">
+              <div id="showcase-feedback-prompts" class="secondary-pair">
                 <section id="feedback">
                   <div class="feedback-grid">
                     <article class="my-card feedback-panel">
@@ -849,7 +873,7 @@
               </div>
 
               <!-- pages/home/primitives（含 PlaybackProgress、SliderExample） -->
-              <div class="secondary-pair">
+              <div id="showcase-feedback-progress" class="secondary-pair">
                 <div id="primitives" class="primitives-grid">
                   <article class="my-card">
                     <div class="my-surface-head">
@@ -1053,7 +1077,7 @@
               </div>
 
               <!-- pages/home/popup -->
-              <div class="secondary-pair">
+              <div id="showcase-feedback-overlays" class="secondary-pair">
                 <div class="popup-showcase">
                   <article class="my-card">
                     <div class="my-surface-head">
@@ -1161,11 +1185,14 @@
                 </div>
               </div>
             </section>
-            <!--
-              8. 05 完整示例：Vue 版这一区没有分区标题，直接是 pages/home/scenarios
-                 （含 ProfileFormExample）与 pages/home/native-html 两个页面组件。
-            -->
             <section id="showcase-scenarios" class="section-gap">
+              <div class="section-title">
+                <div>
+                  <div class="number">05 / 完整示例</div>
+                  <h2>组件如何配合</h2>
+                </div>
+                <div class="subtitle">从资料编辑到内容加载，体验多个组件一起工作。</div>
+              </div>
               <section id="scenarios" class="essentials-section">
                 <div class="scene-grid">
                   <article class="my-card form-example">
@@ -1229,9 +1256,8 @@
           </main>
 
           <!-- 9. footer -->
-          <footer>
-            <span><strong>my-ui</strong> · 从简约出发，让体验更自在。</span>
-            <span>LOCAL SOURCE · YOUR COMPONENTS</span>
+          <footer class="showcase-footer">
+            <span><strong>my-ui</strong> · 完整交互示例</span>
             <button class="to-top" type="button" data-scroll-top>回到顶部 ↑</button>
           </footer>
         </div>

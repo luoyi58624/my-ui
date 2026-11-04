@@ -32,9 +32,14 @@
       const base = document.createElement('base')
       base.href = '/examples/vue/'
       document.head.append(base)
+      const firstMount = new MutationObserver(() => {
+        if (!document.querySelector('.hero')) return
+        const sections = [...document.querySelectorAll('main > section[id^="showcase-"]')]
+        window.initialShowcaseReady = sections.length === 5 && sections.every(section => section.querySelector('[data-my-component]'))
+        firstMount.disconnect()
+      })
+      firstMount.observe(document.getElementById('app'), { childList: true, subtree: true })
       await import('/examples/vue/src/main.ts')
-      const { applyTheme } = await import('/examples/vue/src/commons/theme/index.js')
-      window.applyDemoTheme = applyTheme
     } else {
       const reports = [],
         pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -61,7 +66,7 @@
         await until(() => showcase(), '长页未渲染')
         await until(
           () => sections.every((id) => showcase().querySelector('#showcase-' + id + ' [data-my-component]')),
-          '长页异步组件未加载'
+          '长页示例控件未加载'
         )
       }
       document.querySelector('#run').onclick = async () => {
@@ -78,6 +83,7 @@
 
           await check('独立入口展示完整长页，不加载或挂载应用壳', async () => {
             await waitShowcase()
+            assert(win.initialShowcaseReady === true, '长页首次挂载时留下了空分区')
             assert(win.location.hash === '', '长页启动改写了地址')
             assert(showcase().querySelector('.hero h1').textContent.includes('自然留白'), '缺少头图')
             assert(showcase().querySelectorAll('.sample-window,.float-chip').length === 3, '头图卡片缺失')
@@ -94,8 +100,8 @@
           })
 
           await check('分类导航驱动选中状态与顶栏阴影', async () => {
-            assert(nav().length === 6, '分类导航数量不对：' + nav().length)
-            assert(nav().at(-1).textContent.includes('原生 HTML'), '缺少原生 HTML 入口链接')
+            assert(nav().length === 5, '分类导航数量不对：' + nav().length)
+            assert(showcase().querySelector('.native-example-link'), '缺少独立原生示例入口')
             nav()[1].click()
             await until(
               () => nav().find((item) => item.getAttribute('aria-current') === 'location')?.textContent === '交互控制',
@@ -112,7 +118,7 @@
             assert(win.location.hash === '', '锚点变成了页面跳转')
           })
 
-          await check('分类导航从页面底部把长页带回分区顶部（页面没有独立的回到顶部控件）', async () => {
+          await check('分类导航从页面底部把长页带回分区顶部', async () => {
             showcase().scrollTo({ top: showcase().scrollHeight, behavior: 'instant' })
             await pause(120)
             const bottom = showcase().scrollTop
@@ -126,20 +132,43 @@
             assert(showcase().scrollTop < bottom / 2, '分类导航没有把长页带回分区顶部')
           })
 
-          await check('明暗令牌对长页生效（长页自身不提供主题入口）', async () => {
-            assert(
-              !doc.querySelector('[aria-label="主题定制"],[aria-label^="切换到"]'),
-              '长页不应出现主题设置入口'
-            )
+          await check('独立页头可以切换主题并保留主题令牌', async () => {
+            const toggle = doc.querySelector('.nav-theme button')
+            assert(toggle, '独立页头缺少主题按钮')
+            if (doc.documentElement.dataset.theme === 'dark') {
+              toggle.click()
+              await until(() => doc.documentElement.dataset.theme === 'light', '浅色模式未生效')
+            }
             const style = () => win.getComputedStyle(showcase()).backgroundColor
-            await until(() => win.applyDemoTheme, '主题接口未加载')
-            win.applyDemoTheme({ mode: 'light' })
             const before = style()
-            win.applyDemoTheme({ mode: 'dark' })
-            assert(doc.documentElement.dataset.theme === 'dark', '暗黑模式没有生效')
+            toggle.click()
+            await until(() => doc.documentElement.dataset.theme === 'dark', '暗黑模式没有生效')
             assert(style() !== before, '长页背景没有跟随主题令牌')
-            win.applyDemoTheme({ mode: 'light' })
+            toggle.click()
+            await until(() => doc.documentElement.dataset.theme === 'light', '浅色模式未生效')
             assert(style() === before, '恢复亮色后背景没有还原')
+          })
+
+          await check('窄屏章节目录可直达第五章，小节链接停在固定栏下方', async () => {
+            frame.style.width = '320px'
+            const menu = showcase().querySelector('.chapter-menu')
+            const trigger = menu.querySelector('summary')
+            await until(() => trigger.getBoundingClientRect().width > 0, '窄屏目录未显示')
+            trigger.click()
+            assert(menu.open && menu.querySelectorAll('nav a').length === 5, '目录没有列出五章')
+            menu.querySelector('nav a:last-child').click()
+            await until(() => trigger.textContent === '完整示例', '窄屏目录未跟随当前章节')
+            assert(!menu.open, '跳转后目录没有关闭')
+            trigger.click()
+            menu.querySelectorAll('nav a')[1].click()
+            await until(() => trigger.textContent === '交互控制', '未跳到交互控制')
+            showcase().querySelector('.section-links a[href="#showcase-control-dates"]').click()
+            await until(() => {
+              const bottom = showcase().querySelector('.masthead').getBoundingClientRect().bottom
+              const top = showcase().querySelector('#showcase-control-dates').getBoundingClientRect().top
+              return top >= bottom && top < bottom + 45
+            }, '小节没有对齐导航头')
+            frame.style.width = ''
           })
 
           await check('长页内容不注入模块脚本，示例图片可以从本站加载', async () => {
@@ -173,7 +202,7 @@
           })
 
           document.querySelector('#result').textContent = JSON.stringify(
-            { passed: true, total: 6, reports },
+            { passed: true, total: 7, reports },
             null,
             2
           )

@@ -2,7 +2,7 @@
  * 「完整交互示例」长页的页面脚本（本页自用，不依赖 shell.js）。
  *
  * 职责：
- *   1. 应用外壳：主页 AppBar、明暗切换、Toast 入口
+ *   1. 明暗切换与 Toast 入口
  *   2. 滚动交互：masthead 分隔线、scrollspy、分区平滑定位、回到顶部
  *   3. 装配五个分区的全部组件演示（MyUI.create / MyUI.mount）
  *
@@ -96,41 +96,28 @@
   }
 
   // ── 外壳 ──
-  /** 顶部 AppBar：单页站点没有返回目标，只保留标题。 */
-  function mountAppBar() {
-    var host = document.getElementById('showcase-appbar')
-    if (!host) return
-    host.append(window.MyUI.create('AppBar', { title: '完整交互示例' }).element)
-  }
-
   /** masthead 右侧的明暗切换按钮。 */
   function mountThemeToggle() {
-    var host = document.getElementById('showcase-theme')
-    if (!host) return
-    var dark = resolvedTheme().mode === 'dark'
-    var button = window.MyUI.create(
-      'Button',
-      {
-        variant: 'bare',
-        icon: dark ? 'sun' : 'moon',
-        onClick: function () {
-          var next = resolvedTheme().mode === 'dark' ? 'light' : 'dark'
-          if (!setThemeMode(next)) return
-          var nowDark = resolvedTheme().mode === 'dark'
-          button.update(
-            { icon: nowDark ? 'sun' : 'moon' },
-            { 'aria-label': nowDark ? '切换到浅色模式' : '切换到暗黑模式' }
-          )
-        }
-      },
-      { attributes: { 'aria-label': dark ? '切换到浅色模式' : '切换到暗黑模式' } }
-    )
-    host.append(button.element)
+    var button = document.getElementById('showcase-theme')
+    var glyph = window.MyUI.create('Icon', { name: 'moon' })
+    button.append(glyph.element)
+    function sync() {
+      var dark = resolvedTheme().mode === 'dark'
+      glyph.update({ name: dark ? 'sun' : 'moon' })
+      button.setAttribute('aria-label', dark ? '切换到浅色模式' : '切换到暗黑模式')
+    }
+    button.addEventListener('click', function () {
+      if (setThemeMode(resolvedTheme().mode === 'dark' ? 'light' : 'dark')) sync()
+    })
+    media?.addEventListener('change', sync)
+    sync()
   }
 
   // ── 滚动交互 ──
   var layout = null
   var masthead = null
+  var chapterMenu = null
+  var chapterLabel = null
   var links = []
   var frame = 0
 
@@ -141,19 +128,22 @@
     )
   }
 
-  /** 同步 masthead 阴影与当前分区（阈值 clientHeight * 0.35）。 */
+  /** 当分区标题靠近固定导航时更新章节高亮。 */
   function syncHeader() {
     if (!layout || !masthead) return
     masthead.classList.toggle('scrolled', layout.scrollTop > 24)
-    var base = layout.getBoundingClientRect().top
+    var threshold = masthead.getBoundingClientRect().bottom + 48
     var current = ''
     for (var i = 0; i < SECTIONS.length; i += 1) {
       var section = document.getElementById('showcase-' + SECTIONS[i])
       if (!section) continue
-      if (section.getBoundingClientRect().top - base <= layout.clientHeight * 0.35) {
+      if (section.getBoundingClientRect().top <= threshold) {
         current = SECTIONS[i]
       }
     }
+    var activeLink = links.find(function (link) { return link.dataset.section === current })
+    var label = activeLink ? activeLink.textContent : '章节目录'
+    if (chapterLabel.textContent !== label) chapterLabel.textContent = label
     links.forEach(function (link) {
       var on = link.dataset.section === current
       link.classList.toggle('current', on)
@@ -172,9 +162,10 @@
   }
 
   /** 滚到某个分区，减去 masthead 高度与 20px 呼吸位。 */
-  function scrollToSection(id) {
+  function scrollToSection(id, behavior) {
     if (!layout || !masthead) return
     var target = id === 'top' ? null : document.getElementById('showcase-' + id)
+    if (id !== 'top' && !target) return
     var top = 0
     if (target) {
       top =
@@ -186,7 +177,7 @@
     }
     layout.scrollTo({
       top: Math.max(top, 0),
-      behavior: prefersReducedMotion() ? 'instant' : 'smooth'
+      behavior: prefersReducedMotion() ? 'instant' : behavior || 'smooth'
     })
   }
 
@@ -194,13 +185,34 @@
     layout = document.getElementById('showcase-layout')
     masthead = document.querySelector('.masthead')
     if (!layout || !masthead) return
-    links = Array.prototype.slice.call(document.querySelectorAll('.site-nav a[data-section]'))
+    chapterMenu = masthead.querySelector('.chapter-menu')
+    chapterLabel = chapterMenu.querySelector('[data-current-chapter]')
+    links = Array.from(masthead.querySelectorAll('[data-section]'))
+
+    function closeChapterMenu(restoreFocus) {
+      if (!chapterMenu.open) return
+      chapterMenu.open = false
+      if (restoreFocus) chapterMenu.querySelector('summary').focus({ preventScroll: true })
+    }
 
     links.forEach(function (link) {
       link.addEventListener('click', function (event) {
         event.preventDefault()
+        closeChapterMenu(true)
         scrollToSection(link.dataset.section)
       })
+    })
+    chapterMenu.addEventListener('keydown', function (event) {
+      if (event.key !== 'Escape' || !chapterMenu.open) return
+      event.stopPropagation()
+      closeChapterMenu(true)
+    })
+    layout.addEventListener('click', function (event) {
+      if (!chapterMenu.contains(event.target)) closeChapterMenu(false)
+      var link = event.target.closest('[data-jump]')
+      if (!link) return
+      event.preventDefault()
+      scrollToSection(link.dataset.jump)
     })
 
     Array.prototype.slice.call(document.querySelectorAll('[data-scroll-actions]')).forEach(
@@ -4152,7 +4164,8 @@
 
   // ── 启动 ──
   function start() {
-    mountAppBar()
+    // 同一个任务内装配控件，避免浏览器先绘制尚未填充的示例卡片。
+    document.getElementById('showcase-layout').removeAttribute('data-loading')
     mountThemeToggle()
     mountScrollBehaviour()
     buildHeroArt()
@@ -4163,6 +4176,8 @@
     buildScenarios()
     // 静态声明式组件（data-my）统一初始化，与命令式装配互不影响。
     window.MyUI.init(document.body)
+    var anchor = location.hash.match(/^#showcase-([\w-]+)$/)
+    if (anchor) scrollToSection(anchor[1], 'instant')
     scheduleHeader()
   }
 
